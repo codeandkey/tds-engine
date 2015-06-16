@@ -1,0 +1,6 @@
+TDS README
+
+This projects is called TDS because there is no name for it yet.
+All we know is that it will be top down.
+
+The game engine is written for the C99 standard (with some uses of pragma preprocessor commands), so it should build on most compilers.
