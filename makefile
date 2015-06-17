@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -std=c99 -Wall
-LDFLAGS =
+LDFLAGS = -lm -ldl -lglfw -lGL
 
 SOURCES = $(wildcard src/*.c)
 OBJECTS = $(SOURCES:.c=.o)
