@@ -9,3 +9,4 @@
 #include "memory.h"
 
 #include "display.h"
+#include "script.h"

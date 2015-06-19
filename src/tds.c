@@ -8,6 +8,8 @@ int main(int argc, char** argv) {
 	desc.fs = 0;
 	desc.vsync = 0;
 
+	tds_script_create("test.lua");
+
 	struct tds_display* disp = tds_display_create(desc);
 
 	while (!tds_display_get_close(disp)) {
