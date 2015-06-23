@@ -9,4 +9,5 @@
 #include "memory.h"
 
 #include "display.h"
-#include "script.h"
+#include "config.h"
+#include "engine.h"

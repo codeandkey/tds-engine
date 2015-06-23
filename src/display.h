@@ -1,5 +1,6 @@
 #pragma once
 
+#include <GLXW/glxw.h>
 #include <GLFW/glfw3.h>
 
 struct tds_display_desc {

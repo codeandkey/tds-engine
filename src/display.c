@@ -20,6 +20,12 @@ struct tds_display* tds_display_create(struct tds_display_desc desc) {
 	}
 
 	glfwMakeContextCurrent(output->win_handle);
+
+	if (glxwInit()) {
+		tds_logf(TDS_LOG_CRITICAL, "Failed to load GLXW.\n");
+		return NULL;
+	}
+
 	return output;
 }
 

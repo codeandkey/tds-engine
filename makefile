@@ -1,7 +1,7 @@
 CC = gcc
 CC_LINK = g++
-CFLAGS = -std=c99 -Wall
-LDFLAGS = -lm -ldl -lglfw -lGL -llua
+CFLAGS = -std=c99 -Wall -g
+LDFLAGS = -lm -ldl -lglfw -lGL
 
 SOURCES = $(wildcard src/*.c)
 OBJECTS = $(SOURCES:.c=.o)
