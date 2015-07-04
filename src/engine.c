@@ -33,6 +33,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_logf(TDS_LOG_MESSAGE, "Created display.\n");
 	/* End display subsystem */
 
+	output->tc_handle = tds_texture_cache_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized texture cache.\n");
+
 	/* Free configs */
 	tds_config_free(conf);
 
@@ -44,6 +47,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_logf(TDS_LOG_MESSAGE, "Freeing engine structure and subsystems.\n");
 
 	tds_display_free(ptr->display_handle);
+	tds_texture_cache_free(ptr->tc_handle);
 	tds_free(ptr);
 }
 

@@ -26,7 +26,7 @@ void tds_texture_cache_free(struct tds_texture_cache* ptr) {
 	tds_free(ptr);
 }
 
-struct tds_texture* tds_texture_cache_get(struct tds_texture_cache* ptr, const char* texture_name) {
+struct tds_texture* tds_texture_cache_get(struct tds_texture_cache* ptr, const char* texture_name, int tile_x, int tile_y) {
 	struct tds_texture_cache_link* current = ptr->head;
 
 	while (current) {
@@ -37,7 +37,7 @@ struct tds_texture* tds_texture_cache_get(struct tds_texture_cache* ptr, const c
 		current = current->next;
 	}
 
-	tds_logf(TDS_LOG_DEBUG, "%s not found in texture cache, loading..", texture_name);
+	tds_logf(TDS_LOG_DEBUG, "%s not found in texture cache, loading..\n", texture_name);
 	current = tds_malloc(sizeof(struct tds_texture_cache_link));
 
 	current->prev = ptr->tail;
@@ -47,12 +47,12 @@ struct tds_texture* tds_texture_cache_get(struct tds_texture_cache* ptr, const c
 		ptr->head = current;
 	}
 
-	if (!ptr->tail) {
-		ptr->tail = current;
-	} else {
+	if (ptr->tail) {
 		ptr->tail->next = current;
 	}
 
-	current->data = tds_texture_create(texture_name);
+	ptr->tail = current;
+
+	current->data = tds_texture_create(texture_name, tile_x, tile_y);
 	return current->data;
 }

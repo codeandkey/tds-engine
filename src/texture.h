@@ -11,5 +11,5 @@ struct tds_texture {
 	unsigned int frame_count;
 };
 
-struct tds_texture* tds_texture_create(const char* filename); /* Use tds_texture_cache_get for game purposes. */
+struct tds_texture* tds_texture_create(const char* filename, int tile_x, int tile_y); /* Use tds_texture_cache_get for game purposes. */
 void tds_texture_free(struct tds_texture* ptr);
