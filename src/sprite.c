@@ -9,7 +9,7 @@
 /* Inefficient as it may seem, we prepare a huge VBO with different texcoords for each texture frame. */
 /* Rendering a gigantic VBO with variable offsets is way faster than switching textures each frame. */
 
-struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, float height, float r, float g, float b, float a) {
+struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, float height) {
 	return NULL;
 	struct tds_sprite* output = tds_malloc(sizeof(struct tds_sprite));
 
@@ -17,16 +17,18 @@ struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, f
 	output->height = height;
 	output->texture = texture;
 
+	output->r = output->g = output->b = output->a = 1.0f;
+
 	struct tds_vertex* verts = tds_malloc(sizeof(struct tds_vertex) * texture->frame_count * 6);
 
 	for (int i = 0; i < texture->frame_count; ++i) {
 		struct tds_vertex tri[6] = {
-			{-width / 2.0f, -height / 2.0f, 0.0f, texture->frame_list[i].left, texture->frame_list[i].bottom, r, g, b, a},
-			{width / 2.0f, -height / 2.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom, r, g, b, a},
-			{-width / 2.0f, height / 2.0f, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top, r, g, b, a},
-			{-width / 2.0f, height / 2.0f, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top, r, g, b, a},
-			{width / 2.0f, -height / 2.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom, r, g, b, a},
-			{width / 2.0f, height / 2.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].top, r, g, b, a}
+			{-width / 2.0f, -height / 2.0f, 0.0f, texture->frame_list[i].left, texture->frame_list[i].bottom},
+			{width / 2.0f, -height / 2.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom},
+			{-width / 2.0f, height / 2.0f, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top},
+			{-width / 2.0f, height / 2.0f, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top},
+			{width / 2.0f, -height / 2.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom},
+			{width / 2.0f, height / 2.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].top}
 		};
 
 		memcpy(verts + i * 6, tri, sizeof(struct tds_vertex) * 6);

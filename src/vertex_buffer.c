@@ -21,9 +21,6 @@ struct tds_vertex_buffer* tds_vertex_buffer_create(struct tds_vertex* verts, int
 	glEnableVertexAttribArray(1); /* texture coordinates */
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct tds_vertex), (void*) (sizeof(float) * 3));
 
-	glEnableVertexAttribArray(2); /* color */
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(struct tds_vertex), (void*) (sizeof(float) * 5));
-
 	output->vertex_count = count;
 	output->render_mode = render_mode;
 
