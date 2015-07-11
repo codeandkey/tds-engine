@@ -16,7 +16,6 @@
  */
 
 struct tds_sprite {
-	float r, g, b, a;
 	float center_x, center_y;
 	float offset_x, offset_y, offset_angle;
 	float offset_scale;
@@ -40,4 +39,3 @@ void tds_sprite_free(struct tds_sprite* ptr);
  */
 
 float* tds_sprite_get_transform(struct tds_sprite* ptr);
-unsigned int tds_sprite_get_offset(struct tds_sprite* ptr);

@@ -4,6 +4,7 @@
 
 #include "display.h"
 #include "texture_cache.h"
+#include "render.h"
 
 struct tds_engine_desc {
 	const char* config_filename;
@@ -21,6 +22,8 @@ struct tds_engine {
 	struct tds_engine_state state;
 
 	struct tds_display* display_handle;
+	struct tds_render* render_handle;
+	struct tds_camera* camera_handle;
 	struct tds_texture_cache* tc_handle;
 	struct tds_handle_manager* object_buffer;
 };

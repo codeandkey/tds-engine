@@ -59,6 +59,12 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->object_buffer = tds_handle_manager_create(1024);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized object buffer.\n");
 
+	output->camera_handle = tds_camera_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized camera system.\n");
+
+	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
+	tds_logf(TDS_LOG_MESSAGE, "Initialized render system.\n");
+
 	/* Free configs */
 	tds_config_free(conf);
 
@@ -71,6 +77,8 @@ void tds_engine_free(struct tds_engine* ptr) {
 
 	tds_engine_flush_objects(ptr);
 
+	tds_render_free(ptr->render_handle);
+	tds_camera_free(ptr->camera_handle);
 	tds_display_free(ptr->display_handle);
 	tds_texture_cache_free(ptr->tc_handle);
 	tds_handle_manager_free(ptr->object_buffer);
@@ -84,7 +92,10 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 	{
 		/* Test code to do stuff. */
-		struct tds_object* obj = tds_object_create(&tds_obj_test_type, ptr->object_buffer, NULL, 0.0f, 0.0f, 0.0f, NULL);
+		struct tds_sprite* spr = tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/test.png", 32, 32), 1.0f, 1.0f);
+
+		tds_logf(TDS_LOG_MESSAGE, "sprite : %x\n", (unsigned long) spr);
+		struct tds_object* obj = tds_object_create(&tds_obj_test_type, ptr->object_buffer, spr, 0.0f, 0.0f, 0.0f, NULL);
 
 		/* Not to be in final game. */
 	}
@@ -105,7 +116,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 		dt_point = tds_clock_get_point();
 		accumulator += delta_ms;
 
-		tds_logf(TDS_LOG_MESSAGE, "frame : accum = %f ms, delta_ms = %f ms, timestep = %f\n", accumulator, delta_ms, timestep_ms);
+		// tds_logf(TDS_LOG_MESSAGE, "frame : accum = %f ms, delta_ms = %f ms, timestep = %f\n", accumulator, delta_ms, timestep_ms);
 
 		tds_display_update(ptr->display_handle);
 
@@ -136,6 +147,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 			target->func_draw(target);
 		}
 
+		tds_render_clear(ptr->render_handle);
+		tds_render_draw(ptr->render_handle);
 		tds_display_swap(ptr->display_handle);
 	}
 

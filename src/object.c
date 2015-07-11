@@ -20,6 +20,9 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->y = y;
 	output->z = z;
 	output->angle = 0.0f;
+	output->layer = 0; /* Layers are rendered with lower numbers on bottom, higher numbers on top. */
+
+	output->r = output->g = output->b = output->a = 1.0f;
 
 	output->visible = (sprite != 0);
 	output->sprite_handle = sprite;
@@ -36,7 +39,7 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 		(output->func_init)(output);
 	}
 
-	tds_logf(TDS_LOG_MESSAGE, "created object with handle %d\n", output->object_handle);
+	tds_logf(TDS_LOG_MESSAGE, "created object with handle %d, sprite %X\n", output->object_handle, (unsigned long) sprite);
 
 	return output;
 }
@@ -67,6 +70,17 @@ void tds_object_send_msg(struct tds_object* ptr, int handle, int msg, void* data
 	target->func_msg(target, ptr, msg, data);
 }
 
-void tds_object_get_transform(struct tds_object* ptr) {
+float* tds_object_get_transform(struct tds_object* ptr) {
+	mat4x4 id, pos, rot;
+
 	mat4x4_identity(ptr->transform);
+	mat4x4_identity(id);
+
+	mat4x4_translate(pos, ptr->x, ptr->y, ptr->z);
+	mat4x4_rotate_Z(rot, id, ptr->angle);
+
+	mat4x4_mul(ptr->transform, ptr->transform, rot);
+	mat4x4_mul(ptr->transform, ptr->transform, pos);
+
+	return (float*) ptr->transform;
 };

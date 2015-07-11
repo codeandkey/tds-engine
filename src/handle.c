@@ -11,6 +11,7 @@ struct tds_handle_manager* tds_handle_manager_create(unsigned int buffer_size) {
 	output->buffer_size = buffer_size;
 	output->buffer = tds_malloc(sizeof(struct tds_handle_manager_entry) * buffer_size);
 	output->current_handle = 1;
+	output->max_index = 0;
 
 	for (int i = 0; i < output->buffer_size; ++i) {
 		output->buffer[i].index = 0;

@@ -10,14 +10,11 @@
 /* Rendering a gigantic VBO with variable offsets is way faster than switching textures each frame. */
 
 struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, float height) {
-	return NULL;
 	struct tds_sprite* output = tds_malloc(sizeof(struct tds_sprite));
 
 	output->width = width;
 	output->height = height;
 	output->texture = texture;
-
-	output->r = output->g = output->b = output->a = 1.0f;
 
 	struct tds_vertex* verts = tds_malloc(sizeof(struct tds_vertex) * texture->frame_count * 6);
 
@@ -39,6 +36,7 @@ struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, f
 
 	/* When rendering, use the vertex offset 6 * [frame ID, starting from 0] */
 
+	tds_logf(TDS_LOG_MESSAGE, "Created sprite, returning %x\n", (unsigned long) output);
 	return output;
 }
 
@@ -66,8 +64,4 @@ float* tds_sprite_get_transform(struct tds_sprite* ptr) {
 
 	tds_logf(TDS_LOG_DEBUG, "Discarding transformation matrix and using identity for debugging..\n");
 	return (float*) ptr->mat_id; //mat_transform;
-}
-
-unsigned int tds_sprite_get_offset(struct tds_sprite* ptr) {
-	return ptr->current_frame * 6;
 }

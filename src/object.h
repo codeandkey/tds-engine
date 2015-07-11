@@ -8,8 +8,8 @@ struct tds_object {
 	struct tds_sprite* sprite_handle;
 	const char* type_name;
 
-	int visible;
-	float x, y, z, angle;
+	int visible, layer;
+	float x, y, z, angle, r, g, b, a;
 
 	mat4x4 transform;
 
