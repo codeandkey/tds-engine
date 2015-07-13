@@ -16,6 +16,8 @@
 
 struct tds_engine* tds_engine_global = NULL;
 
+static void _tds_engine_load_sprites(struct tds_engine* ptr);
+
 struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	if (tds_engine_global) {
 		tds_logf(TDS_LOG_CRITICAL, "Only one engine can exist!\n");
@@ -56,14 +58,21 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->tc_handle = tds_texture_cache_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized texture cache.\n");
 
+	output->sc_handle = tds_sprite_cache_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized sprite cache.\n");
+
 	output->object_buffer = tds_handle_manager_create(1024);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized object buffer.\n");
 
-	output->camera_handle = tds_camera_create();
+	output->camera_handle = tds_camera_create(output->display_handle);
+	tds_camera_set(output->camera_handle, 10.0f, 0.0f, 1.0f);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized camera system.\n");
 
 	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized render system.\n");
+
+	_tds_engine_load_sprites(output);
+	tds_logf(TDS_LOG_MESSAGE, "Loaded sprites.\n");
 
 	/* Free configs */
 	tds_config_free(conf);
@@ -81,6 +90,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_camera_free(ptr->camera_handle);
 	tds_display_free(ptr->display_handle);
 	tds_texture_cache_free(ptr->tc_handle);
+	tds_sprite_cache_free(ptr->sc_handle);
 	tds_handle_manager_free(ptr->object_buffer);
 	tds_free(ptr);
 }
@@ -92,10 +102,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 	{
 		/* Test code to do stuff. */
-		struct tds_sprite* spr = tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/test.png", 32, 32), 1.0f, 1.0f);
-
-		tds_logf(TDS_LOG_MESSAGE, "sprite : %x\n", (unsigned long) spr);
-		struct tds_object* obj = tds_object_create(&tds_obj_test_type, ptr->object_buffer, spr, 0.0f, 0.0f, 0.0f, NULL);
+		tds_object_create(&tds_obj_test_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 
 		/* Not to be in final game. */
 	}
@@ -171,4 +178,8 @@ struct tds_object* tds_engine_get_object_by_type(struct tds_engine* ptr, const c
 	}
 
 	return NULL;
+}
+
+void _tds_engine_load_sprites(struct tds_engine* ptr) {
+	tds_sprite_cache_add(ptr->sc_handle, "player", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/test.png", 32, 32), 1.0f, 1.0f));
 }

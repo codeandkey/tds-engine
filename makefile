@@ -1,5 +1,4 @@
 CC = gcc
-CC_LINK = g++
 CFLAGS = -std=gnu99 -Wall -g
 LDFLAGS = -lm -ldl -lglfw -lGL -lSOIL -lrt
 

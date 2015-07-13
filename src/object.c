@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_handle_manager* hmgr, struct tds_sprite* sprite, float x, float y, float z, void* data) {
+struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_handle_manager* hmgr, struct tds_sprite_cache* smgr, float x, float y, float z, void* data) {
 	struct tds_object* output = tds_malloc(sizeof(struct tds_object));
 
 	output->type_name = type->type_name;
@@ -24,12 +24,18 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 
 	output->r = output->g = output->b = output->a = 1.0f;
 
-	output->visible = (sprite != 0);
-	output->sprite_handle = sprite;
+	output->visible = (output->sprite_handle != NULL);
+	output->sprite_handle = type->default_sprite ? tds_sprite_cache_get(smgr, type->default_sprite) : NULL;
 
 	output->object_data = type->data_size ? tds_malloc(type->data_size) : NULL;
 	output->object_handle = tds_handle_manager_get_new(hmgr, output);
 	output->hmgr = hmgr;
+	output->current_frame = 0;
+
+	output->anim_lastframe = tds_clock_get_point();
+	output->anim_oneshot = 0;
+	output->anim_speed_offset = 0.0f;
+	output->anim_running = (output->sprite_handle != NULL);
 
 	if (data && output->object_data) {
 		memcpy(output->object_data, data, type->data_size);
@@ -39,7 +45,7 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 		(output->func_init)(output);
 	}
 
-	tds_logf(TDS_LOG_MESSAGE, "created object with handle %d, sprite %X\n", output->object_handle, (unsigned long) sprite);
+	tds_logf(TDS_LOG_MESSAGE, "created object with handle %d, sprite %X\n", output->object_handle, (unsigned long) output->sprite_handle);
 
 	return output;
 }
@@ -62,6 +68,7 @@ void tds_object_free(struct tds_object* ptr) {
 
 void tds_object_set_sprite(struct tds_object* ptr, struct tds_sprite* sprite) {
 	ptr->sprite_handle = sprite;
+	ptr->current_frame = 0;
 }
 
 void tds_object_send_msg(struct tds_object* ptr, int handle, int msg, void* data) {
@@ -84,3 +91,48 @@ float* tds_object_get_transform(struct tds_object* ptr) {
 
 	return (float*) ptr->transform;
 };
+
+void tds_object_anim_update(struct tds_object* ptr) {
+	if (!ptr->anim_running || !ptr->sprite_handle) {
+		return;
+	}
+
+	double current_time = tds_clock_get_ms(ptr->anim_lastframe);
+	double interval = (double) ptr->sprite_handle->animation_rate + ptr->anim_speed_offset;
+
+	if (current_time >= interval) {
+		ptr->anim_lastframe = tds_clock_get_point();
+
+		if (ptr->current_frame == ptr->sprite_handle->texture->frame_count - 1) {
+			if (ptr->anim_oneshot) {
+				ptr->anim_running = 0;
+			} else {
+				ptr->current_frame = 0;
+			}
+		} else {
+			++ptr->current_frame;
+		}
+	}
+}
+
+void tds_object_anim_start(struct tds_object* ptr) {
+	ptr->current_frame = 0;
+	ptr->anim_running = 1;
+	ptr->anim_lastframe = tds_clock_get_point();
+}
+
+void tds_object_anim_pause(struct tds_object* ptr) {
+	ptr->anim_running = !ptr->anim_running;
+}
+
+void tds_object_anim_setframe(struct tds_object* ptr, int frame) {
+	ptr->current_frame = frame;
+}
+
+int tds_object_anim_oneshot_finished(struct tds_object* ptr) {
+	if (!ptr->sprite_handle) {
+		return 0;
+	}
+
+	return (ptr->anim_oneshot && ptr->current_frame == ptr->sprite_handle->texture->frame_count - 1 && !ptr->anim_running);
+}

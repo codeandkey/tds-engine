@@ -14,7 +14,7 @@ struct tds_render {
 	struct tds_handle_manager* object_buffer;
 
 	unsigned int render_vs, render_fs, render_program;
-	int uniform_texture, uniform_color;
+	int uniform_texture, uniform_color, uniform_transform;
 };
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr);

@@ -13,6 +13,7 @@ struct tds_display* tds_display_create(struct tds_display_desc desc) {
 	}
 
 	output->win_handle = glfwCreateWindow(desc.width, desc.height, "TDS", desc.fs ? glfwGetPrimaryMonitor() : NULL, NULL);
+	output->desc = desc;
 
 	if (!output->win_handle) {
 		tds_logf(TDS_LOG_CRITICAL, "Failed to initialize GLFW window.\n");

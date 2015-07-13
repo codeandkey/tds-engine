@@ -15,6 +15,7 @@ struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, f
 	output->width = width;
 	output->height = height;
 	output->texture = texture;
+	output->animation_rate = 1000.0f;
 
 	struct tds_vertex* verts = tds_malloc(sizeof(struct tds_vertex) * texture->frame_count * 6);
 
@@ -36,12 +37,10 @@ struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, f
 
 	/* When rendering, use the vertex offset 6 * [frame ID, starting from 0] */
 
-	tds_logf(TDS_LOG_MESSAGE, "Created sprite, returning %x\n", (unsigned long) output);
 	return output;
 }
 
 void tds_sprite_free(struct tds_sprite* ptr) {
-	return;
 	tds_vertex_buffer_free(ptr->vbo_handle);
 	tds_free(ptr);
 }

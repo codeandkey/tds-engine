@@ -60,7 +60,7 @@ void tds_render_draw(struct tds_render* ptr) {
 		struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[i].data;
 		object_rendered[i] = 0;
 
-		if (!target) {
+		if (!target || !target->visible || !target->sprite_handle) {
 			object_rendered[i] = 1;
 			continue;
 		}
@@ -91,14 +91,18 @@ void tds_render_draw(struct tds_render* ptr) {
 }
 
 void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int layer) {
-	tds_logf(TDS_LOG_MESSAGE, "rendering %X on layer %d\n", (unsigned long) obj, layer);
 	/* Grab the sprite VBO, compose the render transform, and send the data to the shaders. */
 
+	mat4x4 transform;
+	mat4x4_dup(transform, ptr->camera_handle->mat_transform);
+
 	glUniform4f(ptr->uniform_color, obj->r, obj->g, obj->b, obj->a);
+	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *transform);
+
 	glBindTexture(GL_TEXTURE_2D, obj->sprite_handle->texture->gl_id);
 
 	glBindVertexArray(obj->sprite_handle->vbo_handle->vao);
-	glDrawArrays(obj->sprite_handle->vbo_handle->render_mode, obj->sprite_handle->current_frame * 6, 6);
+	glDrawArrays(obj->sprite_handle->vbo_handle->render_mode, obj->current_frame * 6, 6);
 }
 
 int _tds_load_shaders(struct tds_render* ptr, const char* vs, const char* fs) {
@@ -158,17 +162,26 @@ int _tds_load_shaders(struct tds_render* ptr, const char* vs, const char* fs) {
 
 	ptr->uniform_texture = glGetUniformLocation(ptr->render_program, "tds_texture");
 	ptr->uniform_color = glGetUniformLocation(ptr->render_program, "tds_color");
+	ptr->uniform_transform = glGetUniformLocation(ptr->render_program, "tds_transform");
 
 	if (ptr->uniform_texture < 0) {
 		tds_logf(TDS_LOG_WARNING, "Texture uniform not found in shader.\n");
 	}
 
-	if (ptr->uniform_color< 0) {
+	if (ptr->uniform_color < 0) {
 		tds_logf(TDS_LOG_WARNING, "Color uniform not found in shader.\n");
+	}
+
+	if (ptr->uniform_transform < 0) {
+		tds_logf(TDS_LOG_WARNING, "Transform uniform not found in shader.\n");
 	}
 
 	glUniform1i(ptr->uniform_texture, 0);
 	glUniform4f(ptr->uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+
+	mat4x4 identity;
+	mat4x4_identity(identity);
+	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *identity);
 
 	return 1;
 }

@@ -20,8 +20,7 @@ struct tds_sprite {
 	float offset_x, offset_y, offset_angle;
 	float offset_scale;
 	float width, height;
-	float animation_rate; /* How many frames per second. */
-	unsigned int current_frame;
+	float animation_rate; /* Delay in ms */
 
 	mat4x4 mat_transform, mat_id;
 
