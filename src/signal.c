@@ -4,6 +4,8 @@
 #include <signal.h>
 #include <fenv.h>
 
+extern int feenableexcept(int flags);
+
 void tds_signal_segv(int p) {
 	tds_logf(TDS_LOG_CRITICAL, "Received SIGSEGV signal, terminating immediately.\n");
 }

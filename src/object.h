@@ -49,12 +49,11 @@ void tds_object_free(struct tds_object* ptr);
 
 void tds_object_set_sprite(struct tds_object* ptr, struct tds_sprite* sprite);
 void tds_object_send_msg(struct tds_object* ptr, int handle, int msg, void* data);
-float* tds_object_get_transform(struct tds_object* ptr);
+vec4* tds_object_get_transform(struct tds_object* ptr);
 
 void tds_object_anim_update(struct tds_object* ptr);
 void tds_object_anim_start(struct tds_object* ptr);
 void tds_object_anim_pause(struct tds_object* ptr);
-void tds_object_anim_setframe(struct tds_object* ptr, int frame);
 
 int tds_object_anim_oneshot_finished(struct tds_object* ptr);
 

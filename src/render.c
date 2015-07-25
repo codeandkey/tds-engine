@@ -24,7 +24,7 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 
 	_tds_load_shaders(output, TDS_RENDER_SHADER_WORLD_VS, TDS_RENDER_SHADER_WORLD_FS);
 
-	glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
+	glClearColor(0.1f, 0.1f, 0.1f, 0.0f);
 	glDisable(GL_DEPTH_TEST);
 
 	glActiveTexture(GL_TEXTURE0);
@@ -60,7 +60,11 @@ void tds_render_draw(struct tds_render* ptr) {
 		struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[i].data;
 		object_rendered[i] = 0;
 
-		if (!target || !target->visible || !target->sprite_handle) {
+		if (!target) {
+			continue;
+		}
+
+		if (!target->visible || !target->sprite_handle) {
 			object_rendered[i] = 1;
 			continue;
 		}
@@ -80,6 +84,10 @@ void tds_render_draw(struct tds_render* ptr) {
 
 			struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[i].data;
 
+			if (!target) {
+				continue;
+			}
+
 			if (target->layer == i) {
 				object_rendered[j] = 1;
 				_tds_render_object(ptr, target, i);
@@ -93,8 +101,12 @@ void tds_render_draw(struct tds_render* ptr) {
 void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int layer) {
 	/* Grab the sprite VBO, compose the render transform, and send the data to the shaders. */
 
-	mat4x4 transform;
-	mat4x4_dup(transform, ptr->camera_handle->mat_transform);
+	vec4* sprite_transform = tds_sprite_get_transform(obj->sprite_handle);
+	vec4* object_transform = tds_object_get_transform(obj);
+
+	mat4x4 transform, obj_transform_full;
+	mat4x4_mul(obj_transform_full, object_transform, sprite_transform);
+	mat4x4_mul(transform, ptr->camera_handle->mat_transform, obj_transform_full);
 
 	glUniform4f(ptr->uniform_color, obj->r, obj->g, obj->b, obj->a);
 	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *transform);

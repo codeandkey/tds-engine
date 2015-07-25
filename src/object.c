@@ -24,8 +24,8 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 
 	output->r = output->g = output->b = output->a = 1.0f;
 
-	output->visible = (output->sprite_handle != NULL);
 	output->sprite_handle = type->default_sprite ? tds_sprite_cache_get(smgr, type->default_sprite) : NULL;
+	output->visible = (output->sprite_handle != NULL);
 
 	output->object_data = type->data_size ? tds_malloc(type->data_size) : NULL;
 	output->object_handle = tds_handle_manager_get_new(hmgr, output);
@@ -77,7 +77,7 @@ void tds_object_send_msg(struct tds_object* ptr, int handle, int msg, void* data
 	target->func_msg(target, ptr, msg, data);
 }
 
-float* tds_object_get_transform(struct tds_object* ptr) {
+vec4* tds_object_get_transform(struct tds_object* ptr) {
 	mat4x4 id, pos, rot;
 
 	mat4x4_identity(ptr->transform);
@@ -86,10 +86,9 @@ float* tds_object_get_transform(struct tds_object* ptr) {
 	mat4x4_translate(pos, ptr->x, ptr->y, ptr->z);
 	mat4x4_rotate_Z(rot, id, ptr->angle);
 
-	mat4x4_mul(ptr->transform, ptr->transform, rot);
-	mat4x4_mul(ptr->transform, ptr->transform, pos);
+	mat4x4_mul(ptr->transform, pos, rot);
 
-	return (float*) ptr->transform;
+	return ptr->transform;
 };
 
 void tds_object_anim_update(struct tds_object* ptr) {

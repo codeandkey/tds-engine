@@ -5,7 +5,7 @@
 #include <string.h>
 
 static struct tds_object_type* _tds_object_type_list[] = {
-	&tds_obj_test_type
+	&tds_obj_system_type
 };
 
 struct tds_object_type** tds_object_type_get_list(void) {

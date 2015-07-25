@@ -2,7 +2,7 @@
 
 #include "../object.h"
 
-#include "test.h"
+#include "system.h"
 
 struct tds_object_type** tds_object_type_get_list(void);
 int tds_object_type_get_count(void);

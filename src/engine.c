@@ -8,7 +8,6 @@
 #include "log.h"
 
 #include "objects/all.h"
-#include "objects/test.h"
 
 #include <string.h>
 
@@ -33,7 +32,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	output->desc = desc;
 
-	output->state.mapname = "none";
+	output->state.mapname = (char*) desc.map_filename;
 	output->state.fps = 0.0f;
 	output->state.entity_count = 0;
 
@@ -71,6 +70,15 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized render system.\n");
 
+	output->input_handle = tds_input_create(output->display_handle);
+	tds_logf(TDS_LOG_MESSAGE, "Initialized input system.\n");
+
+	output->input_map_handle = tds_input_map_create(output->input_handle);
+	tds_logf(TDS_LOG_MESSAGE, "Initialized input mapping system.\n");
+
+	output->key_map_handle = tds_key_map_create(desc.game_input, desc.game_input_size);
+	tds_logf(TDS_LOG_MESSAGE, "Initialized key mapping system.\n");
+
 	_tds_engine_load_sprites(output);
 	tds_logf(TDS_LOG_MESSAGE, "Loaded sprites.\n");
 
@@ -86,6 +94,9 @@ void tds_engine_free(struct tds_engine* ptr) {
 
 	tds_engine_flush_objects(ptr);
 
+	tds_input_free(ptr->input_handle);
+	tds_input_map_free(ptr->input_map_handle);
+	tds_key_map_free(ptr->key_map_handle);
 	tds_render_free(ptr->render_handle);
 	tds_camera_free(ptr->camera_handle);
 	tds_display_free(ptr->display_handle);
@@ -96,13 +107,13 @@ void tds_engine_free(struct tds_engine* ptr) {
 }
 
 void tds_engine_run(struct tds_engine* ptr) {
-	int running = 1;
+	int running = ptr->run_flag = 1;
 
 	tds_logf(TDS_LOG_MESSAGE, "Starting engine mainloop.\n");
 
 	{
 		/* Test code to do stuff. */
-		tds_object_create(&tds_obj_test_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
+		tds_object_create(&tds_obj_system_type, ptr->object_buffer, ptr->sc_handle, 1.0f, 0.0f, 0.0f, NULL);
 
 		/* Not to be in final game. */
 	}
@@ -116,7 +127,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 	double accumulator = 0.0f;
 	double timestep_ms = 1000.0f / (double) TDS_ENGINE_TIMESTEP;
 
-	while (running) {
+	while (running && ptr->run_flag) {
 		running &= !tds_display_get_close(ptr->display_handle);
 
 		double delta_ms = tds_clock_get_ms(dt_point);
@@ -126,6 +137,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 		// tds_logf(TDS_LOG_MESSAGE, "frame : accum = %f ms, delta_ms = %f ms, timestep = %f\n", accumulator, delta_ms, timestep_ms);
 
 		tds_display_update(ptr->display_handle);
+		tds_input_update(ptr->input_handle);
 
 		while (accumulator >= timestep_ms) {
 			accumulator -= timestep_ms;
@@ -178,6 +190,10 @@ struct tds_object* tds_engine_get_object_by_type(struct tds_engine* ptr, const c
 	}
 
 	return NULL;
+}
+
+void tds_engine_terminate(struct tds_engine* ptr) {
+	ptr->run_flag = 0;
 }
 
 void _tds_engine_load_sprites(struct tds_engine* ptr) {

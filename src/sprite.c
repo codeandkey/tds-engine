@@ -12,6 +12,8 @@
 struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, float height) {
 	struct tds_sprite* output = tds_malloc(sizeof(struct tds_sprite));
 
+	memset(output, 0, sizeof(struct tds_sprite));
+
 	output->width = width;
 	output->height = height;
 	output->texture = texture;
@@ -45,10 +47,11 @@ void tds_sprite_free(struct tds_sprite* ptr) {
 	tds_free(ptr);
 }
 
-float* tds_sprite_get_transform(struct tds_sprite* ptr) {
+vec4* tds_sprite_get_transform(struct tds_sprite* ptr) {
 	/* Sprites have several transformations, including position, rotations, and scaling */
 
 	mat4x4 pos, rot, scale;
+	mat4x4 rotscale;
 
 	mat4x4_identity(ptr->mat_transform);
 	mat4x4_identity(ptr->mat_id);
@@ -57,10 +60,8 @@ float* tds_sprite_get_transform(struct tds_sprite* ptr) {
 	mat4x4_rotate_Z(rot, ptr->mat_id, ptr->offset_angle);
 	mat4x4_scale(scale, ptr->mat_id, ptr->offset_scale);
 
-	mat4x4_mul(ptr->mat_transform, ptr->mat_transform, rot);
-	mat4x4_mul(ptr->mat_transform, ptr->mat_transform, scale);
-	mat4x4_mul(ptr->mat_transform, ptr->mat_transform, pos);
+	mat4x4_mul(rotscale, ptr->mat_transform, rot);
+	mat4x4_mul(ptr->mat_transform, rotscale, pos);
 
-	tds_logf(TDS_LOG_DEBUG, "Discarding transformation matrix and using identity for debugging..\n");
-	return (float*) ptr->mat_id; //mat_transform;
+	return ptr->mat_transform;
 }

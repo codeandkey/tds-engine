@@ -37,4 +37,4 @@ void tds_sprite_free(struct tds_sprite* ptr);
  * Changing the sprite should be done by manipulating the members.
  */
 
-float* tds_sprite_get_transform(struct tds_sprite* ptr);
+vec4* tds_sprite_get_transform(struct tds_sprite* ptr);
