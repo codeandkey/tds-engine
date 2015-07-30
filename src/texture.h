@@ -1,0 +1,15 @@
+#pragma once
+
+struct tds_texture_frame {
+	float left, right, bottom, top;
+};
+
+struct tds_texture {
+	const char* filename;
+	unsigned int gl_id;
+	struct tds_texture_frame* frame_list;
+	unsigned int frame_count;
+};
+
+struct tds_texture* tds_texture_create(const char* filename, int tile_x, int tile_y); /* Use tds_texture_cache_get for game purposes. */
+void tds_texture_free(struct tds_texture* ptr);
