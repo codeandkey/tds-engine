@@ -1,9 +1,17 @@
 #include "game_input.h"
 
 int TDS_GAME_INPUT_QUIT = 0;
+int TDS_GAME_INPUT_MOVE_LEFT = 1;
+int TDS_GAME_INPUT_MOVE_RIGHT = 2;
+int TDS_GAME_INPUT_MOVE_UP = 3;
+int TDS_GAME_INPUT_MOVE_DOWN = 4;
 
 struct tds_key_map_template _tds_game_input[] = {
-	{"quit", "escape"}
+	{"quit", "escape"},
+	{"left", "A"},
+	{"right", "D"},
+	{"up", "W"},
+	{"down", "S"},
 };
 
 struct tds_key_map_template* tds_get_game_input(void) {
