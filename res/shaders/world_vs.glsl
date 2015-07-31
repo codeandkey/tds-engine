@@ -1,4 +1,4 @@
-#version 150
+#version 130
 
 in vec3 v_position;
 in vec2 v_texcoord;
