@@ -1,5 +1,6 @@
 #include "wall.h"
 #include "../engine.h"
+#include "../log.h"
 
 struct tds_object_type tds_obj_wall_type = {
 	"wall",

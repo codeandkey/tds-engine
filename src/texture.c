@@ -38,7 +38,7 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 
 	for (int x = 0; x < tile_count_w; ++x) {
 		for (int y = tile_count_h - 1; y >= 0; --y) {
-			struct tds_texture_frame* target_frame = output->frame_list + x + y * tile_count_w;
+			struct tds_texture_frame* target_frame = output->frame_list + x + (tile_count_h - (y + 1)) * tile_count_w;
 
 			target_frame->left = (float) x / (float) tile_count_w;
 			target_frame->right = (float) (x + 1) / (float) tile_count_w;
