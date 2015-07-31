@@ -73,13 +73,50 @@ void tds_obj_player_update(struct tds_object* ptr) {
 		ptr->anim_running = 0;
 	}
 
-	/* Method of collision : test future X collision, future Y collision, future X + Y collision, move accordingly */
+	/* Method of collision : test X collision, Y collision, move accordingly */
 	struct tds_engine_object_list wall_list = tds_engine_get_object_list_by_type(tds_engine_global, "wall");
+	int will_collide_x = 0, will_collide_y = 0, will_collide_xy = 0;
 
+	float px = ptr->x, py = ptr->y;
 
-	ptr->x += data->xspeed;
+	ptr->x = px + data->xspeed;
+	ptr->y = py;
 
-	ptr->y += data->yspeed;
+	for (int i = 0; i < wall_list.size; ++i) {
+		will_collide_x |= tds_collision_get_overlap(ptr, wall_list.buffer[i]);
+	}
+
+	ptr->x = px;
+	ptr->y = py + data->yspeed;
+
+	for (int i = 0; i < wall_list.size; ++i) {
+		will_collide_y |= tds_collision_get_overlap(ptr, wall_list.buffer[i]);
+	}
+
+	ptr->x = px + data->xspeed;
+	ptr->y = py + data->yspeed;
+
+	for (int i = 0; i < wall_list.size; ++i) {
+		will_collide_xy |= tds_collision_get_overlap(ptr, wall_list.buffer[i]);
+	}
+
+	if (will_collide_xy && !will_collide_x && !will_collide_y) {
+		will_collide_x = will_collide_y = 1;
+	}
+
+	if (will_collide_x) {
+		data->xspeed = 0.0f;
+		ptr->x = px;
+	} else {
+		ptr->x = px + data->xspeed;
+	}
+
+	if (will_collide_y) {
+		data->yspeed = 0.0f;
+		ptr->y = py;
+	} else {
+		ptr->y = py + data->yspeed;
+	}
 }
 
 void tds_obj_player_draw(struct tds_object* ptr) {

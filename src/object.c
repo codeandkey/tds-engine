@@ -37,6 +37,11 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->anim_speed_offset = 0.0f;
 	output->anim_running = (output->sprite_handle != NULL);
 
+	if (output->sprite_handle) {
+		output->cbox_width = output->sprite_handle->width;
+		output->cbox_height = output->sprite_handle->height;
+	}
+
 	if (data && output->object_data) {
 		memcpy(output->object_data, data, type->data_size);
 	}

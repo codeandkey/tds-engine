@@ -125,7 +125,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 		tds_object_create(&tds_obj_player_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 		tds_object_create(&tds_obj_player_legs_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 		tds_object_create(&tds_obj_cursor_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
-		tds_object_create(&tds_obj_wall_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
+		tds_object_create(&tds_obj_wall_type, ptr->object_buffer, ptr->sc_handle, 3.0f, 0.0f, 0.0f, NULL);
 
 		/* Not to be in final game. */
 	}
