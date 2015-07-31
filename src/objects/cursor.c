@@ -19,7 +19,7 @@ void tds_obj_cursor_destroy(struct tds_object* ptr) {
 }
 
 void tds_obj_cursor_update(struct tds_object* ptr) {
-	const float acceleration = 1.0f / 1000.0f;
+	const float acceleration = 1.0f / 100.0f;
 
 	ptr->x += acceleration * (tds_engine_global->input_handle->mx_last - tds_engine_global->input_handle->mx);
 	ptr->y += acceleration * (tds_engine_global->input_handle->my - tds_engine_global->input_handle->my_last);

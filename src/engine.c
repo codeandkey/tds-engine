@@ -235,6 +235,6 @@ void tds_engine_save_map(struct tds_engine* ptr, char* mapname) {
 }
 
 void _tds_engine_load_sprites(struct tds_engine* ptr) {
-	tds_sprite_cache_add(ptr->sc_handle, "player", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player.png", 32, 32), 1.0f, 1.0f));
-	tds_sprite_cache_add(ptr->sc_handle, "cursor", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/cursor.png", 32, 32), 0.3f, 0.3f));
+	tds_sprite_cache_add(ptr->sc_handle, "player", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player.png", 32, 32), 1.0f, 1.0f, 80.0f));
+	tds_sprite_cache_add(ptr->sc_handle, "cursor", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/cursor.png", 32, 32), 0.3f, 0.3f, 0.0f));
 }

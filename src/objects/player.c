@@ -63,11 +63,19 @@ void tds_obj_player_update(struct tds_object* ptr) {
 		data->yspeed /= TDS_OBJ_PLAYER_DECEL;
 	}
 
+	if (flag_moving_h || flag_moving_v) {
+		ptr->anim_running = 1;
+	} else {
+		ptr->current_frame = 0;
+		ptr->anim_running = 0;
+	}
+
 	ptr->x += data->xspeed;
 	ptr->y += data->yspeed;
 }
 
 void tds_obj_player_draw(struct tds_object* ptr) {
+	tds_object_anim_update(ptr);
 }
 
 void tds_obj_player_msg(struct tds_object* ptr, struct tds_object* caller, int msg, void* param) {

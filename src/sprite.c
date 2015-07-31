@@ -9,7 +9,7 @@
 /* Inefficient as it may seem, we prepare a huge VBO with different texcoords for each texture frame. */
 /* Rendering a gigantic VBO with variable offsets is way faster than switching textures each frame. */
 
-struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, float height) {
+struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, float height, float animation_rate) {
 	struct tds_sprite* output = tds_malloc(sizeof(struct tds_sprite));
 
 	memset(output, 0, sizeof(struct tds_sprite));
@@ -17,7 +17,7 @@ struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, f
 	output->width = width;
 	output->height = height;
 	output->texture = texture;
-	output->animation_rate = 1000.0f;
+	output->animation_rate = animation_rate;
 
 	struct tds_vertex* verts = tds_malloc(sizeof(struct tds_vertex) * texture->frame_count * 6);
 

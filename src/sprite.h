@@ -28,7 +28,7 @@ struct tds_sprite {
 	struct tds_vertex_buffer* vbo_handle;
 };
 
-struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, float height);
+struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, float height, float animation_rate);
 void tds_sprite_free(struct tds_sprite* ptr);
 
 /*
