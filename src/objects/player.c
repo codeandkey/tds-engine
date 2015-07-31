@@ -20,7 +20,10 @@ struct tds_object_type tds_obj_player_type = {
 void tds_obj_player_init(struct tds_object* ptr) {
 	struct tds_obj_player_data* data = (struct tds_obj_player_data*) ptr->object_data;
 
+	ptr->layer = 10;
+
 	data->xspeed = data->yspeed = 0.0f;
+	data->flag_moving_h = data->flag_moving_v = 0;
 }
 
 void tds_obj_player_destroy(struct tds_object* ptr) {
@@ -33,37 +36,37 @@ void tds_obj_player_update(struct tds_object* ptr) {
 
 	ptr->angle = atan2f(obj_cursor->y - ptr->y, obj_cursor->x - ptr->x);
 
-	int flag_moving_h = 0, flag_moving_v = 0;
+	data->flag_moving_h = data->flag_moving_v = 0;
 
 	if (tds_input_map_get_key(tds_engine_global->input_map_handle, tds_key_map_get(tds_engine_global->key_map_handle, TDS_GAME_INPUT_MOVE_LEFT), 0)) {
 		data->xspeed = fmax(data->xspeed - TDS_OBJ_PLAYER_ACCEL, -TDS_OBJ_PLAYER_MAX_SPEED);
-		flag_moving_h = 1;
+		data->flag_moving_h = 1;
 	}
 
 	if (tds_input_map_get_key(tds_engine_global->input_map_handle, tds_key_map_get(tds_engine_global->key_map_handle, TDS_GAME_INPUT_MOVE_DOWN), 0)) {
 		data->yspeed = fmax(data->yspeed - TDS_OBJ_PLAYER_ACCEL, -TDS_OBJ_PLAYER_MAX_SPEED);
-		flag_moving_v = 1;
+		data->flag_moving_v = 1;
 	}
 
 	if (tds_input_map_get_key(tds_engine_global->input_map_handle, tds_key_map_get(tds_engine_global->key_map_handle, TDS_GAME_INPUT_MOVE_RIGHT), 0)) {
 		data->xspeed = fmin(data->xspeed + TDS_OBJ_PLAYER_ACCEL, TDS_OBJ_PLAYER_MAX_SPEED);
-		flag_moving_h = 1;
+		data->flag_moving_h = 1;
 	}
 
 	if (tds_input_map_get_key(tds_engine_global->input_map_handle, tds_key_map_get(tds_engine_global->key_map_handle, TDS_GAME_INPUT_MOVE_UP), 0)) {
 		data->yspeed = fmin(data->yspeed + TDS_OBJ_PLAYER_ACCEL, TDS_OBJ_PLAYER_MAX_SPEED);
-		flag_moving_v = 1;
+		data->flag_moving_v = 1;
 	}
 
-	if (!flag_moving_h) {
+	if (!data->flag_moving_h) {
 		data->xspeed /= TDS_OBJ_PLAYER_DECEL;
 	}
 
-	if (!flag_moving_v) {
+	if (!data->flag_moving_v) {
 		data->yspeed /= TDS_OBJ_PLAYER_DECEL;
 	}
 
-	if (flag_moving_h || flag_moving_v) {
+	if (data->flag_moving_h || data->flag_moving_v) {
 		ptr->anim_running = 1;
 	} else {
 		ptr->current_frame = 0;

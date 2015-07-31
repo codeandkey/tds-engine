@@ -118,6 +118,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 		/* Test code to do stuff. */
 		tds_object_create(&tds_obj_system_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 		tds_object_create(&tds_obj_player_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
+		tds_object_create(&tds_obj_player_legs_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 		tds_object_create(&tds_obj_cursor_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 
 		/* Not to be in final game. */
@@ -236,5 +237,6 @@ void tds_engine_save_map(struct tds_engine* ptr, char* mapname) {
 
 void _tds_engine_load_sprites(struct tds_engine* ptr) {
 	tds_sprite_cache_add(ptr->sc_handle, "player", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player.png", 32, 32), 1.0f, 1.0f, 80.0f));
+	tds_sprite_cache_add(ptr->sc_handle, "player_legs", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player_legs.png", 32, 32), 1.0f, 1.0f, 80.0f));
 	tds_sprite_cache_add(ptr->sc_handle, "cursor", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/cursor.png", 32, 32), 0.3f, 0.3f, 0.0f));
 }

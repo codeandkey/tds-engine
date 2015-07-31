@@ -29,7 +29,7 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 	int tile_count_w = (w / tile_x);
 	int tile_count_h = (h / tile_y);
 
-	tds_logf(TDS_LOG_MESSAGE, "Tile count : %d by %d\n", tile_count_w, tile_count_h);
+	tds_logf(TDS_LOG_DEBUG, "Tile count : %d by %d\n", tile_count_w, tile_count_h);
 
 	output->frame_list = tds_malloc(sizeof(struct tds_texture) * tile_count_w * tile_count_h);
 	output->frame_count = tile_count_w * tile_count_h;
