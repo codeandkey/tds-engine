@@ -7,6 +7,8 @@
 #include "player_legs.h"
 #include "cursor.h"
 
+#include "wall.h"
+
 struct tds_object_type** tds_object_type_get_list(void);
 int tds_object_type_get_count(void);
 struct tds_object_type* tds_object_type_get_by_type(const char* type_name);

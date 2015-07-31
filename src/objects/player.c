@@ -73,7 +73,12 @@ void tds_obj_player_update(struct tds_object* ptr) {
 		ptr->anim_running = 0;
 	}
 
+	/* Method of collision : test future X collision, future Y collision, future X + Y collision, move accordingly */
+	struct tds_engine_object_list wall_list = tds_engine_get_object_list_by_type(tds_engine_global, "wall");
+
+
 	ptr->x += data->xspeed;
+
 	ptr->y += data->yspeed;
 }
 

@@ -20,6 +20,7 @@ struct tds_config {
 };
 
 struct tds_config* tds_config_create(const char* filename);
+struct tds_config* tds_config_create_cmd(int argc, char** argv);
 void tds_config_free(struct tds_config* ptr);
 
 int tds_config_get_int(struct tds_config* ptr, const char* key);

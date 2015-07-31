@@ -36,11 +36,37 @@ struct tds_config* tds_config_create(const char* filename) {
 		t_key = strtok(t_line_buffer, "=");
 		t_value = strtok(NULL, "=");
 
-		strcpy(output->key_buffer[output->pair_count], t_key);
-		strcpy(output->value_buffer[output->pair_count++], t_value);
+		strncpy(output->key_buffer[output->pair_count], t_key, TDS_CONFIG_KEY_SIZE);
+		strncpy(output->value_buffer[output->pair_count++], t_value, TDS_CONFIG_VALUE_SIZE);
 	}
 
 	fclose(fp);
+	return output;
+}
+
+struct tds_config* tds_config_create_cmd(int argc, char** argv) {
+	struct tds_config* output = tds_malloc(sizeof(struct tds_config));
+	output->pair_count = 0;
+
+	argv += 1; /* Disregard the first argument. */
+	argc -= 1;
+
+	int read_key = 1;
+	char* key, *value;
+
+	for (int i = 0; i < argc; ++i) {
+		if (read_key) {
+			key = argv[i];
+		} else {
+			value = argv[i];
+
+			strncpy(output->key_buffer[output->pair_count], key, TDS_CONFIG_KEY_SIZE);
+			strncpy(output->value_buffer[output->pair_count++], value, TDS_CONFIG_VALUE_SIZE);
+		}
+
+		read_key = !read_key;
+	}
+
 	return output;
 }
 
