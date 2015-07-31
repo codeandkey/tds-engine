@@ -3,6 +3,8 @@
 #include "../object.h"
 
 #include "system.h"
+#include "player.h"
+#include "cursor.h"
 
 struct tds_object_type** tds_object_type_get_list(void);
 int tds_object_type_get_count(void);

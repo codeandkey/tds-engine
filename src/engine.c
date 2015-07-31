@@ -9,6 +9,8 @@
 
 #include "objects/all.h"
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #define TDS_ENGINE_TIMESTEP 144.0f
@@ -48,8 +50,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	display_desc.height = tds_config_get_int(conf, "height");
 	display_desc.fs = tds_config_get_int(conf, "fullscreen");
 	display_desc.vsync = tds_config_get_int(conf, "vsync");
+	display_desc.msaa = tds_config_get_int(conf, "msaa");
 
-	tds_logf(TDS_LOG_MESSAGE, "Loaded display description. Video mode : %d by %d, FS %s, VSYNC %s\n", display_desc.width, display_desc.height, display_desc.fs ? "on" : "off", display_desc.vsync ? "on" : "off");
+	tds_logf(TDS_LOG_MESSAGE, "Loaded display description. Video mode : %d by %d, FS %s, VSYNC %s, MSAA %d\n", display_desc.width, display_desc.height, display_desc.fs ? "on" : "off", display_desc.vsync ? "on" : "off", display_desc.msaa);
 	output->display_handle = tds_display_create(display_desc);
 	tds_logf(TDS_LOG_MESSAGE, "Created display.\n");
 	/* End display subsystem */
@@ -113,7 +116,9 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 	{
 		/* Test code to do stuff. */
-		tds_object_create(&tds_obj_system_type, ptr->object_buffer, ptr->sc_handle, 1.0f, 0.0f, 0.0f, NULL);
+		tds_object_create(&tds_obj_system_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
+		tds_object_create(&tds_obj_player_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
+		tds_object_create(&tds_obj_cursor_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 
 		/* Not to be in final game. */
 	}
@@ -192,10 +197,44 @@ struct tds_object* tds_engine_get_object_by_type(struct tds_engine* ptr, const c
 	return NULL;
 }
 
+struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engine* ptr, const char* typename) {
+	struct tds_engine_object_list output;
+
+	output.size = 0;
+	output.buffer = 0;
+
+	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
+		if (!strcmp(((struct tds_object*) ptr->object_buffer->buffer[i].data)->type_name, typename)) {
+			output.buffer = tds_realloc(output.buffer, sizeof(struct tds_object*) * ++output.size);
+			output.buffer[output.size - 1] = (struct tds_object*) ptr->object_buffer->buffer[i].data;
+		}
+	}
+
+	return output;
+}
+
 void tds_engine_terminate(struct tds_engine* ptr) {
 	ptr->run_flag = 0;
 }
 
+void tds_engine_load_map(struct tds_engine* ptr, char* mapname) {
+	tds_engine_flush_objects(ptr);
+
+	FILE* ifile = fopen(mapname, "rb");
+
+	if (!ifile) {
+		tds_logf(TDS_LOG_WARNING, "Failed to open map %s for reading.\n", mapname);
+		return;
+	}
+
+	fclose(ifile);
+}
+
+void tds_engine_save_map(struct tds_engine* ptr, char* mapname) {
+	
+}
+
 void _tds_engine_load_sprites(struct tds_engine* ptr) {
 	tds_sprite_cache_add(ptr->sc_handle, "player", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/test.png", 32, 32), 1.0f, 1.0f));
+	tds_sprite_cache_add(ptr->sc_handle, "cursor", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/cursor.png", 32, 32), 1.0f, 1.0f));
 }

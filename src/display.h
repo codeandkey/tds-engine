@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 
 struct tds_display_desc {
-	int width, height, fs, vsync;
+	int width, height, fs, vsync, msaa;
 };
 
 struct tds_display {

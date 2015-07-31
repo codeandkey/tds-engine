@@ -38,3 +38,4 @@ void tds_key_map_free(struct tds_key_map* ptr);
 
 void tds_key_map_load(struct tds_key_map* ptr, const char* config);
 void tds_key_map_reassign(struct tds_key_map* ptr, const char* name, int key);
+int tds_key_map_get(struct tds_key_map* ptr, int index);

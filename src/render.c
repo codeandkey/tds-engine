@@ -27,6 +27,10 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	glClearColor(0.1f, 0.1f, 0.1f, 0.0f);
 	glDisable(GL_DEPTH_TEST);
 
+	glEnable(GL_BLEND);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	glActiveTexture(GL_TEXTURE0);
 
 	return output;
@@ -61,6 +65,7 @@ void tds_render_draw(struct tds_render* ptr) {
 		object_rendered[i] = 0;
 
 		if (!target) {
+			object_rendered[i] = 1;
 			continue;
 		}
 
@@ -82,11 +87,7 @@ void tds_render_draw(struct tds_render* ptr) {
 				continue;
 			}
 
-			struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[i].data;
-
-			if (!target) {
-				continue;
-			}
+			struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[j].data;
 
 			if (target->layer == i) {
 				object_rendered[j] = 1;

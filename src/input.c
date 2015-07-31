@@ -13,6 +13,9 @@ void _tds_input_char_callback(GLFWwindow* window, unsigned int inp) {
 void _tds_input_mouse_callback(GLFWwindow* window, double mx, double my) {
 	struct tds_input* ptr = (struct tds_input*) glfwGetWindowUserPointer(window);
 
+	ptr->mx_last = ptr->mx;
+	ptr->my_last = ptr->my;
+
 	ptr->mx = mx;
 	ptr->my = my;
 }

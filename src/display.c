@@ -12,6 +12,8 @@ struct tds_display* tds_display_create(struct tds_display_desc desc) {
 		return NULL;
 	}
 
+	glfwWindowHint(GLFW_SAMPLES, desc.msaa);
+
 	output->win_handle = glfwCreateWindow(desc.width, desc.height, "TDS", desc.fs ? glfwGetPrimaryMonitor() : NULL, NULL);
 	output->desc = desc;
 
@@ -26,6 +28,8 @@ struct tds_display* tds_display_create(struct tds_display_desc desc) {
 		tds_logf(TDS_LOG_CRITICAL, "Failed to load GLXW.\n");
 		return NULL;
 	}
+
+	glfwSetInputMode(output->win_handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	return output;
 }

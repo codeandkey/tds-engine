@@ -12,6 +12,7 @@ struct tds_object {
 
 	int visible, layer;
 	float x, y, z, angle, r, g, b, a;
+	float cbox_width, cbox_height;
 
 	tds_clock_point anim_lastframe;
 	double anim_speed_offset;
@@ -58,4 +59,4 @@ void tds_object_anim_pause(struct tds_object* ptr);
 int tds_object_anim_oneshot_finished(struct tds_object* ptr);
 
 /* instead of encapsulating object functions (via more functions), systems and the like should just directly call the function pointers. */
-/* they should be fe to call, they are checked by the creation functions */
+/* they should be safe to call, they are checked by the creation functions */

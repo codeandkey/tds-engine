@@ -9,7 +9,7 @@ struct tds_input {
 	int controller_state[32], controller_state_last[32];
 	float controller_axis_state[32];
 	int last_char;
-	double mx, my;
+	double mx, my, mx_last, my_last;
 };
 
 struct tds_input* tds_input_create(struct tds_display* display_handle);

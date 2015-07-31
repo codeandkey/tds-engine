@@ -54,3 +54,7 @@ void tds_key_map_reassign(struct tds_key_map* ptr, const char* name, int id) {
 
 	tds_logf(TDS_LOG_WARNING, "No input named [%s] found in mapping");
 }
+
+int tds_key_map_get(struct tds_key_map* ptr, int index) {
+	return ptr->entry_buffer[index].key;
+}
