@@ -26,6 +26,8 @@ void tds_obj_cursor_update(struct tds_object* ptr) {
 
 	ptr->x = tds_engine_global->input_handle->mx * 0.001f;
 	ptr->y = -tds_engine_global->input_handle->my * 0.001f;
+
+	ptr->angle += 0.01f;
 }
 
 void tds_obj_cursor_draw(struct tds_object* ptr) {
