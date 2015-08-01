@@ -27,6 +27,9 @@ void tds_obj_player_arms_init(struct tds_object* ptr) {
 	ptr->visible = 0;
 	ptr->anim_oneshot = 1;
 	ptr->layer = 9;
+
+	ptr->cbox_width *= 0.75f;
+	ptr->cbox_height *= 0.75f;
 }
 
 void tds_obj_player_arms_destroy(struct tds_object* ptr) {
@@ -51,7 +54,7 @@ void tds_obj_player_arms_update(struct tds_object* ptr) {
 
 			float obj_angle = atan2f(list.buffer[i]->y - ptr->y, list.buffer[i]->x - ptr->x);
 			float swing_angle;
-			float swing_threshold = 3.141f / 4.0f;
+			float swing_threshold = 3.141f / 8.0f;
 
 			switch(ptr->current_frame) {
 			case 0:
