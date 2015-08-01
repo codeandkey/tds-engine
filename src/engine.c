@@ -123,6 +123,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 		/* Test code to do stuff. */
 		tds_object_create(&tds_obj_system_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 		tds_object_create(&tds_obj_player_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
+		tds_object_create(&tds_obj_enemy_basic_type, ptr->object_buffer, ptr->sc_handle, -1.0f, 0.0f, 0.0f, NULL);
 		tds_object_create(&tds_obj_player_legs_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 		tds_object_create(&tds_obj_player_arms_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 		tds_object_create(&tds_obj_cursor_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
@@ -197,6 +198,10 @@ void tds_engine_flush_objects(struct tds_engine* ptr) {
 
 struct tds_object* tds_engine_get_object_by_type(struct tds_engine* ptr, const char* typename) {
 	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
+		if (!ptr->object_buffer->buffer[i].data) {
+			continue;
+		}
+
 		if (!strcmp(((struct tds_object*) ptr->object_buffer->buffer[i].data)->type_name, typename)) {
 			return ptr->object_buffer->buffer[i].data;
 		}
@@ -216,6 +221,10 @@ struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engi
 	output.size = 0;
 
 	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
+		if (!ptr->object_buffer->buffer[i].data) {
+			continue;
+		}
+
 		if (!strcmp(((struct tds_object*) ptr->object_buffer->buffer[i].data)->type_name, typename)) {
 			ptr->object_list = tds_realloc(ptr->object_list, sizeof(struct tds_object*) * ++output.size);
 			ptr->object_list[output.size - 1] = (struct tds_object*) ptr->object_buffer->buffer[i].data;
@@ -249,6 +258,7 @@ void tds_engine_save_map(struct tds_engine* ptr, char* mapname) {
 
 void _tds_engine_load_sprites(struct tds_engine* ptr) {
 	tds_sprite_cache_add(ptr->sc_handle, "player", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player.png", 32, 32), 1.0f, 1.0f, 80.0f));
+	tds_sprite_cache_add(ptr->sc_handle, "enemy_basic", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/enemy.png", 32, 32), 1.0f, 1.0f, 80.0f));
 	tds_sprite_cache_add(ptr->sc_handle, "player_body_swing", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player_swing_body.png", 96, 96), 3.0f, 3.0f, 40.0f));
 	tds_sprite_cache_add(ptr->sc_handle, "player_legs", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player_legs.png", 32, 32), 1.0f, 1.0f, 80.0f));
 	tds_sprite_cache_add(ptr->sc_handle, "player_arms_katana", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player_swing_arms.png", 96, 96), 3.0f, 3.0f, 40.0f));

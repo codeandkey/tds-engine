@@ -7,6 +7,7 @@
 #include "player_legs.h"
 #include "player_arms.h"
 #include "cursor.h"
+#include "enemy_basic.h"
 
 #include "wall.h"
 

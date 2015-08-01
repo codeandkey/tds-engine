@@ -138,8 +138,6 @@ void tds_obj_player_draw(struct tds_object* ptr) {
 
 	tds_object_anim_update(ptr);
 
-	tds_logf(TDS_LOG_DEBUG, "drawing frame %d, OS = %d\n", ptr->current_frame, ptr->anim_oneshot);
-
 	if (tds_object_anim_oneshot_finished(ptr) && data->flag_swing) {
 		ptr->anim_oneshot = 0;
 		ptr->anim_running = 0;
