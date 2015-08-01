@@ -54,7 +54,7 @@ void tds_obj_player_arms_update(struct tds_object* ptr) {
 
 			float obj_angle = atan2f(list.buffer[i]->y - ptr->y, list.buffer[i]->x - ptr->x);
 			float swing_angle;
-			float swing_threshold = 3.141f / 6.0f;
+			float swing_threshold = 3.141f / 4.0f;
 
 			switch(ptr->current_frame) {
 			case 0:
