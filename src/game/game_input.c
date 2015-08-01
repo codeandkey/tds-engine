@@ -5,6 +5,7 @@ int TDS_GAME_INPUT_MOVE_LEFT = 1;
 int TDS_GAME_INPUT_MOVE_RIGHT = 2;
 int TDS_GAME_INPUT_MOVE_UP = 3;
 int TDS_GAME_INPUT_MOVE_DOWN = 4;
+int TDS_GAME_INPUT_ATTACK = 5;
 
 struct tds_key_map_template _tds_game_input[] = {
 	{"quit", "escape"},
@@ -12,6 +13,7 @@ struct tds_key_map_template _tds_game_input[] = {
 	{"right", "D"},
 	{"up", "W"},
 	{"down", "S"},
+	{"attack", "leftmouse"},
 };
 
 struct tds_key_map_template* tds_get_game_input(void) {

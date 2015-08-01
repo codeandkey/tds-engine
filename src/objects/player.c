@@ -5,6 +5,7 @@
 #include "../input.h"
 #include "../log.h"
 #include "../game/game_input.h"
+#include "../collision.h"
 
 struct tds_object_type tds_obj_player_type = {
 	"player",
@@ -21,16 +22,18 @@ void tds_obj_player_init(struct tds_object* ptr) {
 	struct tds_obj_player_data* data = (struct tds_obj_player_data*) ptr->object_data;
 
 	ptr->layer = 10;
+	ptr->cbox_width = 0.5f;
+	ptr->cbox_height = 0.5f;
 
 	data->xspeed = data->yspeed = 0.0f;
 	data->flag_moving_h = data->flag_moving_v = 0;
+	data->flag_swing = 0;
 }
 
 void tds_obj_player_destroy(struct tds_object* ptr) {
 }
 
 void tds_obj_player_update(struct tds_object* ptr) {
-	struct tds_input* input = tds_engine_global->input_handle;
 	struct tds_object* obj_cursor = tds_engine_get_object_by_type(tds_engine_global, "cursor");
 	struct tds_obj_player_data* data = (struct tds_obj_player_data*) ptr->object_data;
 
@@ -66,11 +69,13 @@ void tds_obj_player_update(struct tds_object* ptr) {
 		data->yspeed /= TDS_OBJ_PLAYER_DECEL;
 	}
 
-	if (data->flag_moving_h || data->flag_moving_v) {
-		ptr->anim_running = 1;
-	} else {
-		ptr->current_frame = 0;
-		ptr->anim_running = 0;
+	if (!data->flag_swing) {
+		if (data->flag_moving_h || data->flag_moving_v) {
+			ptr->anim_running = 1;
+		} else {
+			ptr->current_frame = 0;
+			ptr->anim_running = 0;
+		}
 	}
 
 	/* Method of collision : test X collision, Y collision, move accordingly */
@@ -117,10 +122,30 @@ void tds_obj_player_update(struct tds_object* ptr) {
 	} else {
 		ptr->y = py + data->yspeed;
 	}
+
+	/* Attack animation management */
+
+	if (tds_input_map_get_mouse_button_pressed(tds_engine_global->input_map_handle, tds_key_map_get(tds_engine_global->key_map_handle, TDS_GAME_INPUT_ATTACK), 0) && !data->flag_swing) {
+		data->flag_swing = 1;
+		ptr->anim_oneshot = 1;
+		tds_object_set_sprite(ptr, tds_sprite_cache_get(ptr->smgr, "player_body_swing"));
+		tds_object_anim_start(ptr);
+	}
 }
 
 void tds_obj_player_draw(struct tds_object* ptr) {
+	struct tds_obj_player_data* data = (struct tds_obj_player_data*) ptr->object_data;
+
 	tds_object_anim_update(ptr);
+
+	tds_logf(TDS_LOG_DEBUG, "drawing frame %d, OS = %d\n", ptr->current_frame, ptr->anim_oneshot);
+
+	if (tds_object_anim_oneshot_finished(ptr) && data->flag_swing) {
+		ptr->anim_oneshot = 0;
+		ptr->anim_running = 0;
+		data->flag_swing = 0;
+		tds_object_set_sprite(ptr, tds_sprite_cache_get(ptr->smgr, "player"));
+	}
 }
 
 void tds_obj_player_msg(struct tds_object* ptr, struct tds_object* caller, int msg, void* param) {

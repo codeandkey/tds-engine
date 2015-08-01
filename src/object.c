@@ -30,6 +30,7 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->object_data = type->data_size ? tds_malloc(type->data_size) : NULL;
 	output->object_handle = tds_handle_manager_get_new(hmgr, output);
 	output->hmgr = hmgr;
+	output->smgr = smgr;
 	output->current_frame = 0;
 
 	output->anim_lastframe = tds_clock_get_point();

@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -std=gnu99 -Wall -g
-LDFLAGS = -lm -ldl -lglfw -lGL -lSOIL -lrt
+LDFLAGS = -lm -ldl -lglfw -lGL -lSOIL -lrt -lopenal
 
 SOURCES = $(wildcard src/*.c src/objects/*.c src/game/*.c)
 OBJECTS = $(SOURCES:.c=.o)

@@ -15,7 +15,7 @@ struct tds_object_type tds_obj_player_legs_type = {
 };
 
 void tds_obj_player_legs_init(struct tds_object* ptr) {
-	ptr->layer = 9;
+	ptr->layer = 8;
 }
 
 void tds_obj_player_legs_destroy(struct tds_object* ptr) {

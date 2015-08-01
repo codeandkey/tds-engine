@@ -42,9 +42,14 @@ void tds_input_free(struct tds_input* ptr) {
 void tds_input_update(struct tds_input* ptr) {
 	memcpy(ptr->kb_state_last, ptr->kb_state, sizeof(int) * 512);
 	memcpy(ptr->controller_state_last, ptr->controller_state, sizeof(int) * 32);
+	memcpy(ptr->mb_state_last, ptr->mb_state, sizeof(int) * 16);
 
 	for (int i = 0; i < 512; ++i) {
 		ptr->kb_state[i] = glfwGetKey(ptr->window_handle, i);
+	}
+
+	for (int i = 0; i < 16; ++i) {
+		ptr->mb_state[i] = glfwGetMouseButton(ptr->window_handle, i);
 	}
 
 	if (!tds_input_get_controller(ptr)) {

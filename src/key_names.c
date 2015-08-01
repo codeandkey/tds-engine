@@ -106,6 +106,9 @@ static struct tds_key_name _tds_key_name_list[] = {
 	{"leftsuper", GLFW_KEY_LEFT_SUPER},
 	{"rightsuper", GLFW_KEY_RIGHT_SUPER},
 	{"menu", GLFW_KEY_MENU},
+	{"leftmouse", 0},
+	{"rightmouse", 1},
+	{"middlemouse", 2},
 };
 
 struct tds_key_name* tds_key_name_get_list(void) {

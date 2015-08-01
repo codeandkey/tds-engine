@@ -14,6 +14,7 @@ struct tds_object_type tds_obj_wall_type = {
 };
 
 void tds_obj_wall_init(struct tds_object* ptr) {
+	ptr->layer = 0;
 }
 
 void tds_obj_wall_destroy(struct tds_object* ptr) {

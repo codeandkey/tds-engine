@@ -16,4 +16,8 @@ int tds_input_map_get_key(struct tds_input_map* ptr, int key, int controller_but
 int tds_input_map_get_key_pressed(struct tds_input_map* ptr, int key, int controller_button);
 int tds_input_map_get_key_released(struct tds_input_map* ptr, int key, int controller_button);
 
+int tds_input_map_get_mouse_button(struct tds_input_map* ptr, int mb, int controller_button);
+int tds_input_map_get_mouse_button_pressed(struct tds_input_map* ptr, int mb, int controller_button);
+int tds_input_map_get_mouse_button_released(struct tds_input_map* ptr, int mb, int controller_button);
+
 char tds_input_map_get_char(struct tds_input_map* ptr); /* Gets the character typed by the user. Returns 0 when there is no input to be read. */

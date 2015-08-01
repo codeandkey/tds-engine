@@ -17,4 +17,5 @@ void tds_obj_player_msg(struct tds_object* ptr, struct tds_object* caller, int m
 struct tds_obj_player_data {
 	float xspeed, yspeed;
 	int flag_moving_h, flag_moving_v;
+	int flag_swing;
 };

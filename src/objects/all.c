@@ -10,6 +10,7 @@ static struct tds_object_type* _tds_object_type_list[] = {
 	&tds_obj_cursor_type,
 	&tds_obj_player_legs_type,
 	&tds_obj_wall_type,
+	&tds_obj_player_arms_type,
 };
 
 struct tds_object_type** tds_object_type_get_list(void) {

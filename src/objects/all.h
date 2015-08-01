@@ -5,6 +5,7 @@
 #include "system.h"
 #include "player.h"
 #include "player_legs.h"
+#include "player_arms.h"
 #include "cursor.h"
 
 #include "wall.h"

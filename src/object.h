@@ -31,6 +31,7 @@ struct tds_object {
 	int object_handle;
 
 	struct tds_handle_manager* hmgr;
+	struct tds_sprite_cache* smgr;
 };
 
 struct tds_object_type {

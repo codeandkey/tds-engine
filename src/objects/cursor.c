@@ -19,6 +19,7 @@ void tds_obj_cursor_init(struct tds_object* ptr) {
 
 	ptr->current_frame = 0;
 	ptr->anim_running = 0;
+	ptr->layer = 100;
 
 	data->color_step = 0;
 }
