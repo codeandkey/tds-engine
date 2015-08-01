@@ -1,4 +1,4 @@
-#version 150
+#version 130
 
 in vec2 p_texcoord;
 out vec4 o_color;
