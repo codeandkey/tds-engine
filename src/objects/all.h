@@ -8,6 +8,7 @@
 #include "player_arms.h"
 #include "cursor.h"
 #include "enemy_basic.h"
+#include "bullet.h"
 
 #include "wall.h"
 

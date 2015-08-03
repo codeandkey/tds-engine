@@ -74,9 +74,7 @@ void tds_obj_player_arms_update(struct tds_object* ptr) {
 				break;
 			}
 
-			tds_logf(TDS_LOG_DEBUG, "obj_angle = %f, swing_handle + ptr->angle = %f\n", obj_angle, swing_angle + ptr->angle);
-
-			if (fmod(fabs(obj_angle - (ptr->angle + swing_angle)), 2.0f * 3.141f) <= swing_threshold) {
+			if (tds_util_angle_distance(ptr->angle + swing_angle, obj_angle) <= swing_threshold) {
 				/* We will hit this object. */
 
 				list.buffer[i]->func_msg(list.buffer[i], ptr, TDS_GAME_MSG_KILL_MELEE, NULL);

@@ -44,8 +44,6 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 			target_frame->right = (float) (x + 1) / (float) tile_count_w;
 			target_frame->top = (float) (y + 1) / (float) tile_count_h;
 			target_frame->bottom = (float) y / (float) tile_count_h;
-
-			tds_logf(TDS_LOG_DEBUG, "Parsed animation frame : Texture coordinates (L %.2f, R %.2f, B %.2f, T %.2f)\n", target_frame->left, target_frame->right, target_frame->bottom, target_frame->top);
 		}
 	}
 

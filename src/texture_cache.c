@@ -37,7 +37,6 @@ struct tds_texture* tds_texture_cache_get(struct tds_texture_cache* ptr, const c
 		current = current->next;
 	}
 
-	tds_logf(TDS_LOG_DEBUG, "%s not found in texture cache, loading..\n", texture_name);
 	current = tds_malloc(sizeof(struct tds_texture_cache_link));
 
 	current->prev = ptr->tail;

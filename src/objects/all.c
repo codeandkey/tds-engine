@@ -12,6 +12,7 @@ static struct tds_object_type* _tds_object_type_list[] = {
 	&tds_obj_wall_type,
 	&tds_obj_player_arms_type,
 	&tds_obj_enemy_basic_type,
+	&tds_obj_bullet_type,
 };
 
 struct tds_object_type** tds_object_type_get_list(void) {
