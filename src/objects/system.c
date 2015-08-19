@@ -6,10 +6,13 @@
 
 #include "../game/game_input.h"
 
+#include <string.h>
+#include <stdio.h>
+
 struct tds_object_type tds_obj_system_type = {
 	"system",
 	0,
-	0,
+	sizeof(struct tds_obj_system_data),
 	tds_obj_system_init,
 	tds_obj_system_destroy,
 	tds_obj_system_update,
@@ -18,6 +21,9 @@ struct tds_object_type tds_obj_system_type = {
 };
 
 void tds_obj_system_init(struct tds_object* ptr) {
+	struct tds_obj_system_data* data = (struct tds_obj_system_data*) ptr->object_data;
+
+	data->font = tds_sprite_cache_get(ptr->smgr, "font_debug");
 }
 
 void tds_obj_system_update(struct tds_object* ptr) {
@@ -27,6 +33,33 @@ void tds_obj_system_update(struct tds_object* ptr) {
 }
 
 void tds_obj_system_draw(struct tds_object* ptr) {
+	struct tds_obj_system_data* data = (struct tds_obj_system_data*) ptr->object_data;
+	struct tds_text_batch batch = {0};
+	struct tds_camera* camera = tds_engine_global->camera_handle;
+
+	batch.x = camera->x - camera->width / 2.0f + data->font->width / 2.0f;
+	batch.y = camera->y + 1.0f;
+	batch.font = data->font;
+
+	batch.r = 1.0f;
+	batch.a = 1.0f;
+
+	if (tds_engine_global->state.fps > 30.0f) {
+		batch.g = 1.0f;
+		batch.r = 0.0f;
+	}
+
+	if (tds_engine_global->state.fps > 58.0f) {
+		batch.r = batch.g = 0.0f;
+		batch.b = 1.0f;
+	}
+
+	snprintf(data->text_fps, sizeof(data->text_fps), "FPS : %.2f", tds_engine_global->state.fps);
+
+	batch.str = data->text_fps;
+	batch.str_len = strlen(data->text_fps);
+
+	tds_text_submit(tds_engine_global->text_handle, &batch);
 }
 
 void tds_obj_system_destroy(struct tds_object* ptr) {

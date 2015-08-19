@@ -22,6 +22,8 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 
 	tds_logf(TDS_LOG_DEBUG, "Loaded texture %s : width %d, height %d\n", filename, w, h);
 
+	float pixel_dist_x = 1.0f / (float) w, pixel_dist_y = 1.0f / (float) h;
+
 	if (w % tile_x || h % tile_y) {
 		tds_logf(TDS_LOG_WARNING, "Tile size does not divide evenly into image! (tile %dx%d, image %dx%d)\n", tile_x, tile_y, w, h);
 	}
@@ -41,14 +43,14 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 			struct tds_texture_frame* target_frame = output->frame_list + x + (tile_count_h - (y + 1)) * tile_count_w;
 
 			target_frame->left = (float) x / (float) tile_count_w;
-			target_frame->right = (float) (x + 1) / (float) tile_count_w;
+			target_frame->right = (float) (x + 1) / (float) tile_count_w - pixel_dist_x; /* We don't want to share texcoords with the next frame. */
 			target_frame->top = (float) (y + 1) / (float) tile_count_h;
-			target_frame->bottom = (float) y / (float) tile_count_h;
+			target_frame->bottom = (float) y / (float) tile_count_h + pixel_dist_y; /* Another measure to avoid frame oversampling */
 		}
 	}
 
 	glBindTexture(GL_TEXTURE_2D, output->gl_id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

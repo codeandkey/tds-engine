@@ -19,9 +19,7 @@ void tds_obj_cursor_init(struct tds_object* ptr) {
 
 	ptr->current_frame = 0;
 	ptr->anim_running = 0;
-	ptr->layer = 100;
-
-	data->color_step = 0;
+	ptr->layer = 20;
 }
 
 void tds_obj_cursor_destroy(struct tds_object* ptr) {
@@ -31,10 +29,6 @@ void tds_obj_cursor_update(struct tds_object* ptr) {
 	struct tds_obj_cursor_data* data = (struct tds_obj_cursor_data*) ptr->object_data;
 
 	ptr->angle += 0.01f;
-
-	if ((data->color_step += 64) >= 0x00FFFFFF) {
-		data->color_step = 0;
-	}
 
 	tds_util_hsv_to_rgb((fmod(ptr->angle, 3.141f * 2.0f) / (3.141f * 2.0f)) * 360.0f, 1.0f, 0.5f, &ptr->r, &ptr->g, &ptr->b);
 }

@@ -42,6 +42,10 @@ void tds_obj_bullet_update(struct tds_object* ptr) {
 			return;
 		}
 	}
+
+	if (sqrt(pow(ptr->x - tds_engine_global->camera_handle->x, 2) + pow(ptr->y - tds_engine_global->camera_handle->y, 2)) > 100.0f) {
+		tds_object_free(ptr);
+	}
 }
 
 void tds_obj_bullet_draw(struct tds_object* ptr) {

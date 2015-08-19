@@ -9,3 +9,8 @@ void tds_obj_system_update(struct tds_object* ptr);
 void tds_obj_system_draw(struct tds_object* ptr);
 void tds_obj_system_destroy(struct tds_object* ptr);
 void tds_obj_system_msg(struct tds_object* ptr, struct tds_object* sender, int msg, void* param);
+
+struct tds_obj_system_data {
+	struct tds_sprite* font;
+	char text_fps[64];
+};

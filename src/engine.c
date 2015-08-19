@@ -68,10 +68,13 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_logf(TDS_LOG_MESSAGE, "Initialized object buffer.\n");
 
 	output->camera_handle = tds_camera_create(output->display_handle);
-	tds_camera_set(output->camera_handle, 10.0f, 0.0f, 1.0f);
+	tds_camera_set(output->camera_handle, 10.0f, 0.0f, 0.0f);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized camera system.\n");
 
-	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
+	output->text_handle = tds_text_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized text system.\n");
+
+	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer, output->text_handle);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized render system.\n");
 
 	output->input_handle = tds_input_create(output->display_handle);
@@ -102,6 +105,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 
 	tds_engine_flush_objects(ptr);
 
+	tds_text_free(ptr->text_handle);
 	tds_input_free(ptr->input_handle);
 	tds_input_map_free(ptr->input_map_handle);
 	tds_key_map_free(ptr->key_map_handle);
@@ -148,6 +152,9 @@ void tds_engine_run(struct tds_engine* ptr) {
 		dt_point = tds_clock_get_point();
 		accumulator += delta_ms;
 
+		/* We approximate the fps using the delta frame time. */
+		ptr->state.fps = 1000.0f / delta_ms;
+
 		// tds_logf(TDS_LOG_MESSAGE, "frame : accum = %f ms, delta_ms = %f ms, timestep = %f\n", accumulator, delta_ms, timestep_ms);
 
 		tds_display_update(ptr->display_handle);
@@ -170,6 +177,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 		}
 
 		/* Run game draw logic. */
+		tds_render_clear(ptr->render_handle); /* We clear before executing the draw functions, otherwise the text buffer would be destroyed */
+
 		for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
 			struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[i].data;
 
@@ -180,7 +189,6 @@ void tds_engine_run(struct tds_engine* ptr) {
 			target->func_draw(target);
 		}
 
-		tds_render_clear(ptr->render_handle);
 		tds_render_draw(ptr->render_handle);
 		tds_display_swap(ptr->display_handle);
 	}
@@ -266,4 +274,5 @@ void _tds_engine_load_sprites(struct tds_engine* ptr) {
 	tds_sprite_cache_add(ptr->sc_handle, "wall_concrete_medium", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/wall_concrete.png", 32, 32), 1.0f, 1.0f, 0.0f));
 	tds_sprite_cache_add(ptr->sc_handle, "cursor", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/cursor.png", 32, 32), 0.3f, 0.3f, 0.0f));
 	tds_sprite_cache_add(ptr->sc_handle, "bullet", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/bullet.png", 32, 32), 0.4f, 0.25f, 0.0f));
+	tds_sprite_cache_add(ptr->sc_handle, "font_debug", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/fonts/debug.png", 8, 8), 0.25f, 0.25f, 0.0f));
 }

@@ -11,5 +11,5 @@ void tds_obj_cursor_update(struct tds_object* ptr);
 void tds_obj_cursor_msg(struct tds_object* ptr, struct tds_object* sender, int msg, void* param);
 
 struct tds_obj_cursor_data {
-	unsigned int color_step;
+	int unused;
 };
