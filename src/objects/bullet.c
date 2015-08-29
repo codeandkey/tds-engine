@@ -20,6 +20,9 @@ void tds_obj_bullet_init(struct tds_object* ptr) {
 	ptr->anim_running = 0;
 	ptr->layer = 9;
 	ptr->cbox_height /= 16.0f;
+
+	tds_sound_source_load_buffer(ptr->snd_src, tds_sound_cache_get(tds_engine_global->sndc_handle, "sound_swish"));
+	tds_sound_source_play(ptr->snd_src);
 }
 
 void tds_obj_bullet_destroy(struct tds_object* ptr) {

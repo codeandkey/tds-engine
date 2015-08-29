@@ -24,6 +24,10 @@ void tds_obj_system_init(struct tds_object* ptr) {
 	struct tds_obj_system_data* data = (struct tds_obj_system_data*) ptr->object_data;
 
 	data->font = tds_sprite_cache_get(ptr->smgr, "font_debug");
+
+	tds_sound_source_load_buffer(ptr->snd_src, tds_sound_cache_get(tds_engine_global->sndc_handle, "music_bg"));
+	tds_sound_source_set_loop(ptr->snd_src, 1);
+	tds_sound_source_play(ptr->snd_src);
 }
 
 void tds_obj_system_update(struct tds_object* ptr) {
@@ -38,7 +42,7 @@ void tds_obj_system_draw(struct tds_object* ptr) {
 	struct tds_camera* camera = tds_engine_global->camera_handle;
 
 	batch.x = camera->x - camera->width / 2.0f + data->font->width / 2.0f;
-	batch.y = camera->y + 1.0f;
+	batch.y = camera->y + camera->height / 2.0f;
 	batch.font = data->font;
 
 	batch.r = 1.0f;

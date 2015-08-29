@@ -5,13 +5,14 @@
 #include "linmath.h"
 #include "clock.h"
 #include "sprite_cache.h"
+#include "sound_source.h"
 
 struct tds_object {
 	struct tds_sprite* sprite_handle;
 	const char* type_name;
 
 	int visible, layer;
-	float x, y, z, angle, r, g, b, a;
+	float x, y, z, angle, r, g, b, a, xspeed, yspeed;
 	float cbox_width, cbox_height;
 
 	tds_clock_point anim_lastframe;
@@ -32,6 +33,10 @@ struct tds_object {
 
 	struct tds_handle_manager* hmgr;
 	struct tds_sprite_cache* smgr;
+	struct tds_sound_source* snd_src;
+
+	float snd_volume;
+	int snd_loop;
 };
 
 struct tds_object_type {
@@ -56,6 +61,14 @@ vec4* tds_object_get_transform(struct tds_object* ptr);
 void tds_object_anim_update(struct tds_object* ptr);
 void tds_object_anim_start(struct tds_object* ptr);
 void tds_object_anim_pause(struct tds_object* ptr);
+
+void tds_object_update(struct tds_object* ptr);
+void tds_object_init(struct tds_object* ptr);
+void tds_object_draw(struct tds_object* ptr);
+void tds_object_msg(struct tds_object* ptr, struct tds_object* sender, int msg, void* p);
+void tds_object_destroy(struct tds_object* ptr);
+
+void tds_object_update_sndsrc(struct tds_object* ptr); /* The sound source needs to be updated with pos, vel, etc. */
 
 int tds_object_anim_oneshot_finished(struct tds_object* ptr);
 

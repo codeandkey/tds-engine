@@ -5,6 +5,8 @@
 #include "display.h"
 #include "texture_cache.h"
 #include "sprite_cache.h"
+#include "sound_cache.h"
+#include "sound_manager.h"
 #include "render.h"
 #include "text.h"
 #include "key_map.h"
@@ -38,10 +40,12 @@ struct tds_engine {
 	struct tds_camera* camera_handle;
 	struct tds_texture_cache* tc_handle;
 	struct tds_sprite_cache* sc_handle;
+	struct tds_sound_cache* sndc_handle;
 	struct tds_handle_manager* object_buffer;
 	struct tds_input* input_handle;
 	struct tds_input_map* input_map_handle;
 	struct tds_key_map* key_map_handle;
+	struct tds_sound_manager* sound_manager_handle;
 	struct tds_text* text_handle;
 
 	int run_flag;

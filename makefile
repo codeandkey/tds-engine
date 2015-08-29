@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -std=gnu99 -Wall -g
 LDFLAGS = -lm -ldl -lglfw -lGL -lSOIL -lrt -lopenal
 
-SOURCES = $(wildcard src/*.c src/objects/*.c src/game/*.c)
+SOURCES = $(wildcard src/*.c src/objects/*.c src/game/*.c src/libs/*.c)
 OBJECTS = $(SOURCES:.c=.o)
 
 OUTPUT = tds

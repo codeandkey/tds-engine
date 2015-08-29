@@ -19,6 +19,9 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->x = x;
 	output->y = y;
 	output->z = z;
+	output->xspeed = output->yspeed = 0.0;
+	output->snd_volume = 1.0f;
+	output->snd_loop = 0;
 	output->angle = 0.0f;
 	output->layer = 0; /* Layers are rendered with lower numbers on bottom, higher numbers on top. */
 
@@ -38,6 +41,8 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->anim_speed_offset = 0.0f;
 	output->anim_running = (output->sprite_handle != NULL);
 
+	output->snd_src = tds_sound_source_create();
+
 	if (output->sprite_handle) {
 		output->cbox_width = output->sprite_handle->width;
 		output->cbox_height = output->sprite_handle->height;
@@ -48,7 +53,7 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	}
 
 	if (output->func_init) {
-		(output->func_init)(output);
+		tds_object_init(output);
 	}
 
 	tds_logf(TDS_LOG_MESSAGE, "created object with handle %d, sprite %X\n", output->object_handle, (unsigned long) output->sprite_handle);
@@ -58,7 +63,7 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 
 void tds_object_free(struct tds_object* ptr) {
 	if (ptr->func_destroy) {
-		(ptr->func_destroy)(ptr);
+		tds_object_destroy(ptr);
 	}
 
 	if (ptr->hmgr) {
@@ -69,6 +74,7 @@ void tds_object_free(struct tds_object* ptr) {
 		tds_free(ptr->object_data);
 	}
 
+	tds_free(ptr->snd_src);
 	tds_free(ptr);
 }
 
@@ -105,6 +111,10 @@ void tds_object_anim_update(struct tds_object* ptr) {
 	double current_time = tds_clock_get_ms(ptr->anim_lastframe);
 	double interval = (double) ptr->sprite_handle->animation_rate + ptr->anim_speed_offset;
 
+	if (!interval) {
+		return;
+	}
+
 	if (current_time >= interval) {
 		ptr->anim_lastframe = tds_clock_get_point();
 
@@ -140,4 +150,37 @@ int tds_object_anim_oneshot_finished(struct tds_object* ptr) {
 	}
 
 	return (ptr->anim_oneshot && ptr->current_frame == ptr->sprite_handle->texture->frame_count - 1 && !ptr->anim_running);
+}
+
+void tds_object_init(struct tds_object* ptr) {
+	ptr->func_init(ptr);
+}
+
+void tds_object_update(struct tds_object* ptr) {
+	ptr->func_update(ptr);
+
+	ptr->x += ptr->xspeed;
+	ptr->y += ptr->yspeed;
+
+	tds_object_update_sndsrc(ptr);
+}
+
+void tds_object_draw(struct tds_object* ptr) {
+	tds_object_anim_update(ptr);
+	ptr->func_draw(ptr);
+}
+
+void tds_object_msg(struct tds_object* ptr, struct tds_object* sender, int msg, void* param) {
+	ptr->func_msg(ptr, sender, msg, param);
+}
+
+void tds_object_destroy(struct tds_object* ptr) {
+	ptr->func_destroy(ptr);
+}
+
+void tds_object_update_sndsrc(struct tds_object* ptr) {
+	tds_sound_source_set_pos(ptr->snd_src, ptr->x, ptr->y);
+	tds_sound_source_set_vel(ptr->snd_src, ptr->xspeed, ptr->yspeed);
+	tds_sound_source_set_vol(ptr->snd_src, ptr->snd_volume);
+	tds_sound_source_set_loop(ptr->snd_src, ptr->snd_loop);
 }

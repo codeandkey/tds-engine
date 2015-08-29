@@ -5,6 +5,8 @@
 #include "handle.h"
 #include "memory.h"
 #include "clock.h"
+#include "sprite.h"
+#include "sound_buffer.h"
 #include "log.h"
 
 #include "objects/all.h"
@@ -18,6 +20,7 @@
 struct tds_engine* tds_engine_global = NULL;
 
 static void _tds_engine_load_sprites(struct tds_engine* ptr);
+static void _tds_engine_load_sounds(struct tds_engine* ptr);
 
 struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	if (tds_engine_global) {
@@ -64,6 +67,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->sc_handle = tds_sprite_cache_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized sprite cache.\n");
 
+	output->sndc_handle = tds_sound_cache_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialize sound cache.\n");
+
 	output->object_buffer = tds_handle_manager_create(1024);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized object buffer.\n");
 
@@ -80,6 +86,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->input_handle = tds_input_create(output->display_handle);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized input system.\n");
 
+	output->sound_manager_handle = tds_sound_manager_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized OpenAL context.\n");
+
 	output->input_map_handle = tds_input_map_create(output->input_handle);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized input mapping system.\n");
 
@@ -88,6 +97,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	_tds_engine_load_sprites(output);
 	tds_logf(TDS_LOG_MESSAGE, "Loaded sprites.\n");
+
+	_tds_engine_load_sounds(output);
+	tds_logf(TDS_LOG_MESSAGE, "Loaded sounds.\n");
 
 	/* Free configs */
 	tds_config_free(conf);
@@ -114,6 +126,8 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_display_free(ptr->display_handle);
 	tds_texture_cache_free(ptr->tc_handle);
 	tds_sprite_cache_free(ptr->sc_handle);
+	tds_sound_cache_free(ptr->sndc_handle);
+	tds_sound_manager_free(ptr->sound_manager_handle);
 	tds_handle_manager_free(ptr->object_buffer);
 	tds_free(ptr);
 }
@@ -135,6 +149,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		/* Not to be in final game. */
 	}
+
+	tds_sound_manager_set_pos(ptr->sound_manager_handle, ptr->camera_handle->x, ptr->camera_handle->y);
 
 	/* The game, like 'hunter' will use an accumulator-based approach with a fixed timestep.
 	 * to support higher-refresh rate monitors, the timestep will be set to 144hz. */
@@ -172,7 +188,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 					continue;
 				}
 
-				target->func_update(target);
+				tds_object_update(target);
 			}
 		}
 
@@ -186,7 +202,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 				continue;
 			}
 
-			target->func_draw(target);
+			tds_object_draw(target);
 		}
 
 		tds_render_draw(ptr->render_handle);
@@ -275,4 +291,9 @@ void _tds_engine_load_sprites(struct tds_engine* ptr) {
 	tds_sprite_cache_add(ptr->sc_handle, "cursor", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/cursor.png", 32, 32), 0.3f, 0.3f, 0.0f));
 	tds_sprite_cache_add(ptr->sc_handle, "bullet", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/bullet.png", 32, 32), 0.4f, 0.25f, 0.0f));
 	tds_sprite_cache_add(ptr->sc_handle, "font_debug", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/fonts/debug.png", 8, 8), 0.25f, 0.25f, 0.0f));
+}
+
+void _tds_engine_load_sounds(struct tds_engine* ptr) {
+	tds_sound_cache_add(ptr->sndc_handle, "music_bg", tds_sound_buffer_create("res/music/music_bg.ogg"));
+	tds_sound_cache_add(ptr->sndc_handle, "sound_swish", tds_sound_buffer_create("res/sounds/swish.ogg"));
 }

@@ -21,11 +21,19 @@ struct tds_sound_manager* tds_sound_manager_create(void) {
 		return NULL;
 	}
 
-	ALfloat ori[6] = { 0.0f };
+	ALfloat ori[6] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };
 
 	alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
 	alListener3f(AL_VELOCITY, 0.0f, 0.0f, 0.0f);
 	alListenerfv(AL_ORIENTATION, ori);
+
+	ALenum er = alGetError();
+
+	if (er != AL_NO_ERROR) {
+		tds_logf(TDS_LOG_WARNING, "OpenAL error : %d\n", er);
+	}
+
+	alDopplerFactor(4.0f);
 
 	return output;
 }
@@ -35,4 +43,8 @@ void tds_sound_manager_free(struct tds_sound_manager* ptr) {
 	alcDestroyContext(ptr->context);
 	alcCloseDevice(ptr->device);
 	tds_free(ptr);
+}
+
+void tds_sound_manager_set_pos(struct tds_sound_manager* ptr, float x, float y) {
+	alListener3f(AL_POSITION, x, y, 0.0f);
 }

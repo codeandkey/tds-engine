@@ -11,3 +11,5 @@ struct tds_sound_manager {
 
 struct tds_sound_manager* tds_sound_manager_create(void);
 void tds_sound_manager_free(struct tds_sound_manager* ptr);
+
+void tds_sound_manager_set_pos(struct tds_sound_manager* ptr, float x, float y);

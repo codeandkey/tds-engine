@@ -69,7 +69,7 @@ vec4* tds_text_batch_get_transform(struct tds_text_batch* ptr, int index) {
 	mat4x4_identity(ptr->transform);
 	mat4x4_identity(id);
 
-	mat4x4_translate(pos, gx, ptr->y + gy, ptr->z);
+	mat4x4_translate(pos, gx, gy, ptr->z);
 	mat4x4_rotate_Z(rot, id, ptr->angle);
 
 	mat4x4_mul(ptr->transform, pos, rot);

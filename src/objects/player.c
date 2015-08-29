@@ -25,7 +25,6 @@ void tds_obj_player_init(struct tds_object* ptr) {
 	ptr->cbox_width = 0.5f;
 	ptr->cbox_height = 0.5f;
 
-	data->xspeed = data->yspeed = 0.0f;
 	data->flag_moving_h = data->flag_moving_v = 0;
 	data->flag_swing = 0;
 }
@@ -39,34 +38,36 @@ void tds_obj_player_update(struct tds_object* ptr) {
 
 	ptr->angle = atan2f(obj_cursor->y - ptr->y, obj_cursor->x - ptr->x);
 
+	tds_camera_set(tds_engine_global->camera_handle, 10.0f, ptr->x, ptr->y);
+
 	data->flag_moving_h = data->flag_moving_v = 0;
 
 	if (tds_input_map_get_key(tds_engine_global->input_map_handle, tds_key_map_get(tds_engine_global->key_map_handle, TDS_GAME_INPUT_MOVE_LEFT), 0)) {
-		data->xspeed = fmax(data->xspeed - TDS_OBJ_PLAYER_ACCEL, -TDS_OBJ_PLAYER_MAX_SPEED);
+		ptr->xspeed = fmax(ptr->xspeed - TDS_OBJ_PLAYER_ACCEL, -TDS_OBJ_PLAYER_MAX_SPEED);
 		data->flag_moving_h = 1;
 	}
 
 	if (tds_input_map_get_key(tds_engine_global->input_map_handle, tds_key_map_get(tds_engine_global->key_map_handle, TDS_GAME_INPUT_MOVE_DOWN), 0)) {
-		data->yspeed = fmax(data->yspeed - TDS_OBJ_PLAYER_ACCEL, -TDS_OBJ_PLAYER_MAX_SPEED);
+		ptr->yspeed = fmax(ptr->yspeed - TDS_OBJ_PLAYER_ACCEL, -TDS_OBJ_PLAYER_MAX_SPEED);
 		data->flag_moving_v = 1;
 	}
 
 	if (tds_input_map_get_key(tds_engine_global->input_map_handle, tds_key_map_get(tds_engine_global->key_map_handle, TDS_GAME_INPUT_MOVE_RIGHT), 0)) {
-		data->xspeed = fmin(data->xspeed + TDS_OBJ_PLAYER_ACCEL, TDS_OBJ_PLAYER_MAX_SPEED);
+		ptr->xspeed = fmin(ptr->xspeed + TDS_OBJ_PLAYER_ACCEL, TDS_OBJ_PLAYER_MAX_SPEED);
 		data->flag_moving_h = 1;
 	}
 
 	if (tds_input_map_get_key(tds_engine_global->input_map_handle, tds_key_map_get(tds_engine_global->key_map_handle, TDS_GAME_INPUT_MOVE_UP), 0)) {
-		data->yspeed = fmin(data->yspeed + TDS_OBJ_PLAYER_ACCEL, TDS_OBJ_PLAYER_MAX_SPEED);
+		ptr->yspeed = fmin(ptr->yspeed + TDS_OBJ_PLAYER_ACCEL, TDS_OBJ_PLAYER_MAX_SPEED);
 		data->flag_moving_v = 1;
 	}
 
 	if (!data->flag_moving_h) {
-		data->xspeed /= TDS_OBJ_PLAYER_DECEL;
+		ptr->xspeed /= TDS_OBJ_PLAYER_DECEL;
 	}
 
 	if (!data->flag_moving_v) {
-		data->yspeed /= TDS_OBJ_PLAYER_DECEL;
+		ptr->yspeed /= TDS_OBJ_PLAYER_DECEL;
 	}
 
 	if (!data->flag_swing) {
@@ -84,7 +85,7 @@ void tds_obj_player_update(struct tds_object* ptr) {
 
 	float px = ptr->x, py = ptr->y;
 
-	ptr->x = px + data->xspeed;
+	ptr->x = px + ptr->xspeed;
 	ptr->y = py;
 
 	for (int i = 0; i < wall_list.size; ++i) {
@@ -92,14 +93,14 @@ void tds_obj_player_update(struct tds_object* ptr) {
 	}
 
 	ptr->x = px;
-	ptr->y = py + data->yspeed;
+	ptr->y = py + ptr->yspeed;
 
 	for (int i = 0; i < wall_list.size; ++i) {
 		will_collide_y |= tds_collision_get_overlap(ptr, wall_list.buffer[i]);
 	}
 
-	ptr->x = px + data->xspeed;
-	ptr->y = py + data->yspeed;
+	ptr->x = px + ptr->xspeed;
+	ptr->y = py + ptr->yspeed;
 
 	for (int i = 0; i < wall_list.size; ++i) {
 		will_collide_xy |= tds_collision_get_overlap(ptr, wall_list.buffer[i]);
@@ -110,18 +111,15 @@ void tds_obj_player_update(struct tds_object* ptr) {
 	}
 
 	if (will_collide_x) {
-		data->xspeed = 0.0f;
-		ptr->x = px;
-	} else {
-		ptr->x = px + data->xspeed;
+		ptr->xspeed = 0.0f;
 	}
 
 	if (will_collide_y) {
-		data->yspeed = 0.0f;
-		ptr->y = py;
-	} else {
-		ptr->y = py + data->yspeed;
+		ptr->yspeed = 0.0f;
 	}
+
+	ptr->x = px;
+	ptr->y = py;
 
 	/* Attack animation management */
 
@@ -135,8 +133,6 @@ void tds_obj_player_update(struct tds_object* ptr) {
 
 void tds_obj_player_draw(struct tds_object* ptr) {
 	struct tds_obj_player_data* data = (struct tds_obj_player_data*) ptr->object_data;
-
-	tds_object_anim_update(ptr);
 
 	if (tds_object_anim_oneshot_finished(ptr) && data->flag_swing) {
 		ptr->anim_oneshot = 0;
