@@ -30,6 +30,8 @@ void tds_obj_player_arms_init(struct tds_object* ptr) {
 
 	ptr->cbox_width *= 0.75f;
 	ptr->cbox_height *= 0.75f;
+
+	tds_sound_source_load_buffer(ptr->snd_src, tds_sound_cache_get(tds_engine_global->sndc_handle, "sound_swish"));
 }
 
 void tds_obj_player_arms_destroy(struct tds_object* ptr) {
@@ -42,6 +44,8 @@ void tds_obj_player_arms_update(struct tds_object* ptr) {
 		data->flag_swing = 1;
 		ptr->visible = 1;
 		tds_object_anim_start(ptr);
+		tds_sound_source_stop(ptr->snd_src);
+		tds_sound_source_play(ptr->snd_src);
 	}
 
 	if (data->flag_swing == 1) {

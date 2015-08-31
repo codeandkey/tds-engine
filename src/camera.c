@@ -36,8 +36,6 @@ void tds_camera_set(struct tds_camera* ptr, float size, float x, float y) {
 	ptr->x = x;
 	ptr->y = y;
 
-	tds_logf(TDS_LOG_MESSAGE, "Setting camera ortho (DW %f, DH %f) : L %f, R %f, T %f, B %f\n", disp_width, disp_height, -camera_width / 2.0f, camera_width / 2.0f, camera_height / 2.0f, -camera_height / 2.0f);
-
 	mat4x4 translate, ortho;
 
 	mat4x4_identity(ptr->mat_transform);

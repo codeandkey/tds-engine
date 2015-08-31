@@ -263,6 +263,18 @@ void tds_engine_terminate(struct tds_engine* ptr) {
 	ptr->run_flag = 0;
 }
 
+/* The TDS map format stores each entity and all entity data. */
+/* Entity data saved (in bin format) : 
+ *
+ * position, float2
+ * velocity, float2
+ * angle, float
+ * sprite cache index, int+char[]
+ * current animation frame, int
+ * entity type data, int+char[]
+ * entity type name, int+char[]
+ */
+
 void tds_engine_load_map(struct tds_engine* ptr, char* mapname) {
 	tds_engine_flush_objects(ptr);
 
@@ -273,11 +285,45 @@ void tds_engine_load_map(struct tds_engine* ptr, char* mapname) {
 		return;
 	}
 
+	while (!feof(ifile)) {
+		float e_floats[5];
+
+		if (fread(e_floats, sizeof(float), 5, ifile) != 5) {
+			tds_logf(TDS_LOG_CRITICAL, "Format error in entity positional data.\n");
+			break;
+		}
+
+		int sprite_name_len, data_len, typename_len, current_frame;
+		char* sprite_name, *data, *typename;
+
+		fread(&sprite_name_len, sizeof(int), 1, ifile);
+		sprite_name = tds_malloc(sprite_name_len + 1);
+		fread(sprite_name, 1, sprite_name_len, ifile);
+		sprite_name[sprite_name_len] = 0;
+
+		fread(&current_frame, sizeof(int), 1, ifile);
+
+		fread(&data_len, sizeof(int), 1, ifile);
+		data = tds_malloc(data_len + 1);
+		fread(data, 1, data_len, ifile);
+		data[data_len] = 0;
+
+		fread(&typename_len, sizeof(int), 1, ifile);
+		typename = tds_malloc(typename_len + 1);
+		fread(typename, 1, typename_len, ifile);
+		typename[typename_len] = 0;
+
+		struct tds_object* new_object = tds_object_create(tds_object_type_get_by_name((const char*) typename), ptr->object_buffer, ptr->sc_handle, e_floats[0], e_floats[1], 0.0f, data);
+
+		new_object->xspeed = e_floats[2];
+		new_object->yspeed = e_floats[3];
+		new_object->angle = e_floats[4];
+	}
+
 	fclose(ifile);
 }
 
-void tds_engine_save_map(struct tds_engine* ptr, char* mapname) {
-	
+void tds_engine_save_map(struct tds_engine* ptr, char* mapname) {	
 }
 
 void _tds_engine_load_sprites(struct tds_engine* ptr) {
@@ -296,4 +342,5 @@ void _tds_engine_load_sprites(struct tds_engine* ptr) {
 void _tds_engine_load_sounds(struct tds_engine* ptr) {
 	tds_sound_cache_add(ptr->sndc_handle, "music_bg", tds_sound_buffer_create("res/music/music_bg.ogg"));
 	tds_sound_cache_add(ptr->sndc_handle, "sound_swish", tds_sound_buffer_create("res/sounds/swish.ogg"));
+	tds_sound_cache_add(ptr->sndc_handle, "sound_pistol", tds_sound_buffer_create("res/sounds/pistol.ogg"));
 }
