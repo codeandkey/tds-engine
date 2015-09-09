@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_handle_manager* hmgr, struct tds_sprite_cache* smgr, float x, float y, float z, void* data) {
+struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_handle_manager* hmgr, struct tds_sprite_cache* smgr, float x, float y, float z, struct tds_object_param* param_list) {
 	struct tds_object* output = tds_malloc(sizeof(struct tds_object));
 
 	output->type_name = type->type_name;
@@ -15,6 +15,8 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->func_draw = type->func_draw;
 	output->func_msg = type->func_msg;
 	output->func_destroy = type->func_destroy;
+	output->func_import = type->func_import;
+	output->func_export = type->func_export;
 
 	output->x = x;
 	output->y = y;
@@ -48,12 +50,12 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 		output->cbox_height = output->sprite_handle->height;
 	}
 
-	if (data && output->object_data) {
-		memcpy(output->object_data, data, type->data_size);
-	}
-
 	if (output->func_init) {
 		tds_object_init(output);
+	}
+
+	if (output->func_import && param_list) {
+		tds_object_import(output, param_list);
 	}
 
 	tds_logf(TDS_LOG_MESSAGE, "created object with handle %d, sprite %X\n", output->object_handle, (unsigned long) output->sprite_handle);
@@ -176,6 +178,14 @@ void tds_object_msg(struct tds_object* ptr, struct tds_object* sender, int msg, 
 
 void tds_object_destroy(struct tds_object* ptr) {
 	ptr->func_destroy(ptr);
+}
+
+void tds_object_import(struct tds_object* ptr, struct tds_object_param* param_list) {
+	ptr->func_import(ptr, param_list);
+}
+
+struct tds_object_param* tds_object_export(struct tds_object* ptr) {
+	return ptr->func_export(ptr);
 }
 
 void tds_object_update_sndsrc(struct tds_object* ptr) {

@@ -12,6 +12,8 @@
 struct tds_object_type tds_obj_system_type = {
 	"system",
 	0,
+	(void*) 0,
+	0,
 	sizeof(struct tds_obj_system_data),
 	tds_obj_system_init,
 	tds_obj_system_destroy,

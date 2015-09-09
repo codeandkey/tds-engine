@@ -7,6 +7,8 @@
 #include "sprite_cache.h"
 #include "sound_source.h"
 
+struct tds_object_param;
+
 struct tds_object {
 	struct tds_sprite* sprite_handle;
 	const char* type_name;
@@ -28,6 +30,9 @@ struct tds_object {
 	void (*func_draw)(struct tds_object* this);
 	void (*func_msg)(struct tds_object* ptr, struct tds_object* from, int msg, void* param);
 
+	void (*func_import)(struct tds_object* ptr, struct tds_object_param* param_list);
+	struct tds_object_param* (*func_export)(struct tds_object* ptr);
+
 	void* object_data; /* set to a custom structure per object type. */
 	int object_handle;
 
@@ -42,6 +47,10 @@ struct tds_object {
 struct tds_object_type {
 	const char* type_name;
 	const char* default_sprite;
+	struct tds_object_param* default_params; /* default_params should be used as a contiguous ARRAY, not a linked list! */
+	int default_params_size;
+	/* This allows for really simple static allocation. */
+
 	int data_size;
 
 	void (*func_init)(struct tds_object* ptr);
@@ -49,9 +58,19 @@ struct tds_object_type {
 	void (*func_update)(struct tds_object* ptr);
 	void (*func_draw)(struct tds_object* ptr);
 	void (*func_msg)(struct tds_object* ptr, struct tds_object* from, int msg, void* param);
+
+	void (*func_import)(struct tds_object* ptr, struct tds_object_param* param_list);
+	struct tds_object_param* (*func_export)(struct tds_object* ptr); /* Dynamically allocate the LL of object params, the runtime will release it */
 };
 
-struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_handle_manager* hmgr, struct tds_sprite_cache* smgr, float x, float y, float z, void* initial_data);
+struct tds_object_param {
+	char key[32];
+	char value[32];
+
+	struct tds_object_param* next;
+};
+
+struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_handle_manager* hmgr, struct tds_sprite_cache* smgr, float x, float y, float z, struct tds_object_param* param_list);
 void tds_object_free(struct tds_object* ptr);
 
 void tds_object_set_sprite(struct tds_object* ptr, struct tds_sprite* sprite);
@@ -67,6 +86,9 @@ void tds_object_init(struct tds_object* ptr);
 void tds_object_draw(struct tds_object* ptr);
 void tds_object_msg(struct tds_object* ptr, struct tds_object* sender, int msg, void* p);
 void tds_object_destroy(struct tds_object* ptr);
+
+void tds_object_import(struct tds_object* ptr, struct tds_object_param* param_list);
+struct tds_object_param* tds_object_export(struct tds_object* ptr);
 
 void tds_object_update_sndsrc(struct tds_object* ptr); /* The sound source needs to be updated with pos, vel, etc. */
 

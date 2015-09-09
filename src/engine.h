@@ -6,6 +6,7 @@
 #include "texture_cache.h"
 #include "sprite_cache.h"
 #include "sound_cache.h"
+#include "object_type_cache.h"
 #include "sound_manager.h"
 #include "render.h"
 #include "text.h"
@@ -13,11 +14,34 @@
 #include "input.h"
 #include "input_map.h"
 
+/* TDS engine map spec :
+ *
+ * Maps in TDS are saved in JSON format to allow for easy structuring and editing.
+ *
+ * The root element should have an "objects" member; an array of map objects
+ * The root element should also have a "settings" member; a table of map parameters.
+ * 
+ * Each object in the "objects" list should have the following values:
+ *
+ * x : X position
+ * y : Y position
+ * xspeed : X speed
+ * yspeed : Y speed
+ * angle : object angle
+ * sprite_name : object sprite name
+ * type_name : object type name
+ * params : extra type-specific object parameters, passed to the import() type function
+ */
+
 struct tds_engine_desc {
 	const char* config_filename;
 	const char* map_filename;
 	struct tds_key_map_template* game_input;
 	int game_input_size;
+
+	void (*func_load_sounds)(struct tds_sound_cache* sndc_handle);
+	void (*func_load_sprites)(struct tds_sprite_cache* sc_handle);
+	void (*func_load_object_types)(struct tds_object_type_cache* otc_handle);
 };
 
 struct tds_engine_state {
@@ -41,6 +65,7 @@ struct tds_engine {
 	struct tds_texture_cache* tc_handle;
 	struct tds_sprite_cache* sc_handle;
 	struct tds_sound_cache* sndc_handle;
+	struct tds_object_type_cache* otc_handle;
 	struct tds_handle_manager* object_buffer;
 	struct tds_input* input_handle;
 	struct tds_input_map* input_map_handle;

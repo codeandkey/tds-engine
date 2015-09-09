@@ -68,7 +68,10 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_logf(TDS_LOG_MESSAGE, "Initialized sprite cache.\n");
 
 	output->sndc_handle = tds_sound_cache_create();
-	tds_logf(TDS_LOG_MESSAGE, "Initialize sound cache.\n");
+	tds_logf(TDS_LOG_MESSAGE, "Initialized sound cache.\n");
+
+	output->otc_handle = tds_object_type_cache_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized object type cache.\n");
 
 	output->object_buffer = tds_handle_manager_create(1024);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized object buffer.\n");
@@ -95,11 +98,20 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->key_map_handle = tds_key_map_create(desc.game_input, desc.game_input_size);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized key mapping system.\n");
 
-	_tds_engine_load_sprites(output);
-	tds_logf(TDS_LOG_MESSAGE, "Loaded sprites.\n");
+	if (desc.func_load_sprites) {
+		desc.func_load_sprites(output->sc_handle);
+		tds_logf(TDS_LOG_MESSAGE, "Loaded sprites.\n");
+	}
 
-	_tds_engine_load_sounds(output);
-	tds_logf(TDS_LOG_MESSAGE, "Loaded sounds.\n");
+	if (desc.func_load_sounds) {
+		desc.func_load_sounds(output->sndc_handle);
+		tds_logf(TDS_LOG_MESSAGE, "Loaded sounds.\n");
+	}
+
+	if (desc.func_load_object_types) {
+		desc.func_load_object_types(output->otc_handle);
+		tds_logf(TDS_LOG_MESSAGE, "Loaded object types.\n");
+	}
 
 	/* Free configs */
 	tds_config_free(conf);
@@ -139,6 +151,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 	{
 		/* Test code to do stuff. */
+		/* This will be removed with the revised ECS model which defers abstraction to fptrs passed through the engine constructor. */
+
 		tds_object_create(&tds_obj_system_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 		tds_object_create(&tds_obj_player_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
 		tds_object_create(&tds_obj_enemy_basic_type, ptr->object_buffer, ptr->sc_handle, -1.0f, 0.0f, 0.0f, NULL)->angle = 3.141f;
@@ -171,6 +185,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 		/* We approximate the fps using the delta frame time. */
 		ptr->state.fps = 1000.0f / delta_ms;
 
+		// Useful message for debugging frame delta timings.:w
 		// tds_logf(TDS_LOG_MESSAGE, "frame : accum = %f ms, delta_ms = %f ms, timestep = %f\n", accumulator, delta_ms, timestep_ms);
 
 		tds_display_update(ptr->display_handle);
@@ -263,68 +278,12 @@ void tds_engine_terminate(struct tds_engine* ptr) {
 	ptr->run_flag = 0;
 }
 
-/* The TDS map format stores each entity and all entity data. */
-/* Entity data saved (in bin format) : 
- *
- * position, float2
- * velocity, float2
- * angle, float
- * sprite cache index, int+char[]
- * current animation frame, int
- * entity type data, int+char[]
- * entity type name, int+char[]
+/* The TDS save-load system :
+ * load() will parse a JSON file with all of the object data.
+ * save() [usually only called by the editor] will export all of the game objects in JSON format to a map file.
+ * the JSON format spec can be seen in engine.h
+ * object types are queried via the object type caches passed through the constructor.
  */
-
-void tds_engine_load_map(struct tds_engine* ptr, char* mapname) {
-	tds_engine_flush_objects(ptr);
-
-	FILE* ifile = fopen(mapname, "rb");
-
-	if (!ifile) {
-		tds_logf(TDS_LOG_WARNING, "Failed to open map %s for reading.\n", mapname);
-		return;
-	}
-
-	while (!feof(ifile)) {
-		float e_floats[5];
-
-		if (fread(e_floats, sizeof(float), 5, ifile) != 5) {
-			tds_logf(TDS_LOG_CRITICAL, "Format error in entity positional data.\n");
-			break;
-		}
-
-		int sprite_name_len, data_len, typename_len, current_frame;
-		char* sprite_name, *data, *typename;
-
-		fread(&sprite_name_len, sizeof(int), 1, ifile);
-		sprite_name = tds_malloc(sprite_name_len + 1);
-		fread(sprite_name, 1, sprite_name_len, ifile);
-		sprite_name[sprite_name_len] = 0;
-
-		fread(&current_frame, sizeof(int), 1, ifile);
-
-		fread(&data_len, sizeof(int), 1, ifile);
-		data = tds_malloc(data_len + 1);
-		fread(data, 1, data_len, ifile);
-		data[data_len] = 0;
-
-		fread(&typename_len, sizeof(int), 1, ifile);
-		typename = tds_malloc(typename_len + 1);
-		fread(typename, 1, typename_len, ifile);
-		typename[typename_len] = 0;
-
-		struct tds_object* new_object = tds_object_create(tds_object_type_get_by_name((const char*) typename), ptr->object_buffer, ptr->sc_handle, e_floats[0], e_floats[1], 0.0f, data);
-
-		new_object->xspeed = e_floats[2];
-		new_object->yspeed = e_floats[3];
-		new_object->angle = e_floats[4];
-	}
-
-	fclose(ifile);
-}
-
-void tds_engine_save_map(struct tds_engine* ptr, char* mapname) {	
-}
 
 void _tds_engine_load_sprites(struct tds_engine* ptr) {
 	tds_sprite_cache_add(ptr->sc_handle, "player", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player.png", 32, 32), 1.0f, 1.0f, 80.0f));
