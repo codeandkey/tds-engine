@@ -9,8 +9,6 @@
 #include "sound_buffer.h"
 #include "log.h"
 
-#include "objects/all.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,9 +16,6 @@
 #define TDS_ENGINE_TIMESTEP 144.0f
 
 struct tds_engine* tds_engine_global = NULL;
-
-static void _tds_engine_load_sprites(struct tds_engine* ptr);
-static void _tds_engine_load_sounds(struct tds_engine* ptr);
 
 struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	if (tds_engine_global) {
@@ -148,22 +143,6 @@ void tds_engine_run(struct tds_engine* ptr) {
 	int running = ptr->run_flag = 1;
 
 	tds_logf(TDS_LOG_MESSAGE, "Starting engine mainloop.\n");
-
-	{
-		/* Test code to do stuff. */
-		/* This will be removed with the revised ECS model which defers abstraction to fptrs passed through the engine constructor. */
-
-		tds_object_create(&tds_obj_system_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
-		tds_object_create(&tds_obj_player_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
-		tds_object_create(&tds_obj_enemy_basic_type, ptr->object_buffer, ptr->sc_handle, -1.0f, 0.0f, 0.0f, NULL)->angle = 3.141f;
-		tds_object_create(&tds_obj_player_legs_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
-		tds_object_create(&tds_obj_player_arms_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
-		tds_object_create(&tds_obj_cursor_type, ptr->object_buffer, ptr->sc_handle, 0.0f, 0.0f, 0.0f, NULL);
-		tds_object_create(&tds_obj_wall_type, ptr->object_buffer, ptr->sc_handle, 3.0f, 0.0f, 0.0f, NULL);
-
-		/* Not to be in final game. */
-	}
-
 	tds_sound_manager_set_pos(ptr->sound_manager_handle, ptr->camera_handle->x, ptr->camera_handle->y);
 
 	/* The game, like 'hunter' will use an accumulator-based approach with a fixed timestep.
@@ -285,21 +264,17 @@ void tds_engine_terminate(struct tds_engine* ptr) {
  * object types are queried via the object type caches passed through the constructor.
  */
 
-void _tds_engine_load_sprites(struct tds_engine* ptr) {
-	tds_sprite_cache_add(ptr->sc_handle, "player", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player.png", 32, 32), 1.0f, 1.0f, 80.0f));
-	tds_sprite_cache_add(ptr->sc_handle, "enemy_basic", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/enemy.png", 32, 32), 1.0f, 1.0f, 80.0f));
-	tds_sprite_cache_add(ptr->sc_handle, "enemy_basic_aim", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/enemy_aim.png", 64, 64), 2.0f, 2.0f, 80.0f));
-	tds_sprite_cache_add(ptr->sc_handle, "player_body_swing", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player_swing_body.png", 96, 96), 3.0f, 3.0f, 40.0f));
-	tds_sprite_cache_add(ptr->sc_handle, "player_legs", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player_legs.png", 32, 32), 1.0f, 1.0f, 80.0f));
-	tds_sprite_cache_add(ptr->sc_handle, "player_arms_katana", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/player_swing_arms.png", 96, 96), 3.0f, 3.0f, 40.0f));
-	tds_sprite_cache_add(ptr->sc_handle, "wall_concrete_medium", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/wall_concrete.png", 32, 32), 1.0f, 1.0f, 0.0f));
-	tds_sprite_cache_add(ptr->sc_handle, "cursor", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/cursor.png", 32, 32), 0.3f, 0.3f, 0.0f));
-	tds_sprite_cache_add(ptr->sc_handle, "bullet", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/sprites/bullet.png", 32, 32), 0.4f, 0.25f, 0.0f));
-	tds_sprite_cache_add(ptr->sc_handle, "font_debug", tds_sprite_create(tds_texture_cache_get(ptr->tc_handle, "res/fonts/debug.png", 8, 8), 0.25f, 0.25f, 0.0f));
+void tds_engine_load_map(struct tds_engine* ptr, char* mapname) {
+	tds_logf(TDS_LOG_DEBUG, "Loading map [%s]\n", mapname);
 }
 
-void _tds_engine_load_sounds(struct tds_engine* ptr) {
-	tds_sound_cache_add(ptr->sndc_handle, "music_bg", tds_sound_buffer_create("res/music/music_bg.ogg"));
-	tds_sound_cache_add(ptr->sndc_handle, "sound_swish", tds_sound_buffer_create("res/sounds/swish.ogg"));
-	tds_sound_cache_add(ptr->sndc_handle, "sound_pistol", tds_sound_buffer_create("res/sounds/pistol.ogg"));
+void tds_engine_save_map(struct tds_engine* ptr, char* mapname) {
+	tds_logf(TDS_LOG_DEBUG, "Saving to map [%s]\n", mapname);
+
+	/* To serialize, we must iterate through each object and save entity info + type params. */
+
+	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
+		/* We want to save position, angle, spritename, typename, etc.. */
+		/* We also want to store object type parameters to be passed to/from the import/export functions. */
+	}
 }

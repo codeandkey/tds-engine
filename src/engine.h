@@ -90,4 +90,4 @@ struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engi
 void tds_engine_load_map(struct tds_engine* ptr, char* mapname);
 void tds_engine_save_map(struct tds_engine* ptr, char* mapname);
 
-struct tds_engine* tds_engine_global;
+extern struct tds_engine* tds_engine_global;
