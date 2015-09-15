@@ -14,6 +14,8 @@
 #include "input.h"
 #include "input_map.h"
 
+#define TDS_MAP_PREFIX "res/maps/"
+
 /* TDS engine map spec :
  *
  * Maps in TDS are saved in JSON format to allow for easy structuring and editing.
@@ -45,9 +47,8 @@ struct tds_engine_desc {
 };
 
 struct tds_engine_state {
-	char* mapname;
 	float fps;
-	int entity_count;
+	int entity_maxindex;
 };
 
 struct tds_engine_object_list {
@@ -87,7 +88,7 @@ void tds_engine_terminate(struct tds_engine* ptr); /* flags the engine to stop s
 struct tds_object* tds_engine_get_object_by_type(struct tds_engine* ptr, const char* type);
 struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engine* ptr, const char* type); /* Allocates a buffer. Must be freed after reading! */
 
-void tds_engine_load_map(struct tds_engine* ptr, char* mapname);
-void tds_engine_save_map(struct tds_engine* ptr, char* mapname);
+void tds_engine_load_map(struct tds_engine* ptr, const char* mapname);
+void tds_engine_save_map(struct tds_engine* ptr, const char* mapname);
 
 extern struct tds_engine* tds_engine_global;

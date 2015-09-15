@@ -33,9 +33,8 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->desc = desc;
 	output->object_list = NULL;
 
-	output->state.mapname = (char*) desc.map_filename;
 	output->state.fps = 0.0f;
-	output->state.entity_count = 0;
+	output->state.entity_maxindex = 0;
 
 	tds_logf(TDS_LOG_MESSAGE, "Initializing TDS engine..\n");
 
@@ -110,8 +109,12 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	/* Free configs */
 	tds_config_free(conf);
-
 	tds_logf(TDS_LOG_MESSAGE, "Done initializing everything.\n");
+	tds_logf(TDS_LOG_MESSAGE, "Engine is ready to roll!\n");
+
+	tds_logf(TDS_LOG_MESSAGE, "Loading initial map [%s].\n", desc.map_filename);
+	tds_engine_load_map(output, desc.map_filename);
+
 	return output;
 }
 
@@ -166,6 +169,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		// Useful message for debugging frame delta timings.:w
 		// tds_logf(TDS_LOG_MESSAGE, "frame : accum = %f ms, delta_ms = %f ms, timestep = %f\n", accumulator, delta_ms, timestep_ms);
+
+		ptr->state.entity_maxindex = ptr->object_buffer->max_index;
 
 		tds_display_update(ptr->display_handle);
 		tds_input_update(ptr->input_handle);
@@ -257,24 +262,170 @@ void tds_engine_terminate(struct tds_engine* ptr) {
 	ptr->run_flag = 0;
 }
 
-/* The TDS save-load system :
- * load() will parse a JSON file with all of the object data.
- * save() [usually only called by the editor] will export all of the game objects in JSON format to a map file.
- * the JSON format spec can be seen in engine.h
- * object types are queried via the object type caches passed through the constructor.
- */
+void tds_engine_load_map(struct tds_engine* ptr, const char* mapname) {
+	char* str_filename = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
 
-void tds_engine_load_map(struct tds_engine* ptr, char* mapname) {
-	tds_logf(TDS_LOG_DEBUG, "Loading map [%s]\n", mapname);
+	memcpy(str_filename, TDS_MAP_PREFIX, strlen(TDS_MAP_PREFIX));
+	memcpy(str_filename + strlen(TDS_MAP_PREFIX), mapname, strlen(mapname));
+
+	str_filename[strlen(TDS_MAP_PREFIX) + strlen(mapname)] = 0;
+	tds_logf(TDS_LOG_DEBUG, "Loading map [%s]\n", str_filename);
+
+	FILE* fd_input = fopen(str_filename, "rb");
+
+	if (!fd_input) {
+		tds_logf(TDS_LOG_CRITICAL, "Loading failed : the file could not be opened.\n");
+		return;
+	}
+
+	while(!feof(fd_input)) {
+		float x, y, dx, dy, angle;
+		int type_size, param_count, result = 1;
+		char* type_name;
+
+		result &= fread(&x, sizeof(float), 1, fd_input);
+		result &= fread(&y, sizeof(float), 1, fd_input);
+
+		result &= fread(&dx, sizeof(float), 1, fd_input);
+		result &= fread(&dy, sizeof(float), 1, fd_input);
+		result &= fread(&angle, sizeof(float), 1, fd_input);
+
+		if (!result) {
+			tds_logf(TDS_LOG_CRITICAL, "Loading failed : malformed header, could not finish read.\n");
+			return;
+		}
+
+		result &= fread(&type_size, sizeof(int), 1, fd_input);
+		type_name = tds_malloc(type_size + 1);
+		result &= fread(&type_size, type_size, 1, fd_input);
+		type_name[type_size] = 0;
+
+		result &= fread(&param_count, sizeof(int), 1, fd_input);
+
+		struct tds_object_param* param_list_head = NULL, *param_list_tail = NULL;
+
+		for (int i = 0; i < param_count; ++i) {
+			int param_keysize, param_valsize, param_type;
+			char* param_key, *param_val;
+
+			fread(&param_keysize, sizeof(int), 1, fd_input);
+			fread(&param_valsize, sizeof(int), 1, fd_input);
+			fread(&param_type, sizeof(int) , 1, fd_input);
+
+			param_key = tds_malloc(param_keysize + 1);
+			param_val = tds_malloc(param_valsize + 1);
+
+			fread(param_key, param_keysize, 1, fd_input);
+			fread(param_val, param_valsize, 1, fd_input);
+
+			param_key[param_keysize] = 0;
+			param_val[param_valsize] = 0;
+
+			struct tds_object_param* new_param = tds_malloc(sizeof(struct tds_object_param));
+
+			strncpy(new_param->key, param_key, TDS_PARAM_KEYSIZE);
+			strncpy(new_param->value, param_val, TDS_PARAM_VALSIZE);
+			new_param->type = param_type;
+
+			if (param_list_tail) {
+				param_list_tail->next = new_param;
+				param_list_tail = new_param;
+			} else {
+				param_list_tail = param_list_head = new_param;
+			}
+
+			tds_free(param_key);
+			tds_free(param_val);
+		}
+
+		/* We have the object param list ready. */
+		/* We try and retrieve the type information. */
+
+		struct tds_object_type* type_ptr = tds_object_type_cache_get(ptr->otc_handle, type_name);
+		tds_object_create(type_ptr, ptr->object_buffer, ptr->sc_handle, x, y, 0.0f, param_list_head);
+
+		struct tds_object_param* cur = param_list_head, *tmp = NULL;
+
+		while (cur) {
+			tmp = cur;
+			cur = cur->next;
+			tds_free(tmp);
+		}
+	}
+
+	fclose(fd_input);
+	tds_free(str_filename);
 }
 
-void tds_engine_save_map(struct tds_engine* ptr, char* mapname) {
-	tds_logf(TDS_LOG_DEBUG, "Saving to map [%s]\n", mapname);
+void tds_engine_save_map(struct tds_engine* ptr, const char* mapname) {
+	char* str_filename = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
+
+	memcpy(str_filename, TDS_MAP_PREFIX, strlen(TDS_MAP_PREFIX));
+	memcpy(str_filename + strlen(TDS_MAP_PREFIX), mapname, strlen(mapname));
+
+	str_filename[strlen(TDS_MAP_PREFIX) + strlen(mapname)] = 0;
+
+	tds_logf(TDS_LOG_DEBUG, "Saving to map [%s]\n", str_filename);
+
+	FILE* fd_output = fopen(str_filename, "wb");
+
+	if (!fd_output) {
+		tds_logf(TDS_LOG_CRITICAL, "Saving failed : could not open file\n");
+		return;
+	}
 
 	/* To serialize, we must iterate through each object and save entity info + type params. */
 
 	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
 		/* We want to save position, angle, spritename, typename, etc.. */
 		/* We also want to store object type parameters to be passed to/from the import/export functions. */
+
+		struct tds_object* target = ptr->object_buffer->buffer[i].data;
+
+		if (!target) {
+			continue;
+		}
+
+		/* First save primitiva values, then move through the parameter list. */
+
+		int type_size = strlen(target->type_name);
+
+		fwrite(&target->x, sizeof(float), 1, fd_output);
+		fwrite(&target->y, sizeof(float), 1, fd_output);
+		fwrite(&target->z, sizeof(float), 1, fd_output);
+		fwrite(&target->xspeed, sizeof(float), 1, fd_output);
+		fwrite(&target->yspeed, sizeof(float), 1, fd_output);
+		fwrite(&target->angle, sizeof(float), 1, fd_output);
+		fwrite(&type_size, sizeof(int), 1, fd_output);
+		fwrite(target->type_name, type_size, 1, fd_output);
+
+		struct tds_object_param* param_list_head = target->func_export(target), *current_param = param_list_head;
+
+		/* We run through the list once to get the count, twice to save all of the params. */
+
+		int param_count = 0;
+
+		while (current_param) {
+			param_count++;
+			current_param = current_param->next;
+		}
+
+		fwrite(&param_count, sizeof(int), 1, fd_output);
+		current_param = param_list_head;
+
+		while (current_param) {
+			int keysize = TDS_PARAM_KEYSIZE, valsize = TDS_PARAM_VALSIZE;
+			fwrite(&keysize, sizeof(int), 1, fd_output);
+			fwrite(&valsize, sizeof(int), 1, fd_output);
+
+			fwrite(&current_param->type, sizeof(int), 1, fd_output);
+			fwrite(current_param->key, TDS_PARAM_KEYSIZE, 1, fd_output);
+			fwrite(current_param->value, TDS_PARAM_VALSIZE, 1, fd_output);
+
+			current_param = current_param->next;
+		}
 	}
+
+	tds_free(str_filename);
+	fclose(fd_output);
 }
