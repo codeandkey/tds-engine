@@ -39,13 +39,24 @@ void tds_console_free(struct tds_console* ptr) {
 void tds_console_update(struct tds_console* ptr) {
 	/* This does NOT need to be called on a delta time. Once a frame is enough. */
 
+	if (tds_input_map_get_key_pressed(tds_engine_global->input_map_handle, GLFW_KEY_ENTER, 0)) {
+		ptr->curs_col = 0;
+
+		if (++ptr->curs_row >= ptr->rows) {
+			for (int i = 0; i < ptr->rows - 1; ++i) {
+				memcpy(ptr->buffers[i], ptr->buffers[i + 1], ptr->cols);
+			}
+
+			memset(ptr->buffers[ptr->rows - 1], 0, ptr->cols);
+			ptr->curs_row = ptr->rows - 1;
+		}
+	}
+
 	char input_char = tds_input_map_get_char(tds_engine_global->input_map_handle);
 
 	if (!input_char) {
 		return;
 	}
-
-	tds_logf(TDS_LOG_DEBUG, "Received character [%c]\n", input_char);
 
 	ptr->buffers[ptr->curs_row][ptr->curs_col] = input_char;
 
