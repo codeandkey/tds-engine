@@ -56,12 +56,26 @@ void tds_render_clear(struct tds_render* ptr) {
 void tds_render_draw(struct tds_render* ptr) {
 	/* Drawing will be done linearly on a per-layer basis, using a list of occluded objects. */
 
+	int render_objects = 1, render_text = 1;;
+
 	if (ptr->object_buffer->max_index <= 0) {
-		return;
+		render_objects = 0;
 	}
 
-	int* object_rendered = tds_malloc(ptr->object_buffer->max_index * sizeof(int));
-	int* text_rendered = tds_malloc(ptr->text_handle->size * sizeof(int));
+	if (!ptr->text_handle->head) {
+		render_text = 0;
+	}
+
+	int* object_rendered = NULL;
+	int* text_rendered = NULL;
+
+	if (render_text) {
+		text_rendered = tds_malloc(ptr->text_handle->size * sizeof(int));
+	}
+
+	if (render_objects) {
+		object_rendered = tds_malloc(ptr->object_buffer->max_index * sizeof(int));
+	}
 
 	int min_layer = 0;
 	int max_layer = 0;
@@ -132,8 +146,13 @@ void tds_render_draw(struct tds_render* ptr) {
 		}
 	}
 
-	tds_free(object_rendered);
-	tds_free(text_rendered);
+	if (object_rendered) {
+		tds_free(object_rendered);
+	}
+
+	if (text_rendered) {
+		tds_free(text_rendered);
+	}
 }
 
 void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int layer) {
@@ -158,8 +177,6 @@ void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int laye
 void _tds_render_text_batch(struct tds_render* ptr, struct tds_text_batch* data) {
 	vec4* sprite_transform = tds_sprite_get_transform(data->font);
 	mat4x4 obj_transform, transform_full;
-
-	tds_logf(TDS_LOG_DEBUG, "Rendering text batch [%s] at %f, %f\n", data->str, data->x, data->y);
 
 	/* If we pass the glyph X and Y to the transform function, everything should be taken care of. */
 

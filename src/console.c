@@ -77,6 +77,13 @@ void tds_console_draw(struct tds_console* ptr) {
 
 	for (int i = 0; i < ptr->rows; ++i) {
 		render_batch.y -= ptr->font->height;
+		render_batch.str = ptr->buffers[i];
+		render_batch.str_len = ptr->cols;
+
+		if (!*render_batch.str) {
+			continue;
+		}
+
 		tds_text_submit(tds_engine_global->text_handle, &render_batch);
 	}
 }

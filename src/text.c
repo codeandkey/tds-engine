@@ -1,6 +1,7 @@
 #include "text.h"
 #include "memory.h"
 #include "sprite.h"
+#include "log.h"
 
 #include <stdlib.h>
 
