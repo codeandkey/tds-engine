@@ -71,5 +71,5 @@ int tds_input_map_get_mouse_button_released(struct tds_input_map* ptr, int mb, i
 }
 
 char tds_input_map_get_char(struct tds_input_map* ptr) {
-	return (char) ptr->input_handle->last_char;
+	return tds_input_get_char(ptr->input_handle);
 }

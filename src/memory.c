@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 static int tds_mem_blocks = 0;
 static unsigned long tds_mem_bytes = 0;
@@ -17,6 +18,8 @@ void* tds_malloc(int size) {
 
 	tds_mem_blocks++;
 	tds_mem_bytes += size;
+
+	memset(output, 0, size);
 
 	return output;
 }

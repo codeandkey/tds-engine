@@ -1,11 +1,11 @@
 CC = gcc
-CFLAGS = -std=gnu99 -Wall -g
-LDFLAGS = -lm -ldl -lglfw -lGL -lSOIL -lrt -lopenal
+CFLAGS = -std=gnu99 -Wall -g -fPIC
+LDFLAGS = -shared -fPIC
 
 SOURCES = $(wildcard src/*.c src/objects/*.c src/game/*.c src/libs/*.c)
 OBJECTS = $(SOURCES:.c=.o)
 
-OUTPUT = tds
+OUTPUT = libtds.so
 
 all: $(OUTPUT)
 
@@ -20,3 +20,8 @@ clean:
 
 cleanbin: clean
 	rm -f $(OUTPUT)
+
+install: $(OUTPUT)
+	cp $(OUTPUT) /usr/lib
+	mkdir -p /usr/include/tds
+	cp src/*.h /usr/include/tds

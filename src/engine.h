@@ -8,6 +8,7 @@
 #include "sound_cache.h"
 #include "object_type_cache.h"
 #include "sound_manager.h"
+#include "console.h"
 #include "render.h"
 #include "text.h"
 #include "key_map.h"
@@ -42,7 +43,7 @@ struct tds_engine_desc {
 	int game_input_size;
 
 	void (*func_load_sounds)(struct tds_sound_cache* sndc_handle);
-	void (*func_load_sprites)(struct tds_sprite_cache* sc_handle);
+	void (*func_load_sprites)(struct tds_sprite_cache* sc_handle, struct tds_texture_cache* tc_handle);
 	void (*func_load_object_types)(struct tds_object_type_cache* otc_handle);
 };
 
@@ -73,6 +74,7 @@ struct tds_engine {
 	struct tds_key_map* key_map_handle;
 	struct tds_sound_manager* sound_manager_handle;
 	struct tds_text* text_handle;
+	struct tds_console* console_handle;
 
 	int run_flag;
 	struct tds_object** object_list;

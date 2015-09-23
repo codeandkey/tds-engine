@@ -159,9 +159,15 @@ void _tds_render_text_batch(struct tds_render* ptr, struct tds_text_batch* data)
 	vec4* sprite_transform = tds_sprite_get_transform(data->font);
 	mat4x4 obj_transform, transform_full;
 
+	tds_logf(TDS_LOG_DEBUG, "Rendering text batch [%s] at %f, %f\n", data->str, data->x, data->y);
+
 	/* If we pass the glyph X and Y to the transform function, everything should be taken care of. */
 
 	for (int i = 0; i < data->str_len; ++i) {
+		if (!data->str[i]) {
+			break;
+		}
+
 		vec4* glyph_transform = tds_text_batch_get_transform(data, i);
 		mat4x4_mul(obj_transform, glyph_transform, sprite_transform);
 		mat4x4_mul(transform_full, ptr->camera_handle->mat_transform, obj_transform);

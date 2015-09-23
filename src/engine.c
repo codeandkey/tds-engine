@@ -93,7 +93,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_logf(TDS_LOG_MESSAGE, "Initialized key mapping system.\n");
 
 	if (desc.func_load_sprites) {
-		desc.func_load_sprites(output->sc_handle);
+		desc.func_load_sprites(output->sc_handle, output->tc_handle);
 		tds_logf(TDS_LOG_MESSAGE, "Loaded sprites.\n");
 	}
 
@@ -107,13 +107,18 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 		tds_logf(TDS_LOG_MESSAGE, "Loaded object types.\n");
 	}
 
+	output->console_handle = tds_console_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized console.\n");
+
 	/* Free configs */
 	tds_config_free(conf);
 	tds_logf(TDS_LOG_MESSAGE, "Done initializing everything.\n");
 	tds_logf(TDS_LOG_MESSAGE, "Engine is ready to roll!\n");
 
-	tds_logf(TDS_LOG_MESSAGE, "Loading initial map [%s].\n", desc.map_filename);
-	tds_engine_load_map(output, desc.map_filename);
+	if (desc.map_filename) {
+		tds_logf(TDS_LOG_MESSAGE, "Loading initial map [%s].\n", desc.map_filename);
+		tds_engine_load_map(output, desc.map_filename);
+	}
 
 	return output;
 }
@@ -139,6 +144,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_sound_cache_free(ptr->sndc_handle);
 	tds_sound_manager_free(ptr->sound_manager_handle);
 	tds_handle_manager_free(ptr->object_buffer);
+	tds_console_free(ptr->console_handle);
 	tds_free(ptr);
 }
 
@@ -191,6 +197,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 			}
 		}
 
+		tds_console_update(ptr->console_handle);
+
 		/* Run game draw logic. */
 		tds_render_clear(ptr->render_handle); /* We clear before executing the draw functions, otherwise the text buffer would be destroyed */
 
@@ -203,6 +211,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 			tds_object_draw(target);
 		}
+
+		tds_console_draw(ptr->console_handle);
 
 		tds_render_draw(ptr->render_handle);
 		tds_display_swap(ptr->display_handle);
