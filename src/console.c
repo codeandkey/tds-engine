@@ -7,6 +7,9 @@
 
 #include <string.h>
 
+static void _tds_console_execute(struct tds_console* ptr);
+static void _tds_console_print(struct tds_console* ptr, char* str);
+
 struct tds_console* tds_console_create(void) {
 	struct tds_console* output = tds_malloc(sizeof(struct tds_console));
 
@@ -24,6 +27,8 @@ struct tds_console* tds_console_create(void) {
 
 	output->curs_row = output->curs_col = 0;
 
+	_tds_console_print(output, "$ ");
+
 	return output;
 }
 
@@ -38,40 +43,23 @@ void tds_console_free(struct tds_console* ptr) {
 
 void tds_console_update(struct tds_console* ptr) {
 	/* This does NOT need to be called on a delta time. Once a frame is enough. */
+	char input_char = 0;
 
 	if (tds_input_map_get_key_pressed(tds_engine_global->input_map_handle, GLFW_KEY_ENTER, 0)) {
-		ptr->curs_col = 0;
-
-		if (++ptr->curs_row >= ptr->rows) {
-			for (int i = 0; i < ptr->rows - 1; ++i) {
-				memcpy(ptr->buffers[i], ptr->buffers[i + 1], ptr->cols);
-			}
-
-			memset(ptr->buffers[ptr->rows - 1], 0, ptr->cols);
-			ptr->curs_row = ptr->rows - 1;
-		}
+		_tds_console_execute(ptr);
+		_tds_console_print(ptr, "\n$ ");
 	}
 
-	char input_char = tds_input_map_get_char(tds_engine_global->input_map_handle);
+	input_char = tds_input_map_get_char(tds_engine_global->input_map_handle);
 
 	if (!input_char) {
 		return;
 	}
 
-	ptr->buffers[ptr->curs_row][ptr->curs_col] = input_char;
+	char str[2] = {0};
+	str[0] = input_char;
 
-	if (++ptr->curs_col >= ptr->cols) {
-		ptr->curs_col = 0;
-
-		if (++ptr->curs_row >= ptr->rows) {
-			for (int i = 0; i < ptr->rows - 1; ++i) {
-				memcpy(ptr->buffers[i], ptr->buffers[i + 1], ptr->cols);
-			}
-
-			memset(ptr->buffers[ptr->rows - 1], 0, ptr->cols);
-			ptr->curs_row = ptr->rows - 1;
-		}
-	}
+	_tds_console_print(ptr, str);
 }
 
 void tds_console_draw(struct tds_console* ptr) {
@@ -96,5 +84,46 @@ void tds_console_draw(struct tds_console* ptr) {
 		}
 
 		tds_text_submit(tds_engine_global->text_handle, &render_batch);
+	}
+}
+
+void _tds_console_print(struct tds_console* ptr, char* str) {
+	int str_len = strlen(str);
+
+	for (int i = 0; i < str_len; ++i) {
+		if (str[i] != '\n') {
+			ptr->buffers[ptr->curs_row][ptr->curs_col] = str[i];
+		}
+
+		if (++ptr->curs_col >= ptr->cols || str[i] == '\n') {
+			ptr->curs_col = 0;
+
+			if (++ptr->curs_row >= ptr->rows) {
+				for (int i = 0; i < ptr->rows - 1; ++i) {
+						memcpy(ptr->buffers[i], ptr->buffers[i + 1], ptr->cols);
+				}
+
+				memset(ptr->buffers[ptr->rows - 1], 0, ptr->cols);
+				ptr->curs_row = ptr->rows - 1;
+			}
+		}
+	}
+}
+
+void _tds_console_execute(struct tds_console* ptr) {
+	char* cmd = tds_malloc(ptr->cols);
+	memcpy(cmd, ptr->buffers[ptr->curs_row], ptr->cols);
+	int cmd_len = ptr->cols;
+
+	char* cur_cmd = strtok(cmd, " ");
+	cur_cmd = strtok(NULL, " ");
+
+	if (!strcmp(cur_cmd, "echo")) {
+		_tds_console_print(ptr, "\n");
+
+		while (cur_cmd = strtok(NULL, " ")) {
+			_tds_console_print(ptr, cur_cmd);
+			_tds_console_print(ptr, " ");
+		}
 	}
 }

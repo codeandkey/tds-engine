@@ -10,12 +10,16 @@
 void _tds_key_map_load_config(struct tds_key_map* ptr, const char* config);
 
 struct tds_key_map* tds_key_map_create(struct tds_key_map_template* def, int def_count) {
-	if (!def) {
-		tds_logf(TDS_LOG_CRITICAL, "The key map must be provided with a default config for construction.");
-		return NULL;
-	}
-
 	struct tds_key_map* output = tds_malloc(sizeof(struct tds_key_map));
+
+	if (!def) {
+		tds_logf(TDS_LOG_WARNING, "No template provided to key map! Buffers will be empty.\n");
+
+		output->entry_buffer = NULL;
+		output->entry_count = 0;
+
+		return output;
+	}
 
 	output->entry_buffer = malloc(sizeof(struct tds_key_map) * def_count);
 	output->entry_count = def_count;
@@ -31,7 +35,10 @@ struct tds_key_map* tds_key_map_create(struct tds_key_map_template* def, int def
 }
 
 void tds_key_map_free(struct tds_key_map* ptr) {
-	tds_free(ptr->entry_buffer);
+	if (ptr->entry_buffer) {
+		tds_free(ptr->entry_buffer);
+	}
+
 	tds_free(ptr);
 }
 
