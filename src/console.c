@@ -113,7 +113,6 @@ void _tds_console_print(struct tds_console* ptr, char* str) {
 void _tds_console_execute(struct tds_console* ptr) {
 	char* cmd = tds_malloc(ptr->cols);
 	memcpy(cmd, ptr->buffers[ptr->curs_row], ptr->cols);
-	int cmd_len = ptr->cols;
 
 	char* cur_cmd = strtok(cmd, " ");
 	cur_cmd = strtok(NULL, " ");
@@ -121,7 +120,7 @@ void _tds_console_execute(struct tds_console* ptr) {
 	if (!strcmp(cur_cmd, "echo")) {
 		_tds_console_print(ptr, "\n");
 
-		while (cur_cmd = strtok(NULL, " ")) {
+		while ( (cur_cmd = strtok(NULL, " ")) ) {
 			_tds_console_print(ptr, cur_cmd);
 			_tds_console_print(ptr, " ");
 		}
