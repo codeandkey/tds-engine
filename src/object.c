@@ -10,6 +10,8 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 
 	output->type_name = type->type_name;
 
+	tds_logf(TDS_LOG_MESSAGE, "Creating object of type [%s]\n", type->type_name);
+
 	output->func_init = type->func_init;
 	output->func_update = type->func_update;
 	output->func_draw = type->func_draw;
@@ -155,11 +157,17 @@ int tds_object_anim_oneshot_finished(struct tds_object* ptr) {
 }
 
 void tds_object_init(struct tds_object* ptr) {
+	if (!ptr->func_init) {
+		return;
+	}
+
 	ptr->func_init(ptr);
 }
 
 void tds_object_update(struct tds_object* ptr) {
-	ptr->func_update(ptr);
+	if (ptr->func_update) {
+		ptr->func_update(ptr);
+	}
 
 	ptr->x += ptr->xspeed;
 	ptr->y += ptr->yspeed;
@@ -169,15 +177,22 @@ void tds_object_update(struct tds_object* ptr) {
 
 void tds_object_draw(struct tds_object* ptr) {
 	tds_object_anim_update(ptr);
-	ptr->func_draw(ptr);
+
+	if (ptr->func_draw) {
+		ptr->func_draw(ptr);
+	}
 }
 
 void tds_object_msg(struct tds_object* ptr, struct tds_object* sender, int msg, void* param) {
-	ptr->func_msg(ptr, sender, msg, param);
+	if (ptr->func_msg) {
+		ptr->func_msg(ptr, sender, msg, param);
+	}
 }
 
 void tds_object_destroy(struct tds_object* ptr) {
-	ptr->func_destroy(ptr);
+	if (ptr->func_destroy) {
+		ptr->func_destroy(ptr);
+	}
 }
 
 void tds_object_import(struct tds_object* ptr, struct tds_object_param* param_list) {

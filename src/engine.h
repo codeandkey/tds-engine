@@ -90,7 +90,7 @@ void tds_engine_terminate(struct tds_engine* ptr); /* flags the engine to stop s
 struct tds_object* tds_engine_get_object_by_type(struct tds_engine* ptr, const char* type);
 struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engine* ptr, const char* type); /* Allocates a buffer. Must be freed after reading! */
 
-void tds_engine_load_map(struct tds_engine* ptr, const char* mapname);
-void tds_engine_save_map(struct tds_engine* ptr, const char* mapname);
+void tds_engine_load(struct tds_engine* ptr, const char* mapname);
+void tds_engine_save(struct tds_engine* ptr, const char* mapname);
 
 extern struct tds_engine* tds_engine_global;

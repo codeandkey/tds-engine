@@ -117,7 +117,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	if (desc.map_filename) {
 		tds_logf(TDS_LOG_MESSAGE, "Loading initial map [%s].\n", desc.map_filename);
-		tds_engine_load_map(output, desc.map_filename);
+		tds_engine_load(output, desc.map_filename);
 	}
 
 	return output;
@@ -272,7 +272,7 @@ void tds_engine_terminate(struct tds_engine* ptr) {
 	ptr->run_flag = 0;
 }
 
-void tds_engine_load_map(struct tds_engine* ptr, const char* mapname) {
+void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 	char* str_filename = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
 
 	memcpy(str_filename, TDS_MAP_PREFIX, strlen(TDS_MAP_PREFIX));
@@ -294,6 +294,11 @@ void tds_engine_load_map(struct tds_engine* ptr, const char* mapname) {
 		char* type_name;
 
 		result &= fread(&x, sizeof(float), 1, fd_input);
+
+		if (!result) {
+			break;
+		}
+
 		result &= fread(&y, sizeof(float), 1, fd_input);
 
 		result &= fread(&dx, sizeof(float), 1, fd_input);
@@ -305,12 +310,19 @@ void tds_engine_load_map(struct tds_engine* ptr, const char* mapname) {
 			return;
 		}
 
+		tds_logf(TDS_LOG_DEBUG, "Header : x %f y %f dx %f dy %f angle %f\n", x, y, dx, dy, angle);
+
 		result &= fread(&type_size, sizeof(int), 1, fd_input);
+		tds_logf(TDS_LOG_DEBUG, "Typename size : %d\n", type_size);
 		type_name = tds_malloc(type_size + 1);
-		result &= fread(&type_size, type_size, 1, fd_input);
+		result &= fread(type_name, type_size, 1, fd_input);
 		type_name[type_size] = 0;
 
+		tds_logf(TDS_LOG_DEBUG, "Typename : [%s]\n", type_name);
+
 		result &= fread(&param_count, sizeof(int), 1, fd_input);
+
+		tds_logf(TDS_LOG_DEBUG, "Parameter count : %d\n", param_count);
 
 		struct tds_object_param* param_list_head = NULL, *param_list_tail = NULL;
 
@@ -361,13 +373,15 @@ void tds_engine_load_map(struct tds_engine* ptr, const char* mapname) {
 			cur = cur->next;
 			tds_free(tmp);
 		}
+
+		tds_free(type_name);
 	}
 
 	fclose(fd_input);
 	tds_free(str_filename);
 }
 
-void tds_engine_save_map(struct tds_engine* ptr, const char* mapname) {
+void tds_engine_save(struct tds_engine* ptr, const char* mapname) {
 	char* str_filename = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
 
 	memcpy(str_filename, TDS_MAP_PREFIX, strlen(TDS_MAP_PREFIX));
@@ -402,18 +416,23 @@ void tds_engine_save_map(struct tds_engine* ptr, const char* mapname) {
 
 		fwrite(&target->x, sizeof(float), 1, fd_output);
 		fwrite(&target->y, sizeof(float), 1, fd_output);
-		fwrite(&target->z, sizeof(float), 1, fd_output);
 		fwrite(&target->xspeed, sizeof(float), 1, fd_output);
 		fwrite(&target->yspeed, sizeof(float), 1, fd_output);
 		fwrite(&target->angle, sizeof(float), 1, fd_output);
 		fwrite(&type_size, sizeof(int), 1, fd_output);
 		fwrite(target->type_name, type_size, 1, fd_output);
 
-		struct tds_object_param* param_list_head = target->func_export(target), *current_param = param_list_head;
+		struct tds_object_param* param_list_head, *current_param;
+		int param_count = 0;
+
+		if (target->func_export) {
+			param_list_head = current_param = target->func_export(target);
+		} else {
+			fwrite(&param_count, sizeof(int), 1, fd_output);
+			continue;
+		}
 
 		/* We run through the list once to get the count, twice to save all of the params. */
-
-		int param_count = 0;
 
 		while (current_param) {
 			param_count++;

@@ -12,6 +12,10 @@ struct tds_object_param;
 #define TDS_PARAM_KEYSIZE 32
 #define TDS_PARAM_VALSIZE 32
 
+#define TDS_PARAM_INT 0
+#define TDS_PARAM_STRING 1
+#define TDS_PARAM_FLOAT 2
+
 struct tds_object {
 	struct tds_sprite* sprite_handle;
 	const char* type_name;

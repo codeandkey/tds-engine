@@ -6,9 +6,9 @@
 #include "input_map.h"
 
 #include <string.h>
+#include <stdlib.h>
 
 static void _tds_console_execute(struct tds_console* ptr);
-static void _tds_console_print(struct tds_console* ptr, char* str);
 
 struct tds_console* tds_console_create(void) {
 	struct tds_console* output = tds_malloc(sizeof(struct tds_console));
@@ -27,7 +27,7 @@ struct tds_console* tds_console_create(void) {
 
 	output->curs_row = output->curs_col = 0;
 
-	_tds_console_print(output, "$ ");
+	tds_console_print(output, "$ ");
 
 	return output;
 }
@@ -46,8 +46,9 @@ void tds_console_update(struct tds_console* ptr) {
 	char input_char = 0;
 
 	if (tds_input_map_get_key_pressed(tds_engine_global->input_map_handle, GLFW_KEY_ENTER, 0)) {
+		tds_console_print(ptr, "\n");
 		_tds_console_execute(ptr);
-		_tds_console_print(ptr, "\n$ ");
+		tds_console_print(ptr, "$ ");
 	}
 
 	input_char = tds_input_map_get_char(tds_engine_global->input_map_handle);
@@ -59,7 +60,7 @@ void tds_console_update(struct tds_console* ptr) {
 	char str[2] = {0};
 	str[0] = input_char;
 
-	_tds_console_print(ptr, str);
+	tds_console_print(ptr, str);
 }
 
 void tds_console_draw(struct tds_console* ptr) {
@@ -87,7 +88,11 @@ void tds_console_draw(struct tds_console* ptr) {
 	}
 }
 
-void _tds_console_print(struct tds_console* ptr, char* str) {
+void tds_console_print(struct tds_console* ptr, char* str) {
+	if (!str) {
+		return;
+	}
+
 	int str_len = strlen(str);
 
 	for (int i = 0; i < str_len; ++i) {
@@ -112,17 +117,93 @@ void _tds_console_print(struct tds_console* ptr, char* str) {
 
 void _tds_console_execute(struct tds_console* ptr) {
 	char* cmd = tds_malloc(ptr->cols);
-	memcpy(cmd, ptr->buffers[ptr->curs_row], ptr->cols);
+	memcpy(cmd, ptr->buffers[ptr->curs_row - 1], ptr->cols);
 
 	char* cur_cmd = strtok(cmd, " ");
 	cur_cmd = strtok(NULL, " ");
 
-	if (!strcmp(cur_cmd, "echo")) {
-		_tds_console_print(ptr, "\n");
-
-		while ( (cur_cmd = strtok(NULL, " ")) ) {
-			_tds_console_print(ptr, cur_cmd);
-			_tds_console_print(ptr, " ");
-		}
+	if (!cur_cmd) {
+		return;
 	}
+
+	if (!strcmp(cur_cmd, "echo")) {
+		while ( (cur_cmd = strtok(NULL, " ")) ) {
+			tds_console_print(ptr, cur_cmd);
+			tds_console_print(ptr, " ");
+		}
+
+		tds_console_print(ptr, "\n");
+
+		return;
+	}
+
+	if (!strcmp(cur_cmd, "create")) {
+		char* type = strtok(NULL, " "), *x = strtok(NULL, " "), *y = strtok(NULL, " ");
+
+		if (!(type && x && y)) {
+			tds_console_print(ptr, "invalid number of arguments\n");
+			return;
+		}
+
+		tds_console_print(ptr, "searching for object type : [");
+		tds_console_print(ptr, type);
+		tds_console_print(ptr, "]\n");
+
+		struct tds_object_type* obj_type = tds_object_type_cache_get(tds_engine_global->otc_handle, type);
+
+		if (!obj_type) {
+			tds_console_print(ptr, "object type lookup failed\n");
+			return;
+		}
+
+		tds_console_print(ptr, "located object type : [");
+		tds_console_print(ptr, obj_type->type_name);
+		tds_console_print(ptr, "]\n");
+
+		float x_f = strtof(x, NULL), y_f = strtof(y, NULL);
+		tds_object_create(obj_type, tds_engine_global->object_buffer, tds_engine_global->sc_handle, x_f, y_f, 0.0f, NULL);
+
+		tds_console_print(ptr, "created object\n");
+		return;
+	}
+
+	if (!strcmp(cur_cmd, "exit") || !strcmp(cur_cmd, "quit")) {
+		tds_engine_terminate(tds_engine_global);
+		return;
+	}
+
+	if (!strcmp(cur_cmd, "save")) {
+		char* file = strtok(NULL, " ");
+
+		if (!file) {
+			tds_console_print(ptr, "usage: save <filename>\n");
+			return;
+		}
+
+		tds_engine_save(tds_engine_global, file);
+
+		tds_console_print(ptr, "saved map to ");
+		tds_console_print(ptr, file);
+		tds_console_print(ptr, "\n");
+
+		return;
+	}
+
+	if (!strcmp(cur_cmd, "load")) {
+		char* file = strtok(NULL, " ");
+
+		if (!file) {
+			tds_console_print(ptr, "usage: load <filename>\n");
+			return;
+		}
+
+		tds_console_print(ptr, "loading from ");
+		tds_console_print(ptr, file);
+		tds_console_print(ptr, "..\n");
+
+		tds_engine_load(tds_engine_global, file);
+		return;
+	}
+
+	tds_free(cmd);
 }
