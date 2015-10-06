@@ -199,6 +199,18 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "-edit")) {
 		tds_console_print(ptr, "destroying editor objects\n");
 		tds_destroy_editor_objects();
+	} else if (!strcmp(cur_cmd, "+draw")) {
+		tds_console_print(ptr, "enabling draw\n");
+		tds_engine_global->enable_draw = 1;
+	} else if (!strcmp(cur_cmd, "-draw")) {
+		tds_console_print(ptr, "disabling draw\n");
+		tds_engine_global->enable_draw = 0;
+	} else if (!strcmp(cur_cmd, "+update")) {
+		tds_console_print(ptr, "enabling update\n");
+		tds_engine_global->enable_update = 1;
+	} else if (!strcmp(cur_cmd, "-update")) {
+		tds_console_print(ptr, "disabling update\n");
+		tds_engine_global->enable_update = 0;
 	}
 
 	tds_free(cmd);

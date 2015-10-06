@@ -21,15 +21,16 @@ struct tds_object_type obj_editor_cursor_type = {
 };
 
 void obj_editor_cursor_init(struct tds_object* ptr) {
+	tds_input_set_mouse(tds_engine_global->input_handle, 0.0f, 0.0f);
 }
 
 void obj_editor_cursor_destroy(struct tds_object* ptr) {
 }
 
 void obj_editor_cursor_update(struct tds_object* ptr) {
-	ptr->x = tds_engine_global->input_handle->mx * OBJ_EDITOR_CURSOR_SENS + tds_engine_global->camera_handle->x;
-	ptr->y = tds_engine_global->input_handle->my * OBJ_EDITOR_CURSOR_SENS + tds_engine_global->camera_handle->y;
 }
 
 void obj_editor_cursor_draw(struct tds_object* ptr) {
+	ptr->x = tds_engine_global->input_handle->mx * OBJ_EDITOR_CURSOR_SENS + tds_engine_global->camera_handle->x;
+	ptr->y = tds_engine_global->input_handle->my * -OBJ_EDITOR_CURSOR_SENS + tds_engine_global->camera_handle->y;
 }

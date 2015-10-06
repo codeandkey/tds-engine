@@ -35,6 +35,8 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->desc = desc;
 	output->object_list = NULL;
 
+	output->enable_update = output->enable_draw = 1;
+
 	output->state.fps = 0.0f;
 	output->state.entity_maxindex = 0;
 
@@ -191,15 +193,18 @@ void tds_engine_run(struct tds_engine* ptr) {
 			accumulator -= timestep_ms;
 
 			/* Run game update logic. */
+			/* Even if updating is disabled, we still want to run down the accumulator. */
 
-			for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
-				struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[i].data;
+			if (ptr->enable_update) {
+				for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
+					struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[i].data;
 
-				if (!target) {
-					continue;
+					if (!target) {
+						continue;
+					}
+
+					tds_object_update(target);
 				}
-
-				tds_object_update(target);
 			}
 		}
 
@@ -208,14 +213,16 @@ void tds_engine_run(struct tds_engine* ptr) {
 		/* Run game draw logic. */
 		tds_render_clear(ptr->render_handle); /* We clear before executing the draw functions, otherwise the text buffer would be destroyed */
 
-		for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
-			struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[i].data;
+		if (ptr->enable_draw) {
+			for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
+				struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[i].data;
 
-			if (!target) {
-				continue;
+				if (!target) {
+					continue;
+				}
+
+				tds_object_draw(target);
 			}
-
-			tds_object_draw(target);
 		}
 
 		tds_console_draw(ptr->console_handle);

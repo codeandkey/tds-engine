@@ -5,11 +5,6 @@
 
 /* A debug flag can be enabled, memcheck will report functions which allocated memory which was never freed. */
 
-/* Remove to disable memory debugging. */
-#define TDS_MEMORY_DEBUG
-/* ----------------------------------- */
-
-
 void* tds_malloc_dbg(const char* func, int size);
 void tds_free_dbg(const char* func, void* ptr);
 void* tds_realloc_dbg(void* ptr, int size);
