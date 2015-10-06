@@ -93,4 +93,6 @@ struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engi
 void tds_engine_load(struct tds_engine* ptr, const char* mapname);
 void tds_engine_save(struct tds_engine* ptr, const char* mapname);
 
+void tds_engine_destroy_objects(struct tds_engine* ptr, const char* type_name);
+
 extern struct tds_engine* tds_engine_global;

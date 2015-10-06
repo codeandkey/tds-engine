@@ -16,4 +16,4 @@ void tds_console_free(struct tds_console* ptr);
 
 void tds_console_update(struct tds_console* ptr);
 void tds_console_draw(struct tds_console* ptr);
-void tds_console_print(struct tds_console* ptr, char* str);
+void tds_console_print(struct tds_console* ptr, const char* str);

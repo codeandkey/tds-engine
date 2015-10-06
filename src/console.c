@@ -4,6 +4,7 @@
 #include "log.h"
 #include "memory.h"
 #include "input_map.h"
+#include "objects/objects.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -88,7 +89,7 @@ void tds_console_draw(struct tds_console* ptr) {
 	}
 }
 
-void tds_console_print(struct tds_console* ptr, char* str) {
+void tds_console_print(struct tds_console* ptr, const char* str) {
 	if (!str) {
 		return;
 	}
@@ -124,9 +125,7 @@ void _tds_console_execute(struct tds_console* ptr) {
 
 	if (!cur_cmd) {
 		return;
-	}
-
-	if (!strcmp(cur_cmd, "echo")) {
+	} else if (!strcmp(cur_cmd, "echo")) {
 		while ( (cur_cmd = strtok(NULL, " ")) ) {
 			tds_console_print(ptr, cur_cmd);
 			tds_console_print(ptr, " ");
@@ -135,13 +134,12 @@ void _tds_console_execute(struct tds_console* ptr) {
 		tds_console_print(ptr, "\n");
 
 		return;
-	}
-
-	if (!strcmp(cur_cmd, "create")) {
+	} else if (!strcmp(cur_cmd, "create")) {
 		char* type = strtok(NULL, " "), *x = strtok(NULL, " "), *y = strtok(NULL, " ");
 
 		if (!(type && x && y)) {
 			tds_console_print(ptr, "invalid number of arguments\n");
+			tds_free(cmd);
 			return;
 		}
 
@@ -153,6 +151,7 @@ void _tds_console_execute(struct tds_console* ptr) {
 
 		if (!obj_type) {
 			tds_console_print(ptr, "object type lookup failed\n");
+			tds_free(cmd);
 			return;
 		}
 
@@ -164,19 +163,14 @@ void _tds_console_execute(struct tds_console* ptr) {
 		tds_object_create(obj_type, tds_engine_global->object_buffer, tds_engine_global->sc_handle, x_f, y_f, 0.0f, NULL);
 
 		tds_console_print(ptr, "created object\n");
-		return;
-	}
-
-	if (!strcmp(cur_cmd, "exit") || !strcmp(cur_cmd, "quit")) {
+	} else if (!strcmp(cur_cmd, "exit") || !strcmp(cur_cmd, "quit")) {
 		tds_engine_terminate(tds_engine_global);
-		return;
-	}
-
-	if (!strcmp(cur_cmd, "save")) {
+	} else if (!strcmp(cur_cmd, "save")) {
 		char* file = strtok(NULL, " ");
 
 		if (!file) {
 			tds_console_print(ptr, "usage: save <filename>\n");
+			tds_free(cmd);
 			return;
 		}
 
@@ -185,15 +179,12 @@ void _tds_console_execute(struct tds_console* ptr) {
 		tds_console_print(ptr, "saved map to ");
 		tds_console_print(ptr, file);
 		tds_console_print(ptr, "\n");
-
-		return;
-	}
-
-	if (!strcmp(cur_cmd, "load")) {
+	} else if (!strcmp(cur_cmd, "load")) {
 		char* file = strtok(NULL, " ");
 
 		if (!file) {
 			tds_console_print(ptr, "usage: load <filename>\n");
+			tds_free(cmd);
 			return;
 		}
 
@@ -202,7 +193,12 @@ void _tds_console_execute(struct tds_console* ptr) {
 		tds_console_print(ptr, "..\n");
 
 		tds_engine_load(tds_engine_global, file);
-		return;
+	} else if (!strcmp(cur_cmd, "+edit")) {
+		tds_console_print(ptr, "creating editor objects\n");
+		tds_create_editor_objects();
+	} else if (!strcmp(cur_cmd, "-edit")) {
+		tds_console_print(ptr, "destroying editor objects\n");
+		tds_destroy_editor_objects();
 	}
 
 	tds_free(cmd);

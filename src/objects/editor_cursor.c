@@ -1,7 +1,12 @@
 #include "editor_cursor.h"
 
+#include "../engine.h"
+#include "../input.h"
+
+#define OBJ_EDITOR_CURSOR_SENS 0.01
+
 struct tds_object_type obj_editor_cursor_type = {
-	.type_name = "editor_cursor",
+	.type_name = "obj_editor_cursor",
 	.default_sprite = "spr_editor_cursor",
 	.default_params = 0,
 	.default_params_size = 0,
@@ -22,6 +27,8 @@ void obj_editor_cursor_destroy(struct tds_object* ptr) {
 }
 
 void obj_editor_cursor_update(struct tds_object* ptr) {
+	ptr->x = tds_engine_global->input_handle->mx * OBJ_EDITOR_CURSOR_SENS + tds_engine_global->camera_handle->x;
+	ptr->y = tds_engine_global->input_handle->my * OBJ_EDITOR_CURSOR_SENS + tds_engine_global->camera_handle->y;
 }
 
 void obj_editor_cursor_draw(struct tds_object* ptr) {

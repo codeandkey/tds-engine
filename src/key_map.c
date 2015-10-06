@@ -21,7 +21,7 @@ struct tds_key_map* tds_key_map_create(struct tds_key_map_template* def, int def
 		return output;
 	}
 
-	output->entry_buffer = malloc(sizeof(struct tds_key_map) * def_count);
+	output->entry_buffer = tds_malloc(sizeof(struct tds_key_map) * def_count);
 	output->entry_count = def_count;
 
 	for (int i = 0; i < def_count; ++i) {

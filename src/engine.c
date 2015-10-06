@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "objects/objects.h"
+
 #define TDS_ENGINE_TIMESTEP 144.0f
 
 struct tds_engine* tds_engine_global = NULL;
@@ -102,6 +104,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 		tds_logf(TDS_LOG_MESSAGE, "Loaded sounds.\n");
 	}
 
+	/* Here, we add the editor objects. */
+	tds_load_editor_objects(output->otc_handle);
+
 	if (desc.func_load_object_types) {
 		desc.func_load_object_types(output->otc_handle);
 		tds_logf(TDS_LOG_MESSAGE, "Loaded object types.\n");
@@ -142,6 +147,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_texture_cache_free(ptr->tc_handle);
 	tds_sprite_cache_free(ptr->sc_handle);
 	tds_sound_cache_free(ptr->sndc_handle);
+	tds_object_type_cache_free(ptr->otc_handle);
 	tds_sound_manager_free(ptr->sound_manager_handle);
 	tds_handle_manager_free(ptr->object_buffer);
 	tds_console_free(ptr->console_handle);
@@ -457,4 +463,18 @@ void tds_engine_save(struct tds_engine* ptr, const char* mapname) {
 
 	tds_free(str_filename);
 	fclose(fd_output);
+}
+
+void tds_engine_destroy_objects(struct tds_engine* ptr, const char* type_name) {
+	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
+		struct tds_object* cur = ptr->object_buffer->buffer[i].data;
+
+		if (!cur) {
+			continue;
+		}
+
+		if (!strcmp(cur->type_name, type_name)) {
+			tds_object_free(cur);
+		}
+	}
 }
