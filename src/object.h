@@ -20,7 +20,7 @@ struct tds_object {
 	struct tds_sprite* sprite_handle;
 	const char* type_name;
 
-	int visible, layer;
+	int visible, layer, save; /* Save : will the object be exported? If not, the editor will not create a selector for it and the engine will ignore it during saving. */
 	float x, y, z, angle, r, g, b, a, xspeed, yspeed;
 	float cbox_width, cbox_height;
 
@@ -58,7 +58,7 @@ struct tds_object_type {
 	int default_params_size;
 	/* This allows for really simple static allocation. */
 
-	int data_size;
+	int data_size, save;
 
 	void (*func_init)(struct tds_object* ptr);
 	void (*func_destroy)(struct tds_object* ptr);

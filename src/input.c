@@ -90,6 +90,10 @@ int tds_input_get_char(struct tds_input* ptr) {
 	return out;
 }
 
+void tds_input_forget_char(struct tds_input* ptr) {
+	ptr->last_char = 0;
+}
+
 void tds_input_set_mouse(struct tds_input* ptr, double mx, double my) {
 	glfwSetCursorPos(ptr->window_handle, mx, my);
 

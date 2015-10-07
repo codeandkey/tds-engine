@@ -423,6 +423,10 @@ void tds_engine_save(struct tds_engine* ptr, const char* mapname) {
 			continue;
 		}
 
+		if (!target->save) {
+			continue;
+		}
+
 		/* First save primitiva values, then move through the parameter list. */
 
 		int type_size = strlen(target->type_name);

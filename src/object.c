@@ -23,6 +23,7 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->x = x;
 	output->y = y;
 	output->z = z;
+	output->save = type->save;
 	output->xspeed = output->yspeed = 0.0;
 	output->snd_volume = 1.0f;
 	output->snd_loop = 0;

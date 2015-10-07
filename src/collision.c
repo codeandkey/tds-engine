@@ -39,3 +39,6 @@ int tds_collision_get_overlap(struct tds_object* first, struct tds_object* secon
 
 	/* At this point, we know the rectangles are close enough for a potential collision, we do a more precise test */
 }
+
+int tds_collision_get_point_overlap(struct tds_object* ptr, float x, float y) {
+}

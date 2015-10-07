@@ -17,7 +17,8 @@ struct tds_object_type obj_editor_cursor_type = {
 	.func_draw = obj_editor_cursor_draw,
 	.func_msg = (void*) 0,
 	.func_import = (void*) 0,
-	.func_export = (void*) 0
+	.func_export = (void*) 0,
+	.save = 0
 };
 
 void obj_editor_cursor_init(struct tds_object* ptr) {

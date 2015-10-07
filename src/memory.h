@@ -27,9 +27,9 @@ void tds_memcheck_rel(void);
 
 #else
 
-#define tds_malloc(x) tds_malloc_rel(x);
-#define tds_free(x) tds_free_rel(x);
-#define tds_realloc(x, y) tds_realloc_rel(x, y);
+#define tds_malloc(x) tds_malloc_rel(x)
+#define tds_free(x) tds_free_rel(x)
+#define tds_realloc(x, y) tds_realloc_rel(x, y)
 #define tds_get_blocks tds_get_blocks_rel
 #define tds_memcheck tds_memcheck_rel
 

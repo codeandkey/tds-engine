@@ -27,6 +27,7 @@ struct tds_console* tds_console_create(void) {
 	}
 
 	output->curs_row = output->curs_col = 0;
+	output->enabled = 0;
 
 	tds_console_print(output, "$ ");
 
@@ -43,6 +44,15 @@ void tds_console_free(struct tds_console* ptr) {
 }
 
 void tds_console_update(struct tds_console* ptr) {
+	if (tds_input_map_get_key_pressed(tds_engine_global->input_map_handle, GLFW_KEY_GRAVE_ACCENT, 0)) {
+		ptr->enabled = !ptr->enabled;
+		tds_input_forget_char(tds_engine_global->input_handle);
+	}
+
+	if (!ptr->enabled) {
+		return;
+	}
+
 	/* This does NOT need to be called on a delta time. Once a frame is enough. */
 	char input_char = 0;
 
@@ -65,6 +75,10 @@ void tds_console_update(struct tds_console* ptr) {
 }
 
 void tds_console_draw(struct tds_console* ptr) {
+	if (!ptr->enabled) {
+		return;
+	}
+
 	struct tds_text_batch render_batch = {0};
 
 	render_batch.font = ptr->font;

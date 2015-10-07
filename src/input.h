@@ -19,4 +19,5 @@ void tds_input_free(struct tds_input* ptr);
 void tds_input_update(struct tds_input* ptr);
 int tds_input_get_controller(struct tds_input* ptr);
 int tds_input_get_char(struct tds_input* ptr);
+void tds_input_forget_char(struct tds_input* ptr);
 void tds_input_set_mouse(struct tds_input* ptr, double x, double y);
