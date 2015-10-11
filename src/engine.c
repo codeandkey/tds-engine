@@ -377,7 +377,9 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 		/* We try and retrieve the type information. */
 
 		struct tds_object_type* type_ptr = tds_object_type_cache_get(ptr->otc_handle, type_name);
-		tds_object_create(type_ptr, ptr->object_buffer, ptr->sc_handle, x, y, 0.0f, param_list_head);
+		struct tds_object* obj_new = tds_object_create(type_ptr, ptr->object_buffer, ptr->sc_handle, x, y, 0.0f, param_list_head);
+
+		obj_new->angle = angle;
 
 		struct tds_object_param* cur = param_list_head, *tmp = NULL;
 

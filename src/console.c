@@ -174,9 +174,12 @@ void _tds_console_execute(struct tds_console* ptr) {
 		tds_console_print(ptr, "]\n");
 
 		float x_f = strtof(x, NULL), y_f = strtof(y, NULL);
-		tds_object_create(obj_type, tds_engine_global->object_buffer, tds_engine_global->sc_handle, x_f, y_f, 0.0f, NULL);
-
+		struct tds_object* new_object = tds_object_create(obj_type, tds_engine_global->object_buffer, tds_engine_global->sc_handle, x_f, y_f, 0.0f, NULL);
 		tds_console_print(ptr, "created object\n");
+
+		if (tds_editor_get_mode()) {
+			tds_editor_add_selector(new_object);
+		}
 	} else if (!strcmp(cur_cmd, "exit") || !strcmp(cur_cmd, "quit")) {
 		tds_engine_terminate(tds_engine_global);
 	} else if (!strcmp(cur_cmd, "save")) {

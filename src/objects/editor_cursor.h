@@ -10,5 +10,6 @@ void obj_editor_cursor_draw(struct tds_object* ptr);
 void obj_editor_cursor_destroy(struct tds_object* ptr);
 
 struct obj_editor_cursor_data {
-	int unused;
+	struct tds_object* drag;
+	float x_offset, y_offset;
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include "../object_type_cache.h"
+#include "../object.h"
 
 /* The built in objects are designed exclusively for the editor. */
 
@@ -11,3 +12,5 @@ void tds_load_editor_objects(struct tds_object_type_cache* otc_handle); /* Speci
 
 void tds_create_editor_objects(void);
 void tds_destroy_editor_objects(void);
+int tds_editor_get_mode(void);
+void tds_editor_add_selector(struct tds_object* ptr);
