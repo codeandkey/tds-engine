@@ -47,7 +47,7 @@ void obj_editor_cursor_draw(struct tds_object* ptr) {
 		struct tds_engine_object_list result = tds_engine_get_object_list_by_type(tds_engine_global, "obj_editor_selector");
 
 		for (int i = 0; i < result.size; ++i) {
-			if (tds_collision_get_point_overlap(result.buffer[i], ptr->x, ptr->y)) {
+			if (tds_collision_get_overlap(result.buffer[i], ptr)) {
 				data->drag = result.buffer[i];
 				data->x_offset = result.buffer[i]->x - ptr->x;
 				data->y_offset = result.buffer[i]->y - ptr->y;

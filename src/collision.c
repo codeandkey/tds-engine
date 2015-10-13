@@ -11,24 +11,6 @@ float _tds_collision_crossz(float x1, float y1, float x2, float y2, float x3, fl
 int _tds_collision_tri(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
 
 int tds_collision_get_overlap(struct tds_object* first, struct tds_object* second) {
-	/* The current collision system will disregard all angles and proceed only with the object dimensions. */
-	/* If the game really does need rotated rect. collisions (MUCH more complex than AABB, we can deal with that later. */
-	/* There is an optimizing pass written here but it really only helps the performance of more complicated algorithms.. */
-	/* AABB is much faster than the optimized pass :D */
-
-	if (first->x + first->cbox_width / 2.0f < second->x - second->cbox_width / 2.0f || first->x - first->cbox_width / 2.0f > second->x + second->cbox_width / 2.0f) {
-		return 0;
-	}
-
-	if (first->y + first->cbox_height / 2.0f < second->y - second->cbox_height / 2.0f || first->y - first->cbox_height / 2.0f > second->y + second->cbox_height / 2.0f) {
-		return 0;
-	}
-
-	return 1;
-
-	/* This only checks object collisions, it disregards everything about the sprites. */
-	/* First pass - basic distance check. */
-
 	float first_r = sqrtf(pow(first->cbox_height / 2.0f, 2.0f) + pow(first->cbox_width / 2.0f, 2.0f));
 	float second_r = sqrtf(pow(second->cbox_height / 2.0f, 2.0f) + pow(second->cbox_height / 2.0f, 2.0f));
 
@@ -42,6 +24,59 @@ int tds_collision_get_overlap(struct tds_object* first, struct tds_object* secon
 	}
 
 	/* At this point, we know the rectangles are close enough for a potential collision, we do a more precise test */
+	/* This is a general implementation of the separating axis theorem. */
+
+	float first_diagonal_angle = atan2f(first->cbox_height, first->cbox_width);
+	float first_diagonal_length = sqrtf(pow(first->cbox_width, 2) + pow(first->cbox_height, 2));
+
+	float first_verts[4][2] = {{0.0f}};
+
+	first_verts[0][0] = cos(M_PI - first_diagonal_angle) * first_diagonal_length + first->x;
+	first_verts[0][1] = sin(M_PI - first_diagonal_angle) * first_diagonal_length + first->y;
+	first_verts[1][0] = cos(M_PI + first_diagonal_angle) * first_diagonal_length + first->x;
+	first_verts[1][1] = sin(M_PI + first_diagonal_angle) * first_diagonal_length + first->y;
+	first_verts[2][0] = cos(first_diagonal_angle) * first_diagonal_length + first->x;
+	first_verts[2][1] = sin(first_diagonal_angle) * first_diagonal_length + first->y;
+	first_verts[3][0] = cos(-first_diagonal_angle) * first_diagonal_length + first->x;
+	first_verts[3][1] = sin(-first_diagonal_angle) * first_diagonal_length + first->y;
+
+	float second_diagonal_angle = atan2f(second->cbox_height, second->cbox_width);
+	float second_diagonal_length = sqrtf(pow(second->cbox_width, 2) + pow(second->cbox_height, 2));
+
+	float second_verts[4][2] = {{0.0f}};
+
+	second_verts[0][0] = cos(M_PI - second_diagonal_angle) * second_diagonal_length + second->x;
+	second_verts[0][1] = sin(M_PI - second_diagonal_angle) * second_diagonal_length + second->y;
+	second_verts[1][0] = cos(M_PI + second_diagonal_angle) * second_diagonal_length + second->x;
+	second_verts[1][1] = sin(M_PI + second_diagonal_angle) * second_diagonal_length + second->y;
+	second_verts[2][0] = cos(second_diagonal_angle) * second_diagonal_length + second->x;
+	second_verts[2][1] = sin(second_diagonal_angle) * second_diagonal_length + second->y;
+	second_verts[3][0] = cos(-second_diagonal_angle) * second_diagonal_length + second->x;
+	second_verts[3][1] = sin(-second_diagonal_angle) * second_diagonal_length + second->y;
+
+	/* We have to check 8 lines. */
+	/* We know that each point on the shape containing a line will be on the same side of it (convex), so we can skip some points and just grab the side of [0] to test against the other points. */
+	/* If all the other points on the other poly is on a different side from [0] then the line is a seperating axis. */
+
+	float current_polarity = 0.0f;
+
+	for (int i = 0; i < 4; ++i) {
+		int j = (i + 1) % 4;
+		float ref_cross = _tds_collision_crossz(first_verts[i][0], first_verts[i][1], first_verts[j][0], first_verts[j][1], first_verts[0][1], first_verts[0][1]);
+		int failed = 0;
+
+		for (int k = 0; (k < 4) && !failed; ++k) {
+			float cur_cross = _tds_collision_crossz(first_verts[i][0], first_verts[i][1], first_verts[j][0], first_verts[j][1], second_verts[k][0], second_verts[k][1]);
+
+			failed |= ((cur_cross > 0.0f) == (ref_cross > 0.0f));
+		}
+
+		if (!failed) {
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 int tds_collision_get_point_overlap(struct tds_object* ptr, float x, float y) {

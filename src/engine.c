@@ -390,6 +390,10 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 		}
 
 		tds_free(type_name);
+
+		if (tds_editor_get_mode()) {
+			tds_editor_add_selector(obj_new);
+		}
 	}
 
 	fclose(fd_input);
