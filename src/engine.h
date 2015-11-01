@@ -14,6 +14,8 @@
 #include "key_map.h"
 #include "input.h"
 #include "input_map.h"
+#include "block_map.h"
+#include "world.h"
 
 #define TDS_MAP_PREFIX "res/maps/"
 
@@ -45,6 +47,7 @@ struct tds_engine_desc {
 	void (*func_load_sounds)(struct tds_sound_cache* sndc_handle);
 	void (*func_load_sprites)(struct tds_sprite_cache* sc_handle, struct tds_texture_cache* tc_handle);
 	void (*func_load_object_types)(struct tds_object_type_cache* otc_handle);
+	void (*func_load_block_map)(struct tds_block_map* block_map_handle);
 };
 
 struct tds_engine_state {
@@ -75,6 +78,8 @@ struct tds_engine {
 	struct tds_sound_manager* sound_manager_handle;
 	struct tds_text* text_handle;
 	struct tds_console* console_handle;
+	struct tds_block_map* block_map_handle;
+	struct tds_world* world_handle;
 
 	int run_flag;
 	struct tds_object** object_list;

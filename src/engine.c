@@ -96,9 +96,20 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->key_map_handle = tds_key_map_create(desc.game_input, desc.game_input_size);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized key mapping system.\n");
 
+	output->block_map_handle = tds_block_map_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized block mapping subsystem.\n");
+
+	output->world_handle = tds_world_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized world subsystem.\n");
+
 	if (desc.func_load_sprites) {
 		desc.func_load_sprites(output->sc_handle, output->tc_handle);
 		tds_logf(TDS_LOG_MESSAGE, "Loaded sprites.\n");
+	}
+
+	if (desc.func_load_block_map) {
+		desc.func_load_block_map(output->block_map_handle);
+		tds_logf(TDS_LOG_MESSAGE, "Loaded block types.\n");
 	}
 
 	if (desc.func_load_sounds) {
@@ -139,6 +150,8 @@ void tds_engine_free(struct tds_engine* ptr) {
 
 	tds_engine_flush_objects(ptr);
 
+	tds_block_map_free(ptr->block_map_handle);
+	tds_world_free(ptr->world_handle);
 	tds_text_free(ptr->text_handle);
 	tds_input_free(ptr->input_handle);
 	tds_input_map_free(ptr->input_map_handle);
@@ -396,6 +409,23 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 		}
 	}
 
+	/* All object information is done. We then load the world information for the current map. */
+	/* Format: two 32-bit integer values for width and height, followed by one byte per block. */
+
+	uint32_t world_width, world_height;
+
+	fread(&world_width, sizeof(world_width), 1, fd_input);
+	fread(&world_height, sizeof(world_height), 1, fd_input);
+
+	uint8_t* block_buffer = tds_malloc(sizeof(*block_buffer) * world_width * world_height);
+
+	for (int i = 0; i < world_height * world_width; ++i) {
+		fread(block_buffer + i, sizeof *block_buffer, 1, fd_input);
+	}
+
+	tds_world_load(ptr->world_handle, block_buffer, world_width, world_height);
+	tds_free(block_buffer);
+
 	fclose(fd_input);
 	tds_free(str_filename);
 }
@@ -478,6 +508,18 @@ void tds_engine_save(struct tds_engine* ptr, const char* mapname) {
 		}
 	}
 
+	/* We then serialize the world into a buffer and write it. */
+	int world_width = ptr->world_handle->width, world_height = ptr->world_handle->height;
+	uint8_t* block_buffer = tds_malloc(sizeof(*block_buffer) * world_width * world_height);
+
+	tds_world_save(ptr->world_handle, block_buffer, world_width, world_height);
+
+	fwrite(&world_width, sizeof world_width, 1, fd_output);
+	fwrite(&world_height, sizeof world_height, 1, fd_output);
+
+	fwrite(block_buffer, sizeof(*block_buffer) * world_width * world_height, 1, fd_output);
+
+	tds_free(block_buffer);
 	tds_free(str_filename);
 	fclose(fd_output);
 }
