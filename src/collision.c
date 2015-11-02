@@ -58,8 +58,6 @@ int tds_collision_get_overlap(struct tds_object* first, struct tds_object* secon
 	/* We know that each point on the shape containing a line will be on the same side of it (convex), so we can skip some points and just grab the side of [0] to test against the other points. */
 	/* If all the other points on the other poly is on a different side from [0] then the line is a seperating axis. */
 
-	float current_polarity = 0.0f;
-
 	for (int i = 0; i < 4; ++i) {
 		int j = (i + 1) % 4;
 		float ref_cross = _tds_collision_crossz(first_verts[i][0], first_verts[i][1], first_verts[j][0], first_verts[j][1], first_verts[0][1], first_verts[0][1]);
@@ -67,6 +65,22 @@ int tds_collision_get_overlap(struct tds_object* first, struct tds_object* secon
 
 		for (int k = 0; (k < 4) && !failed; ++k) {
 			float cur_cross = _tds_collision_crossz(first_verts[i][0], first_verts[i][1], first_verts[j][0], first_verts[j][1], second_verts[k][0], second_verts[k][1]);
+
+			failed |= ((cur_cross > 0.0f) == (ref_cross > 0.0f));
+		}
+
+		if (!failed) {
+			return 0;
+		}
+	}
+
+	for (int i = 0; i < 4; ++i) {
+		int j = (i + 1) % 4;
+		float ref_cross = _tds_collision_crossz(second_verts[i][0], second_verts[i][1], second_verts[j][0], second_verts[j][1], second_verts[0][1], second_verts[0][1]);
+		int failed = 0;
+
+		for (int k = 0; (k < 4) && !failed; ++k) {
+			float cur_cross = _tds_collision_crossz(second_verts[i][0], second_verts[i][1], second_verts[j][0], second_verts[j][1], first_verts[k][0], first_verts[k][1]);
 
 			failed |= ((cur_cross > 0.0f) == (ref_cross > 0.0f));
 		}

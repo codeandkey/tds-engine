@@ -2,6 +2,8 @@
 #include "log.h"
 #include "memory.h"
 
+#include <GLXW/glxw.h>
+
 static void _tds_world_generate_hblocks(struct tds_world* ptr);
 
 struct tds_world* tds_world_create(void) {
@@ -96,6 +98,7 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 		struct tds_world_hblock* cur = ptr->block_list_head, *tmp = 0;
 
 		while (cur) {
+			tds_vertex_buffer_free(cur->vb);
 			tmp = cur->next;
 			tds_free(cur);
 			cur = tmp;
@@ -154,6 +157,23 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 		}
 
 		ptr->block_list_tail = new_block;
+	}
+
+	/* At this time we will also generate VBOs for each hblock, so that tds_render doesn't have to. */
+
+	struct tds_world_hblock* hb_cur = ptr->block_list_head;
+	while (hb_cur) {
+		struct tds_vertex vert_list[] = {
+			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE, 0.0f, 0.0f, 1.0f },
+			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE, 0.0f, hb_cur->w, 0.0f },
+			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE, 0.0f, hb_cur->w, 1.0f },
+			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE, 0.0f, 0.0f, 1.0f },
+			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE, 0.0f, hb_cur->w, 0.0f },
+			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE, 0.0f, 0.0f, 0.0f },
+		};
+
+		hb_cur->vb = tds_vertex_buffer_create(vert_list, sizeof(vert_list) / sizeof(vert_list[0]), GL_TRIANGLES);
+		hb_cur = hb_cur->next;
 	}
 }
 

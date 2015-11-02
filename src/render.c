@@ -2,6 +2,7 @@
 #include "log.h"
 #include "memory.h"
 #include "object.h"
+#include "block_map.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,6 +16,7 @@ struct _tds_file {
 
 static void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int layer);
 static void _tds_render_text_batch(struct tds_render* ptr, struct tds_text_batch* data);
+static void _tds_render_world(struct tds_render* ptr, struct tds_world* world);
 static int _tds_load_shaders(struct tds_render* ptr, const char* vs, const char* fs);
 static struct _tds_file _tds_load_file(const char* filename);
 
@@ -53,7 +55,7 @@ void tds_render_clear(struct tds_render* ptr) {
 	tds_text_clear(ptr->text_handle);
 }
 
-void tds_render_draw(struct tds_render* ptr) {
+void tds_render_draw(struct tds_render* ptr, struct tds_world* world) {
 	/* Drawing will be done linearly on a per-layer basis, using a list of occluded objects. */
 
 	int render_objects = 1, render_text = 1;;
@@ -143,6 +145,11 @@ void tds_render_draw(struct tds_render* ptr) {
 			}
 
 			++ind;
+		}
+
+		if (!i) {
+			/* We render the world at depth 0. */
+			_tds_render_world(ptr, world);
 		}
 	}
 
@@ -303,4 +310,31 @@ struct _tds_file _tds_load_file(const char* filename) {
 	fclose(inp);
 
 	return output;
+}
+
+void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
+	/* We want to render each h-block and wrap the texcoord accordingly.
+	 * To effectively wrap world blocks, the textures will have to be in their own files.
+	 * The block map has O(1) access complexity, so we can query textures all the time without worry.
+	 * World hblocks must have their own VBOs and generating them on a per-frame basis would seriously hit performance.
+	 * The hblock VBOs are accessible as a part of the hblock structure. */
+
+	struct tds_world_hblock* cur = world->block_list_head;
+
+	while (cur) {
+		struct tds_block_type render_type = tds_block_map_get(tds_engine_global->block_map_handle, cur->id);
+
+		mat4x4 transform;
+		mat4x4_translate(transform, (cur->x + cur->w / 2.0f) * TDS_WORLD_BLOCK_SIZE, TDS_WORLD_BLOCK_SIZE / 2.0f);
+
+		glUniform4f(ptr->uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
+		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *transform);
+
+		glBindTexture(GL_TEXTURE_2D, cur->texture->gl_id);
+
+		glBindVertexArray(cur->vb->vao);
+		glDrawArrays(cur->vb->render_mode, 0, 6);
+
+		cur = cur->next;
+	}
 }

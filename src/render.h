@@ -6,6 +6,7 @@
 #include "handle.h"
 #include "camera.h"
 #include "text.h"
+#include "world.h"
 
 #define TDS_RENDER_SHADER_WORLD_VS "res/shaders/world_vs.glsl"
 #define TDS_RENDER_SHADER_WORLD_FS "res/shaders/world_fs.glsl"
@@ -23,4 +24,4 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 void tds_render_free(struct tds_render* ptr);
 
 void tds_render_clear(struct tds_render* ptr);
-void tds_render_draw(struct tds_render* ptr);
+void tds_render_draw(struct tds_render* ptr, struct tds_world* world);

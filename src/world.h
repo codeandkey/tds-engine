@@ -2,12 +2,14 @@
 #include <stdint.h>
 
 #include "object.h"
+#include "vertex_buffer.h"
 
 #define TDS_WORLD_BLOCK_SIZE 0.5f
 
 struct tds_world_hblock {
 	int x, y, w, id;
 	struct tds_world_hblock* next;
+	struct tds_vertex_buffer* vb;
 };
 
 struct tds_world {
