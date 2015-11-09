@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "object.h"
 #include "block_map.h"
+#include "engine.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -325,12 +326,12 @@ void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
 		struct tds_block_type render_type = tds_block_map_get(tds_engine_global->block_map_handle, cur->id);
 
 		mat4x4 transform;
-		mat4x4_translate(transform, (cur->x + cur->w / 2.0f) * TDS_WORLD_BLOCK_SIZE, TDS_WORLD_BLOCK_SIZE / 2.0f);
+		mat4x4_translate(transform, (cur->x + cur->w / 2.0f) * TDS_WORLD_BLOCK_SIZE, TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f);
 
 		glUniform4f(ptr->uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
 		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *transform);
 
-		glBindTexture(GL_TEXTURE_2D, cur->texture->gl_id);
+		glBindTexture(GL_TEXTURE_2D, render_type.texture->gl_id);
 
 		glBindVertexArray(cur->vb->vao);
 		glDrawArrays(cur->vb->render_mode, 0, 6);
