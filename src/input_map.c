@@ -1,5 +1,6 @@
 #include "input_map.h"
 #include "memory.h"
+#include "log.h"
 
 struct tds_input_map* tds_input_map_create(struct tds_input* ptr) {
 	struct tds_input_map* output = tds_malloc(sizeof(struct tds_input_map));

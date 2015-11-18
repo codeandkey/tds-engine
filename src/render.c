@@ -59,7 +59,7 @@ void tds_render_clear(struct tds_render* ptr) {
 void tds_render_draw(struct tds_render* ptr, struct tds_world* world) {
 	/* Drawing will be done linearly on a per-layer basis, using a list of occluded objects. */
 
-	int render_objects = 1, render_text = 1;;
+	int render_objects = 1, render_text = 1;
 
 	if (ptr->object_buffer->max_index <= 0) {
 		render_objects = 0;
@@ -117,6 +117,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world) {
 
 		ind++;
 	}
+
 
 	for (int i = min_layer; i <= max_layer; ++i) {
 		for (int j = 0; j < ptr->object_buffer->max_index; ++j) {

@@ -417,14 +417,16 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 	fread(&world_width, sizeof(world_width), 1, fd_input);
 	fread(&world_height, sizeof(world_height), 1, fd_input);
 
-	uint8_t* block_buffer = tds_malloc(sizeof(*block_buffer) * world_width * world_height);
+	if (world_width && world_height) {
+		uint8_t* block_buffer = tds_malloc(sizeof(*block_buffer) * world_width * world_height);
 
-	for (int i = 0; i < world_height * world_width; ++i) {
-		fread(block_buffer + i, sizeof *block_buffer, 1, fd_input);
+		for (int i = 0; i < world_height * world_width; ++i) {
+			fread(block_buffer + i, sizeof *block_buffer, 1, fd_input);
+		}
+
+		tds_world_load(ptr->world_handle, block_buffer, world_width, world_height);
+		tds_free(block_buffer);
 	}
-
-	tds_world_load(ptr->world_handle, block_buffer, world_width, world_height);
-	tds_free(block_buffer);
 
 	fclose(fd_input);
 	tds_free(str_filename);

@@ -213,7 +213,10 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "+edit")) {
 		tds_console_print(ptr, "creating editor objects\n");
 		tds_create_editor_objects();
-	} else if (!strcmp(cur_cmd, "-edit")) {
+	} else if (!strcmp(cur_cmd, "+wedit")) {
+		tds_console_print(ptr, "creating world editor objects\n");
+		tds_create_editor_objects();
+	} else if (!strcmp(cur_cmd, "-edit") || !strcmp(cur_cmd, "-wedit")) {
 		tds_console_print(ptr, "destroying editor objects\n");
 		tds_destroy_editor_objects();
 	} else if (!strcmp(cur_cmd, "+draw")) {
