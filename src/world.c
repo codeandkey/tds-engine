@@ -38,7 +38,7 @@ void tds_world_free(struct tds_world* ptr) {
 	tds_free(ptr);
 }
 
-void tds_world_load(struct tds_world* ptr, const uint8_t* block_buffer, int width, int height) {
+void tds_world_init(struct tds_world* ptr, int width, int height) {
 	if (ptr->buffer) {
 		for (int i = 0; i < height; ++i) {
 			tds_free(ptr->buffer[i]);
@@ -55,6 +55,16 @@ void tds_world_load(struct tds_world* ptr, const uint8_t* block_buffer, int widt
 	for (int y = 0; y < height; ++y) {
 		ptr->buffer[y] = tds_malloc(sizeof ptr->buffer[0][0] * width);
 
+		for (int x = 0; x < width; ++x) {
+			ptr->buffer[y][x] = 0;
+		}
+	}
+}
+
+void tds_world_load(struct tds_world* ptr, const uint8_t* block_buffer, int width, int height) {
+	tds_world_init(ptr, width, height);	
+
+	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
 			ptr->buffer[y][x] = block_buffer[y * width + x];
 		}
@@ -79,6 +89,13 @@ void tds_world_save(struct tds_world* ptr, uint8_t* block_buffer, int width, int
 }
 
 void tds_world_set_block(struct tds_world* ptr, int x, int y, uint8_t block) {
+	tds_logf(TDS_LOG_DEBUG, "Setting block at %d,%d to %d\n", x, y, block);
+
+	if (x >= ptr->width || x < 0 || y >= ptr->height || y < 0) {
+		tds_logf(TDS_LOG_WARNING, "World index out of bounds.\n");
+		return;
+	}
+
 	ptr->buffer[y][x] = block;
 	_tds_world_generate_hblocks(ptr); /* This is not the most efficient way to do this, but it really shouldn't matter with small worlds. */
 
@@ -103,36 +120,41 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 			tds_free(cur);
 			cur = tmp;
 		}
+
+		ptr->block_list_head = ptr->block_list_tail = NULL;
 	}
 
 	for (int y = 0; y < ptr->height; ++y) {
 		uint8_t cur_type = 0;
 		int block_length = 0, block_x = -1;
+		struct tds_world_hblock* tmp_block = NULL;
 
 		for (int x = 0; x < ptr->width; ++x) {
 			if (ptr->buffer[y][x] != cur_type) {
 				if (block_length > 0 && cur_type) {
 					/* Extract a block. */
-					struct tds_world_hblock* new_block = tds_malloc(sizeof *new_block);
+					tmp_block = tds_malloc(sizeof *tmp_block);
 
-					new_block->next = 0;
-					new_block->x = block_x;
-					new_block->y = y;
-					new_block->w = block_length;
-					new_block->id = cur_type;
+					tmp_block->next = 0;
+					tmp_block->x = block_x;
+					tmp_block->y = y;
+					tmp_block->w = block_length;
+					tmp_block->id = cur_type;
 
 					if (ptr->block_list_tail) {
-						ptr->block_list_tail->next = new_block;
+						ptr->block_list_tail->next = tmp_block;
 					} else {
-						ptr->block_list_head = new_block;
+						ptr->block_list_head = tmp_block;
 					}
 
-					ptr->block_list_tail = new_block;
+					ptr->block_list_tail = tmp_block;
 				}
 
 				cur_type = ptr->buffer[y][x];
 				block_x = x;
 				block_length = 1;
+			} else {
+				block_length++;
 			}
 		}
 
@@ -142,21 +164,21 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 
 		/* We also extract a block afterwards, or we'll miss some */
 		/* Extract a block. */
-		struct tds_world_hblock* new_block = tds_malloc(sizeof *new_block);
+		tmp_block = tds_malloc(sizeof *tmp_block);
 
-		new_block->next = 0;
-		new_block->x = block_x;
-		new_block->y = y;
-		new_block->w = block_length;
-		new_block->id = cur_type;
+		tmp_block->next = 0;
+		tmp_block->x = block_x;
+		tmp_block->y = y;
+		tmp_block->w = block_length;
+		tmp_block->id = cur_type;
 
 		if (ptr->block_list_tail) {
-			ptr->block_list_tail->next = new_block;
+			ptr->block_list_tail->next = tmp_block;
 		} else {
-			ptr->block_list_head = new_block;
+			ptr->block_list_head = tmp_block;
 		}
 
-		ptr->block_list_tail = new_block;
+		ptr->block_list_tail = tmp_block;
 	}
 
 	/* At this time we will also generate VBOs for each hblock, so that tds_render doesn't have to. */
@@ -164,15 +186,15 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 	struct tds_world_hblock* hb_cur = ptr->block_list_head;
 	while (hb_cur) {
 		struct tds_vertex vert_list[] = {
-			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE, 0.0f, 0.0f, 1.0f },
-			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE, 0.0f, hb_cur->w, 0.0f },
-			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE, 0.0f, hb_cur->w, 1.0f },
-			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE, 0.0f, 0.0f, 1.0f },
-			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE, 0.0f, hb_cur->w, 0.0f },
-			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE, 0.0f, 0.0f, 0.0f },
+			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, 0.0f, 1.0f },
+			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, hb_cur->w, 0.0f },
+			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, hb_cur->w, 1.0f },
+			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, 0.0f, 1.0f },
+			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, hb_cur->w, 0.0f },
+			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, 0.0f, 0.0f },
 		};
 
-		hb_cur->vb = tds_vertex_buffer_create(vert_list, sizeof(vert_list) / sizeof(vert_list[0]), GL_TRIANGLES);
+		hb_cur->vb = tds_vertex_buffer_create(vert_list, 6, GL_TRIANGLES);
 		hb_cur = hb_cur->next;
 	}
 }

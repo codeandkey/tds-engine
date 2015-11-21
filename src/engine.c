@@ -108,7 +108,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	}
 
 	if (desc.func_load_block_map) {
-		desc.func_load_block_map(output->block_map_handle);
+		desc.func_load_block_map(output->block_map_handle, output->tc_handle);
 		tds_logf(TDS_LOG_MESSAGE, "Loaded block types.\n");
 	}
 
@@ -314,6 +314,22 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 		return;
 	}
 
+	uint32_t world_width, world_height;
+
+	fread(&world_width, sizeof(world_width), 1, fd_input);
+	fread(&world_height, sizeof(world_height), 1, fd_input);
+
+	if (world_width && world_height) {
+		uint8_t* block_buffer = tds_malloc(sizeof(*block_buffer) * world_width * world_height);
+
+		for (int i = 0; i < world_height * world_width; ++i) {
+			fread(block_buffer + i, sizeof *block_buffer, 1, fd_input);
+		}
+
+		tds_world_load(ptr->world_handle, block_buffer, world_width, world_height);
+		tds_free(block_buffer);
+	}
+
 	while(!feof(fd_input)) {
 		float x, y, dx, dy, angle;
 		int type_size, param_count, result = 1;
@@ -409,25 +425,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 		}
 	}
 
-	/* All object information is done. We then load the world information for the current map. */
-	/* Format: two 32-bit integer values for width and height, followed by one byte per block. */
-
-	uint32_t world_width, world_height;
-
-	fread(&world_width, sizeof(world_width), 1, fd_input);
-	fread(&world_height, sizeof(world_height), 1, fd_input);
-
-	if (world_width && world_height) {
-		uint8_t* block_buffer = tds_malloc(sizeof(*block_buffer) * world_width * world_height);
-
-		for (int i = 0; i < world_height * world_width; ++i) {
-			fread(block_buffer + i, sizeof *block_buffer, 1, fd_input);
-		}
-
-		tds_world_load(ptr->world_handle, block_buffer, world_width, world_height);
-		tds_free(block_buffer);
-	}
-
 	fclose(fd_input);
 	tds_free(str_filename);
 }
@@ -448,6 +445,18 @@ void tds_engine_save(struct tds_engine* ptr, const char* mapname) {
 		tds_logf(TDS_LOG_CRITICAL, "Saving failed : could not open file\n");
 		return;
 	}
+
+	/* We then serialize the world into a buffer and write it. */
+	int world_width = ptr->world_handle->width, world_height = ptr->world_handle->height;
+	uint8_t* block_buffer = tds_malloc(sizeof(*block_buffer) * world_width * world_height);
+
+	tds_world_save(ptr->world_handle, block_buffer, world_width, world_height);
+
+	fwrite(&world_width, sizeof world_width, 1, fd_output);
+	fwrite(&world_height, sizeof world_height, 1, fd_output);
+
+	fwrite(block_buffer, sizeof(*block_buffer) * world_width * world_height, 1, fd_output);
+	tds_free(block_buffer);
 
 	/* To serialize, we must iterate through each object and save entity info + type params. */
 
@@ -509,19 +518,6 @@ void tds_engine_save(struct tds_engine* ptr, const char* mapname) {
 			current_param = current_param->next;
 		}
 	}
-
-	/* We then serialize the world into a buffer and write it. */
-	int world_width = ptr->world_handle->width, world_height = ptr->world_handle->height;
-	uint8_t* block_buffer = tds_malloc(sizeof(*block_buffer) * world_width * world_height);
-
-	tds_world_save(ptr->world_handle, block_buffer, world_width, world_height);
-
-	fwrite(&world_width, sizeof world_width, 1, fd_output);
-	fwrite(&world_height, sizeof world_height, 1, fd_output);
-
-	fwrite(block_buffer, sizeof(*block_buffer) * world_width * world_height, 1, fd_output);
-
-	tds_free(block_buffer);
 	tds_free(str_filename);
 	fclose(fd_output);
 }

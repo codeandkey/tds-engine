@@ -60,6 +60,14 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 	return output;
 }
 
+void tds_texture_set_wrap(struct tds_texture* ptr, int wrap_x, int wrap_y) {
+	tds_logf(TDS_LOG_DEBUG, "Setting texture to wrap mode (%d, %d)\n", wrap_x, wrap_y);
+
+	glBindTexture(GL_TEXTURE_2D, ptr->gl_id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_x ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_y ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+}
+
 void tds_texture_free(struct tds_texture* ptr) {
 	glDeleteTextures(1, &ptr->gl_id);
 	tds_free(ptr->frame_list);

@@ -26,7 +26,7 @@ void tds_texture_cache_free(struct tds_texture_cache* ptr) {
 	tds_free(ptr);
 }
 
-struct tds_texture* tds_texture_cache_get(struct tds_texture_cache* ptr, const char* texture_name, int tile_x, int tile_y) {
+struct tds_texture* tds_texture_cache_get(struct tds_texture_cache* ptr, const char* texture_name, int tile_x, int tile_y, int wrap_x, int wrap_y) {
 	struct tds_texture_cache_link* current = ptr->head;
 
 	while (current) {
@@ -53,5 +53,10 @@ struct tds_texture* tds_texture_cache_get(struct tds_texture_cache* ptr, const c
 	ptr->tail = current;
 
 	current->data = tds_texture_create(texture_name, tile_x, tile_y);
+
+	if (wrap_x || wrap_y) {
+		tds_texture_set_wrap(current->data, wrap_x, wrap_y);
+	}
+
 	return current->data;
 }

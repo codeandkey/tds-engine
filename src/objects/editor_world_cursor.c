@@ -40,6 +40,20 @@ void obj_editor_world_cursor_update(struct tds_object* ptr) {
 void obj_editor_world_cursor_draw(struct tds_object* ptr) {
 	struct obj_editor_world_cursor_data* data = ptr->object_data;
 
+	if (tds_input_map_get_key_pressed(tds_engine_global->input_map_handle, GLFW_KEY_EQUAL, 0)) {
+		data->current_block_id++;
+	}
+
+	if (tds_input_map_get_key_pressed(tds_engine_global->input_map_handle, GLFW_KEY_MINUS, 0)) {
+		if (--data->current_block_id < 0) {
+			data->current_block_id = 0;
+		}
+	}
+
+	if (tds_input_map_get_mouse_button(tds_engine_global->input_map_handle, 0, 0)) {
+		tds_world_set_block(tds_engine_global->world_handle, roundf(ptr->x) + tds_engine_global->world_handle->width / 2, roundf(ptr->y) + tds_engine_global->world_handle->height / 2, data->current_block_id & 0xFF); 
+	}
+
 	ptr->x = roundf(tds_engine_global->input_handle->mx * OBJ_EDITOR_WORLD_CURSOR_SENS + tds_engine_global->camera_handle->x);
 	ptr->y = roundf(tds_engine_global->input_handle->my * -OBJ_EDITOR_WORLD_CURSOR_SENS + tds_engine_global->camera_handle->y);
 }

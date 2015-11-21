@@ -12,4 +12,5 @@ void obj_editor_world_cursor_destroy(struct tds_object* ptr);
 struct obj_editor_world_cursor_data {
 	struct tds_object* drag;
 	float x_offset, y_offset;
+	int current_block_id;
 };

@@ -47,7 +47,7 @@ struct tds_engine_desc {
 	void (*func_load_sounds)(struct tds_sound_cache* sndc_handle);
 	void (*func_load_sprites)(struct tds_sprite_cache* sc_handle, struct tds_texture_cache* tc_handle);
 	void (*func_load_object_types)(struct tds_object_type_cache* otc_handle);
-	void (*func_load_block_map)(struct tds_block_map* block_map_handle);
+	void (*func_load_block_map)(struct tds_block_map* block_map_handle, struct tds_texture_cache* tc_handle);
 };
 
 struct tds_engine_state {

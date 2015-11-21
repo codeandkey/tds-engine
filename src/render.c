@@ -120,6 +120,11 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world) {
 
 
 	for (int i = min_layer; i <= max_layer; ++i) {
+		if (!i) {
+			/* We render the world at depth 0. */
+			_tds_render_world(ptr, world);
+		}
+
 		for (int j = 0; j < ptr->object_buffer->max_index; ++j) {
 			if (object_rendered[j]) {
 				continue;
@@ -147,11 +152,6 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world) {
 			}
 
 			++ind;
-		}
-
-		if (!i) {
-			/* We render the world at depth 0. */
-			_tds_render_world(ptr, world);
 		}
 	}
 
@@ -326,11 +326,23 @@ void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
 	while (cur) {
 		struct tds_block_type render_type = tds_block_map_get(tds_engine_global->block_map_handle, cur->id);
 
-		mat4x4 transform;
-		mat4x4_translate(transform, (cur->x + cur->w / 2.0f) * TDS_WORLD_BLOCK_SIZE, TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f);
+		if (!render_type.texture) {
+			tds_logf(TDS_LOG_WARNING, "Block type %d does not have an associated texture.\n", cur->id);
+			cur = cur->next;
+			continue;
+		}
+
+		/* The translation must take into account that the block size may not be aligned. */
+		float render_x = TDS_WORLD_BLOCK_SIZE * (cur->x - world->width / 2.0f + (cur->w - 1) / 2.0f);
+		float render_y = TDS_WORLD_BLOCK_SIZE * cur->y - world->height / 2.0f;
+
+		mat4x4 transform, transform_full;
+		mat4x4_identity(transform); // This may be unnecessary.
+		mat4x4_translate(transform, render_x, render_y, 0.0f);
+		mat4x4_mul(transform_full, ptr->camera_handle->mat_transform, transform);
 
 		glUniform4f(ptr->uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
-		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *transform);
+		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *transform_full);
 
 		glBindTexture(GL_TEXTURE_2D, render_type.texture->gl_id);
 

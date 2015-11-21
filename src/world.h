@@ -4,7 +4,7 @@
 #include "object.h"
 #include "vertex_buffer.h"
 
-#define TDS_WORLD_BLOCK_SIZE 0.5f
+#define TDS_WORLD_BLOCK_SIZE 1.0f
 
 struct tds_world_hblock {
 	int x, y, w, id;
@@ -20,6 +20,7 @@ struct tds_world {
 struct tds_world* tds_world_create(void);
 void tds_world_free(struct tds_world* ptr);
 
+void tds_world_init(struct tds_world* ptr, int width, int height); /* This creates a blank slate world; tds_world_load will automatically call this if it hasn't been called yet. */
 void tds_world_load(struct tds_world* ptr, const uint8_t* block_buffer, int width, int height);
 void tds_world_save(struct tds_world* ptr, uint8_t* block_buffer, int width, int height);
 
