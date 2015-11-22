@@ -30,7 +30,7 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 
 	_tds_load_shaders(output, TDS_RENDER_SHADER_WORLD_VS, TDS_RENDER_SHADER_WORLD_FS);
 
-	glClearColor(0.1f, 0.1f, 0.1f, 0.0f);
+	glClearColor(0.0f, 0.25f, 0.25f, 0.0f);
 	glDisable(GL_DEPTH_TEST);
 
 	glEnable(GL_BLEND);

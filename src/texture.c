@@ -43,9 +43,9 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 			struct tds_texture_frame* target_frame = output->frame_list + x + (tile_count_h - (y + 1)) * tile_count_w;
 
 			target_frame->left = (float) x / (float) tile_count_w;
-			target_frame->right = (float) (x + 1) / (float) tile_count_w - pixel_dist_x; /* We don't want to share texcoords with the next frame. */
+			target_frame->right = (float) (x + 1) / (float) tile_count_w; // - pixel_dist_x; /* We don't want to share texcoords with the next frame. */
 			target_frame->top = (float) (y + 1) / (float) tile_count_h;
-			target_frame->bottom = (float) y / (float) tile_count_h + pixel_dist_y; /* Another measure to avoid frame oversampling */
+			target_frame->bottom = (float) y / (float) tile_count_h; // + pixel_dist_y; /* Another measure to avoid frame oversampling */
 		}
 	}
 
