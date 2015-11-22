@@ -20,6 +20,11 @@ void _tds_input_mouse_callback(GLFWwindow* window, double mx, double my) {
 	ptr->my = my;
 }
 
+void _tds_input_scroll_callback(GLFWwindow* window, double sx, double sy) {
+	struct tds_input* ptr = (struct tds_input*) glfwGetWindowUserPointer(window);
+	ptr->scroll = (sy < 0) ? -1 : 1;
+}
+
 struct tds_input* tds_input_create(struct tds_display* display_handle) {
 	/* The input system is actually the only subsystem that requires GLFW callbacks, we can use the window's user pointer here. */
 
@@ -31,6 +36,7 @@ struct tds_input* tds_input_create(struct tds_display* display_handle) {
 	glfwSetWindowUserPointer(display_handle->win_handle, output);
 	glfwSetCharCallback(display_handle->win_handle, _tds_input_char_callback);
 	glfwSetCursorPosCallback(display_handle->win_handle, _tds_input_mouse_callback);
+	glfwSetScrollCallback(display_handle->win_handle, _tds_input_scroll_callback);
 
 	return output;
 }
@@ -51,6 +57,8 @@ void tds_input_update(struct tds_input* ptr) {
 	for (int i = 0; i < 16; ++i) {
 		ptr->mb_state[i] = glfwGetMouseButton(ptr->window_handle, i);
 	}
+
+	ptr->scroll = 0;
 
 	if (!tds_input_get_controller(ptr)) {
 		return;

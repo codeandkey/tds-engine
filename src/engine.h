@@ -95,7 +95,7 @@ void tds_engine_flush_objects(struct tds_engine* ptr); /* destroys all objects i
 void tds_engine_terminate(struct tds_engine* ptr); /* flags the engine to stop soon */
 
 struct tds_object* tds_engine_get_object_by_type(struct tds_engine* ptr, const char* type);
-struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engine* ptr, const char* type); /* Allocates a buffer. Must be freed after reading! */
+struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engine* ptr, const char* type); /* Allocates a buffer. Freed by the engine on shutdown. */
 
 void tds_engine_load(struct tds_engine* ptr, const char* mapname);
 void tds_engine_save(struct tds_engine* ptr, const char* mapname);

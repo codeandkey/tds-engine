@@ -334,7 +334,7 @@ void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
 
 		/* The translation must take into account that the block size may not be aligned. */
 		float render_x = TDS_WORLD_BLOCK_SIZE * (cur->x - world->width / 2.0f + (cur->w - 1) / 2.0f);
-		float render_y = TDS_WORLD_BLOCK_SIZE * cur->y - world->height / 2.0f;
+		float render_y = TDS_WORLD_BLOCK_SIZE * (cur->y - world->height / 2.0f);
 
 		mat4x4 transform, transform_full;
 		mat4x4_identity(transform); // This may be unnecessary.

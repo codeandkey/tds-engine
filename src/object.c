@@ -84,8 +84,10 @@ void tds_object_free(struct tds_object* ptr) {
 }
 
 void tds_object_set_sprite(struct tds_object* ptr, struct tds_sprite* sprite) {
-	ptr->sprite_handle = sprite;
-	ptr->current_frame = 0;
+	if (ptr->sprite_handle != sprite) {
+		ptr->sprite_handle = sprite;
+		ptr->current_frame = 0;
+	}
 }
 
 void tds_object_send_msg(struct tds_object* ptr, int handle, int msg, void* data) {

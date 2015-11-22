@@ -299,6 +299,8 @@ void tds_engine_terminate(struct tds_engine* ptr) {
 }
 
 void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
+	tds_engine_flush_objects(ptr);
+
 	char* str_filename = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
 
 	memcpy(str_filename, TDS_MAP_PREFIX, strlen(TDS_MAP_PREFIX));
@@ -420,7 +422,7 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 		tds_free(type_name);
 
-		if (tds_editor_get_mode()) {
+		if (tds_editor_get_mode() == TDS_EDITOR_MODE_OBJECTS) {
 			tds_editor_add_selector(obj_new);
 		}
 	}
@@ -518,6 +520,7 @@ void tds_engine_save(struct tds_engine* ptr, const char* mapname) {
 			current_param = current_param->next;
 		}
 	}
+
 	tds_free(str_filename);
 	fclose(fd_output);
 }

@@ -89,8 +89,6 @@ void tds_world_save(struct tds_world* ptr, uint8_t* block_buffer, int width, int
 }
 
 void tds_world_set_block(struct tds_world* ptr, int x, int y, uint8_t block) {
-	tds_logf(TDS_LOG_DEBUG, "Setting block at %d,%d to %d\n", x, y, block);
-
 	if (x >= ptr->width || x < 0 || y >= ptr->height || y < 0) {
 		tds_logf(TDS_LOG_WARNING, "World index out of bounds.\n");
 		return;
@@ -208,7 +206,7 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj) {
 	float obj_top = obj->y + obj->cbox_height / 2.0f;
 
 	if (obj->angle) {
-		tds_logf(TDS_LOG_WARNING, "The target is object is not axis-aligned. Using a wider bounding box than normal to accommadate.\n");
+		tds_logf(TDS_LOG_WARNING, "The target object is not axis-aligned. Using a wider bounding box than normal to accommadate.\n");
 
 		float diagonal = sqrtf(pow(obj->cbox_width, 2) + pow(obj->cbox_height, 2)) / 2.0f;
 
@@ -219,23 +217,31 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj) {
 	}
 
 	/* The world block coordinates will be treated as centers. The block at [0, 0] will be centered on the origin. */
-
 	struct tds_world_hblock* cblock = ptr->block_list_head;
 
 	while (cblock) {
-		if (obj_left > cblock->x + cblock->w + TDS_WORLD_BLOCK_SIZE / 2.0f) {
+		float cblock_left = (cblock->x - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+		float cblock_right = (cblock->x + cblock->w - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+		float cblock_top = (cblock->y + 0.5f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+		float cblock_bottom = (cblock->y - ptr->height / 2.0f - 0.5f) * TDS_WORLD_BLOCK_SIZE;
+
+		if (obj_left > cblock_right) {
+			cblock = cblock->next;
 			continue;
 		}
 
-		if (obj_right < cblock->x - TDS_WORLD_BLOCK_SIZE / 2.0f) {
+		if (obj_right < cblock_left) {
+			cblock = cblock->next;
 			continue;
 		}
 
-		if (obj_top < cblock->y - TDS_WORLD_BLOCK_SIZE / 2.0f) {
+		if (obj_top < cblock_bottom) {
+			cblock = cblock->next;
 			continue;
 		}
 
-		if (obj_bottom > cblock->y + 1 + TDS_WORLD_BLOCK_SIZE / 2.0f) {
+		if (obj_bottom > cblock_top) {
+			cblock = cblock->next;
 			continue;
 		}
 

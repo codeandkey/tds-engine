@@ -4,7 +4,7 @@
 #include "object.h"
 #include "vertex_buffer.h"
 
-#define TDS_WORLD_BLOCK_SIZE 1.0f
+#define TDS_WORLD_BLOCK_SIZE 0.5f
 
 struct tds_world_hblock {
 	int x, y, w, id;

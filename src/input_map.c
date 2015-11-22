@@ -2,6 +2,8 @@
 #include "memory.h"
 #include "log.h"
 
+#include <math.h>
+
 struct tds_input_map* tds_input_map_create(struct tds_input* ptr) {
 	struct tds_input_map* output = tds_malloc(sizeof(struct tds_input_map));
 
@@ -73,4 +75,8 @@ int tds_input_map_get_mouse_button_released(struct tds_input_map* ptr, int mb, i
 
 char tds_input_map_get_char(struct tds_input_map* ptr) {
 	return tds_input_get_char(ptr->input_handle);
+}
+
+int tds_input_map_get_mouse_scrolled(struct tds_input_map* ptr) {
+	return ptr->input_handle->scroll;
 }

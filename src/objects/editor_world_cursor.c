@@ -45,15 +45,33 @@ void obj_editor_world_cursor_draw(struct tds_object* ptr) {
 	}
 
 	if (tds_input_map_get_key_pressed(tds_engine_global->input_map_handle, GLFW_KEY_MINUS, 0)) {
-		if (--data->current_block_id < 0) {
-			data->current_block_id = 0;
-		}
+		data->current_block_id--;
 	}
+
+	if (data->current_block_id < 0) {
+		data->current_block_id = 0;
+	}
+
+	struct tds_texture* c_texture = tds_block_map_get(tds_engine_global->block_map_handle, data->current_block_id).texture;
 
 	if (tds_input_map_get_mouse_button(tds_engine_global->input_map_handle, 0, 0)) {
-		tds_world_set_block(tds_engine_global->world_handle, roundf(ptr->x) + tds_engine_global->world_handle->width / 2, roundf(ptr->y) + tds_engine_global->world_handle->height / 2, data->current_block_id & 0xFF); 
+		int block_x = floorf(ptr->x / TDS_WORLD_BLOCK_SIZE) + tds_engine_global->world_handle->width / 2;
+		int block_y = floorf(ptr->y / TDS_WORLD_BLOCK_SIZE) + tds_engine_global->world_handle->height / 2;
+
+		tds_world_set_block(tds_engine_global->world_handle, block_x, block_y, data->current_block_id & 0xFF); 
 	}
 
-	ptr->x = roundf(tds_engine_global->input_handle->mx * OBJ_EDITOR_WORLD_CURSOR_SENS + tds_engine_global->camera_handle->x);
-	ptr->y = roundf(tds_engine_global->input_handle->my * -OBJ_EDITOR_WORLD_CURSOR_SENS + tds_engine_global->camera_handle->y);
+	ptr->x = tds_engine_global->input_handle->mx * OBJ_EDITOR_WORLD_CURSOR_SENS + tds_engine_global->camera_handle->x;
+	ptr->y = tds_engine_global->input_handle->my * -OBJ_EDITOR_WORLD_CURSOR_SENS + tds_engine_global->camera_handle->y;
+
+	ptr->x -= fmod(ptr->x, TDS_WORLD_BLOCK_SIZE);
+	ptr->y -= fmod(ptr->y, TDS_WORLD_BLOCK_SIZE);
+
+	if (c_texture) {
+		ptr->sprite_handle->texture = tds_block_map_get(tds_engine_global->block_map_handle, data->current_block_id).texture;
+		ptr->a = 0.3f;
+	} else {
+		ptr->sprite_handle->texture = tds_texture_cache_get(tds_engine_global->tc_handle, "res/sprites/editor_cursor.png", 32, 32, 0, 0);
+		ptr->a = 1.0f;
+	}
 }

@@ -109,6 +109,12 @@ static struct tds_key_name _tds_key_name_list[] = {
 	{"leftmouse", 0},
 	{"rightmouse", 1},
 	{"middlemouse", 2},
+	{"axis0", 0},
+	{"axis1", 1},
+	{"axis2", 2},
+	{"axis3", 3},
+	{"axis4", 4},
+	{"axis5", 5},
 };
 
 struct tds_key_name* tds_key_name_get_list(void) {

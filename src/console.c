@@ -177,7 +177,7 @@ void _tds_console_execute(struct tds_console* ptr) {
 		struct tds_object* new_object = tds_object_create(obj_type, tds_engine_global->object_buffer, tds_engine_global->sc_handle, x_f, y_f, 0.0f, NULL);
 		tds_console_print(ptr, "created object\n");
 
-		if (tds_editor_get_mode()) {
+		if (tds_editor_get_mode() == TDS_EDITOR_MODE_OBJECTS) {
 			tds_editor_add_selector(new_object);
 		}
 	} else if (!strcmp(cur_cmd, "exit") || !strcmp(cur_cmd, "quit")) {

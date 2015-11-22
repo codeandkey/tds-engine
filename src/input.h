@@ -11,6 +11,7 @@ struct tds_input {
 	float controller_axis_state[32];
 	int last_char;
 	double mx, my, mx_last, my_last;
+	int scroll;
 };
 
 struct tds_input* tds_input_create(struct tds_display* display_handle);
