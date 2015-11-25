@@ -1,6 +1,7 @@
 #include "world.h"
 #include "log.h"
 #include "memory.h"
+#include "engine.h"
 
 #include <GLXW/glxw.h>
 
@@ -220,6 +221,10 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj) {
 	struct tds_world_hblock* cblock = ptr->block_list_head;
 
 	while (cblock) {
+		if (!tds_block_map_get(tds_engine_global->block_map_handle, cblock->id).solid) {
+			continue;
+		}
+
 		float cblock_left = (cblock->x - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 		float cblock_right = (cblock->x + cblock->w - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 		float cblock_top = (cblock->y + 0.5f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;

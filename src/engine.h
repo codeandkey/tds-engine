@@ -16,6 +16,7 @@
 #include "input_map.h"
 #include "block_map.h"
 #include "world.h"
+#include "signal.h"
 
 #define TDS_MAP_PREFIX "res/maps/"
 

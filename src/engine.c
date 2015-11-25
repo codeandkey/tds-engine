@@ -42,6 +42,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	tds_logf(TDS_LOG_MESSAGE, "Initializing TDS engine..\n");
 
+	tds_signal_init();
+	tds_logf(TDS_LOG_MESSAGE, "Registered signal handlers.\n");
+
 	/* Config loading */
 	conf = tds_config_create(desc.config_filename);
 
