@@ -11,31 +11,19 @@ float _tds_collision_crossz(float x1, float y1, float x2, float y2, float x3, fl
 int _tds_collision_tri(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
 
 int tds_collision_get_overlap(struct tds_object* first, struct tds_object* second) {
-	float first_r = sqrtf(pow(first->cbox_height / 2.0f, 2.0f) + pow(first->cbox_width / 2.0f, 2.0f));
-	float second_r = sqrtf(pow(second->cbox_height / 2.0f, 2.0f) + pow(second->cbox_height / 2.0f, 2.0f));
-
-	/* first_r and second_r are the virtual radii of the two objects;
-	 * if the dist. between the centers is more than f_r + s_r there is no way they will collide */
-
-	float center_dist = sqrtf(pow(first->x - second->x, 2.0f) + pow(first->y - second->y, 2.0f));
-
-	if (center_dist > first_r + second_r) {
+	if (first->x - first->cbox_width / 2.0f > second->x + second->cbox_width / 2.0f) {
 		return 0;
 	}
 
-	if (first->x - first_r > second->x + second_r) {
+	if (first->x + first->cbox_width / 2.0f < second->x - second->cbox_width / 2.0f) {
 		return 0;
 	}
 
-	if (first->x + first_r < second->x - second_r) {
+	if (first->y - first->cbox_height / 2.0f > second->y + second->cbox_height / 2.0f) {
 		return 0;
 	}
 
-	if (first->y + first_r < second->y - second_r) {
-		return 0;
-	}
-
-	if (first->y - first_r > second->y + second_r) {
+	if (first->y + first->cbox_height / 2.0f > second->y - second->cbox_height / 2.0f) {
 		return 0;
 	}
 
