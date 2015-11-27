@@ -30,6 +30,9 @@ struct tds_display* tds_display_create(struct tds_display_desc desc) {
 	}
 
 	glfwSetInputMode(output->win_handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwGetWindowSize(output->win_handle, &output->desc.width, &output->desc.height);
+
+	glViewport(0, 0, output->desc.width, output->desc.height);
 
 	return output;
 }
