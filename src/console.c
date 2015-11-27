@@ -15,6 +15,9 @@ struct tds_console* tds_console_create(void) {
 	struct tds_console* output = tds_malloc(sizeof(struct tds_console));
 
 	output->font = tds_sprite_cache_get(tds_engine_global->sc_handle, "font_debug");
+
+	/* We can't control anything but rows and cols, so 1:1 may be hard */
+
 	output->rows = tds_engine_global->camera_handle->height / output->font->height;
 	output->cols = tds_engine_global->camera_handle->width / output->font->width;
 
@@ -41,6 +44,32 @@ void tds_console_free(struct tds_console* ptr) {
 
 	tds_free(ptr->buffers);
 	tds_free(ptr);
+}
+
+void tds_console_resize(struct tds_console* ptr) {
+	if (!ptr->buffers) {
+		return;
+	}
+
+	for (int i = 0; i < ptr->rows; ++i) {
+		tds_free(ptr->buffers[i]);
+	}
+
+	tds_free(ptr->buffers);
+
+	ptr->rows = tds_engine_global->camera_handle->height / ptr->font->height;
+	ptr->cols = tds_engine_global->camera_handle->width / ptr->font->width;
+
+	tds_logf(TDS_LOG_MESSAGE, "Resizing console to %d rows and %d cols\n", ptr->rows, ptr->cols);
+
+	ptr->buffers = tds_malloc(sizeof(char*) * ptr->rows);
+
+	for (int i = 0; i < ptr->rows; ++i) {
+		ptr->buffers[i] = tds_malloc(ptr->cols);
+	}
+
+	ptr->curs_row = ptr->curs_col = 0;
+	tds_console_print(ptr, "$ ");
 }
 
 void tds_console_update(struct tds_console* ptr) {
