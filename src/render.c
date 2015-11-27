@@ -18,6 +18,7 @@ struct _tds_file {
 static void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int layer);
 static void _tds_render_text_batch(struct tds_render* ptr, struct tds_text_batch* data);
 static void _tds_render_world(struct tds_render* ptr, struct tds_world* world);
+static void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world);
 static int _tds_load_shaders(struct tds_render* ptr, const char* vs, const char* fs);
 static struct _tds_file _tds_load_file(const char* filename);
 
@@ -38,6 +39,13 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glActiveTexture(GL_TEXTURE0);
+
+	unsigned int display_width = tds_engine_global->display_handle->desc.width, display_height = tds_engine_global->display_handle->desc.height;
+	output->lightmap_rt = tds_rt_create(display_width, display_height);
+	output->dir_rt = tds_rt_create(display_width, display_height);
+	output->point_rt = tds_rt_create(TDS_RENDER_POINT_RT_SIZE, TDS_RENDER_POINT_RT_SIZE);
+
+	tds_rt_bind(NULL);
 
 	return output;
 }
@@ -351,4 +359,51 @@ void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
 
 		cur = cur->next;
 	}
+}
+
+void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
+	/* This function should fill the ptr->lightmap_rt with the world's light information. */
+	/* We render each light individually and construct the shadowmap. */
+
+	/* We will use a basic [-1:1] square VBO to do most of the light rendering.
+	 * It will come in handy later. */
+
+	struct tds_vertex verts[] = {
+		{-1.0f, 1.0f, 0.0f, 0.0f, 1.0f},
+		{1.0f, -1.0f, 0.0f, 1.0f, 0.0f},
+		{1.0f, 1.0f, 0.0f, 1.0f, 1.0f},
+		{-1.0f, 1.0f, 0.0f, 0.0f, 1.0f},
+		{1.0f, -1.0f, 0.0f, 1.0f, 0.0f},
+		{-1.0f, -1.0f, 0.0f, 0.0f, 0.0f}
+	};
+
+	struct tds_vertex_buffer* vb = tds_vertex_buffer_create(verts, sizeof verts / sizeof *verts, GL_TRIANGLES);
+	mat4x4 point_light_translate, point_light_camera;
+
+	struct tds_render_light* cur = ptr->light_list;
+	while (cur) {
+		switch(cur->type) {
+		case TDS_RENDER_LIGHT_POINT:
+			/* We can cheat a little with the camera. We will directly manipulate the ortho projection and set the values accordingly. */
+			mat4x4_ortho(point_light_camera, cur->x - cur->dist / 2.0f, cur->x + cur->dist / 2.0f, cur->y - cur->dist / 2.0f, cur->y + cur->dist / 2.0f, 1.0f, -1.0f);
+			mat4x4_translate(point_light_translate, cur->x, cur->y, 0.0f);
+			tds_rt_bind(ptr->point_rt);
+			break;
+		case TDS_RENDER_LIGHT_DIRECTIONAL:
+			tds_rt_bind(ptr->dir_rt);
+			break;
+		}
+
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		/* Because _tds_render_world is unaware of RTs, we can really just use that */
+		_tds_render_world(ptr, world);
+
+		/* TODO : rest of lightmap render */
+
+		cur = cur->next;
+	}
+
+	tds_vertex_buffer_free(vb);
 }

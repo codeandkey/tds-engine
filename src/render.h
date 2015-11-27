@@ -7,14 +7,29 @@
 #include "camera.h"
 #include "text.h"
 #include "world.h"
+#include "rt.h"
 
 #define TDS_RENDER_SHADER_WORLD_VS "res/shaders/world_vs.glsl"
 #define TDS_RENDER_SHADER_WORLD_FS "res/shaders/world_fs.glsl"
+
+#define TDS_RENDER_LIGHT_POINT 0
+#define TDS_RENDER_LIGHT_DIRECTIONAL 1
+
+#define TDS_RENDER_POINT_RT_SIZE 256
+
+struct tds_render_light {
+	unsigned int type;
+	float x, y, r, g, b, dist;
+	struct tds_render_light* next;
+};
 
 struct tds_render {
 	struct tds_camera* camera_handle;
 	struct tds_handle_manager* object_buffer;
 	struct tds_text* text_handle;
+	struct tds_rt* lightmap_rt, *point_rt, *dir_rt;
+
+	struct tds_render_light* light_list;
 
 	unsigned int render_vs, render_fs, render_program;
 	int uniform_texture, uniform_color, uniform_transform;

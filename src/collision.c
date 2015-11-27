@@ -19,7 +19,7 @@ int tds_collision_get_overlap(struct tds_object* first, struct tds_object* secon
 
 	float center_dist = sqrtf(pow(first->x - second->x, 2.0f) + pow(first->y - second->y, 2.0f));
 
-	if (center_dist < first_r + second_r) {
+	if (center_dist > first_r + second_r) {
 		return 0;
 	}
 
