@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -std=gnu99 -Wall -g -fPIC
 LDFLAGS = -shared -fPIC
 
-SOURCES = $(wildcard src/*.c src/objects/*.c src/game/*.c src/libs/*.c)
+SOURCES = $(wildcard src/*.c src/objects/*.c src/libs/*.c)
 OBJECTS = $(SOURCES:.c=.o)
 
 OUTPUT = libtds.so
