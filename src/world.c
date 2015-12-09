@@ -63,7 +63,7 @@ void tds_world_init(struct tds_world* ptr, int width, int height) {
 }
 
 void tds_world_load(struct tds_world* ptr, const uint8_t* block_buffer, int width, int height) {
-	tds_world_init(ptr, width, height);	
+	tds_world_init(ptr, width, height);
 
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
@@ -198,7 +198,7 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 	}
 }
 
-int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj) {
+int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, float* x, float* y, float* w, float* h) {
 	/* Another important function. Intersection testing with axis-aligned objects. */
 
 	float obj_left = obj->x - obj->cbox_width / 2.0f;
@@ -248,6 +248,22 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj) {
 		if (obj_bottom > cblock_top) {
 			cblock = cblock->next;
 			continue;
+		}
+
+		if (x) {
+			*x = (cblock->x - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+		}
+
+		if (y) {
+			*y = (cblock->y + 0.5f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+		}
+
+		if (w) {
+			*w = cblock->w * TDS_WORLD_BLOCK_SIZE;
+		}
+
+		if (h) {
+			*h = TDS_WORLD_BLOCK_SIZE;
 		}
 
 		return 1;
