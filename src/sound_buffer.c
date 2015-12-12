@@ -4,7 +4,7 @@
 
 #include <AL/al.h>
 
-#include "libs/stb_vorbis.ch" // Yes, this includes a C source. We will wrap stb_vorbis entirely in this file.
+#include "libs/stb_vorbis.h"
 
 static unsigned int _tds_sound_buffer_load(char* filename);
 
