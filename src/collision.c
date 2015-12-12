@@ -23,7 +23,7 @@ int tds_collision_get_overlap(struct tds_object* first, struct tds_object* secon
 		return 0;
 	}
 
-	if (first->y + first->cbox_height / 2.0f > second->y - second->cbox_height / 2.0f) {
+	if (first->y + first->cbox_height / 2.0f < second->y - second->cbox_height / 2.0f) {
 		return 0;
 	}
 
