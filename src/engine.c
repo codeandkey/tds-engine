@@ -15,7 +15,7 @@
 
 #include "objects/objects.h"
 
-#define TDS_ENGINE_TIMESTEP 144.0f
+#define TDS_ENGINE_TIMESTEP 120.0f
 
 struct tds_engine* tds_engine_global = NULL;
 
