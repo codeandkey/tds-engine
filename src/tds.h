@@ -18,6 +18,7 @@
 #include "linmath.h"
 #include "log.h"
 #include "memory.h"
+#include "msg.h"
 #include "object.h"
 #include "object_type_cache.h"
 #include "render.h"

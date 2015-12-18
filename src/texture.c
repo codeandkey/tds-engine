@@ -22,8 +22,6 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 
 	tds_logf(TDS_LOG_DEBUG, "Loaded texture %s : width %d, height %d\n", filename, w, h);
 
-	float pixel_dist_x = 1.0f / (float) w, pixel_dist_y = 1.0f / (float) h;
-
 	if (w % tile_x || h % tile_y) {
 		tds_logf(TDS_LOG_WARNING, "Tile size does not divide evenly into image! (tile %dx%d, image %dx%d)\n", tile_x, tile_y, w, h);
 	}

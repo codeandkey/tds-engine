@@ -14,7 +14,8 @@ struct tds_console {
 struct tds_console* tds_console_create(void);
 void tds_console_free(struct tds_console* ptr);
 
-void tds_console_update(struct tds_console* ptr);
+int tds_console_char_pressed(struct tds_console* ptr, unsigned int chr); // Returns whether the console actually used the input.
+void tds_console_key_pressed(struct tds_console* ptr, int key);
 void tds_console_draw(struct tds_console* ptr);
 void tds_console_print(struct tds_console* ptr, const char* str);
 void tds_console_resize(struct tds_console* ptr);

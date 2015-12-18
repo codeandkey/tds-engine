@@ -33,50 +33,10 @@ int tds_input_map_get_key(struct tds_input_map* ptr, int key, int button) {
 	return ptr->input_handle->kb_state[key];
 }
 
-int tds_input_map_get_key_pressed(struct tds_input_map* ptr, int key, int button) {
-	if (ptr->use_controller && tds_input_get_controller(ptr->input_handle)) {
-		return ptr->input_handle->controller_state[button] && !ptr->input_handle->controller_state_last[button];
-	}
-
-	return ptr->input_handle->kb_state[key] && !ptr->input_handle->kb_state_last[key];
-}
-
-int tds_input_map_get_key_released(struct tds_input_map* ptr, int key, int button) {
-	if (ptr->use_controller && tds_input_get_controller(ptr->input_handle)) {
-		return !ptr->input_handle->controller_state[button] && ptr->input_handle->controller_state_last[button];
-	}
-
-	return !ptr->input_handle->kb_state[key] && ptr->input_handle->kb_state_last[key];
-}
-
 int tds_input_map_get_mouse_button(struct tds_input_map* ptr, int mb, int button) {
 	if (ptr->use_controller && tds_input_get_controller(ptr->input_handle)) {
 		return ptr->input_handle->controller_state[button];
 	}
 
 	return ptr->input_handle->mb_state[mb];
-}
-
-int tds_input_map_get_mouse_button_pressed(struct tds_input_map* ptr, int mb, int button) {
-	if (ptr->use_controller && tds_input_get_controller(ptr->input_handle)) {
-		return ptr->input_handle->controller_state[button] && !ptr->input_handle->controller_state_last[button];
-	}
-
-	return ptr->input_handle->mb_state[mb] && !ptr->input_handle->mb_state_last[mb];
-}
-
-int tds_input_map_get_mouse_button_released(struct tds_input_map* ptr, int mb, int button) {
-	if (ptr->use_controller && tds_input_get_controller(ptr->input_handle)) {
-		return !ptr->input_handle->controller_state[button] && ptr->input_handle->controller_state_last[button];
-	}
-
-	return !ptr->input_handle->mb_state[mb] && ptr->input_handle->mb_state_last[mb];
-}
-
-char tds_input_map_get_char(struct tds_input_map* ptr) {
-	return tds_input_get_char(ptr->input_handle);
-}
-
-int tds_input_map_get_mouse_scrolled(struct tds_input_map* ptr) {
-	return ptr->input_handle->scroll;
 }

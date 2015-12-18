@@ -102,5 +102,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname);
 void tds_engine_save(struct tds_engine* ptr, const char* mapname);
 
 void tds_engine_destroy_objects(struct tds_engine* ptr, const char* type_name);
+void tds_engine_broadcast(struct tds_engine* ptr, int msg, void* param);
 
 extern struct tds_engine* tds_engine_global;

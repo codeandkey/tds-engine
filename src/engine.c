@@ -197,19 +197,20 @@ void tds_engine_run(struct tds_engine* ptr) {
 		/* We approximate the fps using the delta frame time. */
 		ptr->state.fps = 1000.0f / delta_ms;
 
-		// Useful message for debugging frame delta timings.:w
+		// Useful message for debugging frame delta timings.
 		// tds_logf(TDS_LOG_MESSAGE, "frame : accum = %f ms, delta_ms = %f ms, timestep = %f\n", accumulator, delta_ms, timestep_ms);
 
 		ptr->state.entity_maxindex = ptr->object_buffer->max_index;
 
 		tds_display_update(ptr->display_handle);
-		tds_input_update(ptr->input_handle);
 
 		while (accumulator >= timestep_ms) {
 			accumulator -= timestep_ms;
 
 			/* Run game update logic. */
 			/* Even if updating is disabled, we still want to run down the accumulator. */
+
+			tds_input_update(ptr->input_handle);
 
 			if (ptr->enable_update) {
 				for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
@@ -223,8 +224,6 @@ void tds_engine_run(struct tds_engine* ptr) {
 				}
 			}
 		}
-
-		tds_console_update(ptr->console_handle);
 
 		/* Run game draw logic. */
 		tds_render_clear(ptr->render_handle); /* We clear before executing the draw functions, otherwise the text buffer would be destroyed */
@@ -539,5 +538,17 @@ void tds_engine_destroy_objects(struct tds_engine* ptr, const char* type_name) {
 		if (!strcmp(cur->type_name, type_name)) {
 			tds_object_free(cur);
 		}
+	}
+}
+
+void tds_engine_broadcast(struct tds_engine* ptr, int msg, void* param) {
+	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
+		struct tds_object* cur = ptr->object_buffer->buffer[i].data;
+
+		if (!cur) {
+			continue;
+		}
+
+		tds_object_msg(cur, NULL, msg, param);
 	}
 }

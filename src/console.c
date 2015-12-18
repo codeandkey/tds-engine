@@ -72,35 +72,39 @@ void tds_console_resize(struct tds_console* ptr) {
 	tds_console_print(ptr, "$ ");
 }
 
-void tds_console_update(struct tds_console* ptr) {
-	if (tds_input_map_get_key_pressed(tds_engine_global->input_map_handle, GLFW_KEY_GRAVE_ACCENT, 0)) {
+void tds_console_key_pressed(struct tds_console* ptr, int key) {
+	if (key == GLFW_KEY_GRAVE_ACCENT) {
 		ptr->enabled = !ptr->enabled;
-		tds_input_forget_char(tds_engine_global->input_handle);
-	}
-
-	if (!ptr->enabled) {
 		return;
 	}
-
-	/* This does NOT need to be called on a delta time. Once a frame is enough. */
-	char input_char = 0;
-
-	if (tds_input_map_get_key_pressed(tds_engine_global->input_map_handle, GLFW_KEY_ENTER, 0)) {
+	
+	if (key == GLFW_KEY_ENTER) {
 		tds_console_print(ptr, "\n");
 		_tds_console_execute(ptr);
 		tds_console_print(ptr, "$ ");
 	}
+}
 
-	input_char = tds_input_map_get_char(tds_engine_global->input_map_handle);
+int tds_console_char_pressed(struct tds_console* ptr, unsigned int chr) {
+	if (!ptr->enabled) {
+		return 0;
+	}
 
-	if (!input_char) {
-		return;
+	if (!chr) {
+		return 0;
+	}
+
+	if (chr == '`' || chr == '~') {
+		return 0;
 	}
 
 	char str[2] = {0};
-	str[0] = input_char;
+	str[0] = chr;
+
+	tds_logf(TDS_LOG_DEBUG, "printing string [%s]\n", str);
 
 	tds_console_print(ptr, str);
+	return 1;
 }
 
 void tds_console_draw(struct tds_console* ptr) {

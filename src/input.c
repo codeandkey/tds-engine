@@ -1,13 +1,15 @@
 #include "input.h"
 #include "log.h"
 #include "memory.h"
+#include "console.h"
+#include "engine.h"
+#include "msg.h"
 
 #include <string.h>
 
 void _tds_input_char_callback(GLFWwindow* window, unsigned int inp) {
-	struct tds_input* ptr = (struct tds_input*) glfwGetWindowUserPointer(window);
-
-	ptr->last_char = inp;
+	tds_logf(TDS_LOG_DEBUG, "char callback : %c [%X]\n", inp, inp);
+	tds_console_char_pressed(tds_engine_global->console_handle, inp);
 }
 
 void _tds_input_mouse_callback(GLFWwindow* window, double mx, double my) {
@@ -20,9 +22,23 @@ void _tds_input_mouse_callback(GLFWwindow* window, double mx, double my) {
 	ptr->my = my;
 }
 
+void _tds_input_mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+	tds_engine_broadcast(tds_engine_global, (action == GLFW_PRESS) ? TDS_MSG_MOUSE_PRESSED : TDS_MSG_MOUSE_RELEASED, &button);
+}
+
 void _tds_input_scroll_callback(GLFWwindow* window, double sx, double sy) {
-	struct tds_input* ptr = (struct tds_input*) glfwGetWindowUserPointer(window);
-	ptr->scroll = (sy < 0) ? -1 : 1;
+}
+
+void _tds_input_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	if (action == GLFW_PRESS) {
+		tds_console_key_pressed(tds_engine_global->console_handle, key);
+	}
+
+	if (tds_engine_global->console_handle->enabled) {
+		return;
+	}
+
+	tds_engine_broadcast(tds_engine_global, (action == GLFW_PRESS) ? TDS_MSG_KEY_PRESSED : TDS_MSG_KEY_RELEASED, &key);
 }
 
 struct tds_input* tds_input_create(struct tds_display* display_handle) {
@@ -37,6 +53,7 @@ struct tds_input* tds_input_create(struct tds_display* display_handle) {
 	glfwSetCharCallback(display_handle->win_handle, _tds_input_char_callback);
 	glfwSetCursorPosCallback(display_handle->win_handle, _tds_input_mouse_callback);
 	glfwSetScrollCallback(display_handle->win_handle, _tds_input_scroll_callback);
+	glfwSetKeyCallback(display_handle->win_handle, _tds_input_key_callback);
 
 	return output;
 }
@@ -46,10 +63,6 @@ void tds_input_free(struct tds_input* ptr) {
 }
 
 void tds_input_update(struct tds_input* ptr) {
-	memcpy(ptr->kb_state_last, ptr->kb_state, sizeof(int) * 512);
-	memcpy(ptr->controller_state_last, ptr->controller_state, sizeof(int) * 32);
-	memcpy(ptr->mb_state_last, ptr->mb_state, sizeof(int) * 16);
-
 	for (int i = 0; i < 512; ++i) {
 		ptr->kb_state[i] = glfwGetKey(ptr->window_handle, i);
 	}
@@ -57,8 +70,6 @@ void tds_input_update(struct tds_input* ptr) {
 	for (int i = 0; i < 16; ++i) {
 		ptr->mb_state[i] = glfwGetMouseButton(ptr->window_handle, i);
 	}
-
-	ptr->scroll = 0;
 
 	if (!tds_input_get_controller(ptr)) {
 		return;
@@ -89,17 +100,6 @@ void tds_input_update(struct tds_input* ptr) {
 
 int tds_input_get_controller(struct tds_input* ptr) {
 	return glfwJoystickPresent(GLFW_JOYSTICK_1);
-}
-
-int tds_input_get_char(struct tds_input* ptr) {
-	int out = ptr->last_char;
-	ptr->last_char = 0;
-
-	return out;
-}
-
-void tds_input_forget_char(struct tds_input* ptr) {
-	ptr->last_char = 0;
 }
 
 void tds_input_set_mouse(struct tds_input* ptr, double mx, double my) {

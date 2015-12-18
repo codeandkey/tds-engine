@@ -344,6 +344,32 @@ void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
 		float render_x = TDS_WORLD_BLOCK_SIZE * (cur->x - world->width / 2.0f + (cur->w - 1) / 2.0f);
 		float render_y = TDS_WORLD_BLOCK_SIZE * (cur->y - world->height / 2.0f);
 
+		/* We implement a quick AABB test with the world block. */
+		float block_left = render_x - cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
+		float block_right = render_x + cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
+		float block_top = render_y + TDS_WORLD_BLOCK_SIZE / 2.0f;
+		float block_bottom = render_y - TDS_WORLD_BLOCK_SIZE / 2.0f;
+
+		if (block_right < ptr->camera_handle->x - ptr->camera_handle->width / 2.0f) {
+			cur = cur->next;
+			continue;
+		}
+
+		if (block_left > ptr->camera_handle->x + ptr->camera_handle->width / 2.0f) {
+			cur = cur->next;
+			continue;
+		}
+
+		if (block_top < ptr->camera_handle->y - ptr->camera_handle->height / 2.0f) {
+			cur = cur->next;
+			continue;
+		}
+
+		if (block_bottom > ptr->camera_handle->y + ptr->camera_handle->height / 2.0f) {
+			cur = cur->next;
+			continue;
+		}
+
 		mat4x4 transform, transform_full;
 		mat4x4_identity(transform); // This may be unnecessary.
 		mat4x4_translate(transform, render_x, render_y, 0.0f);

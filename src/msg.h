@@ -1,0 +1,6 @@
+#pragma once
+
+#define TDS_MSG_KEY_PRESSED 0
+#define TDS_MSG_KEY_RELEASED 1
+#define TDS_MSG_MOUSE_PRESSED 2
+#define TDS_MSG_MOUSE_RELEASED 3
