@@ -8,7 +8,6 @@
 #include <string.h>
 
 void _tds_input_char_callback(GLFWwindow* window, unsigned int inp) {
-	tds_logf(TDS_LOG_DEBUG, "char callback : %c [%X]\n", inp, inp);
 	tds_console_char_pressed(tds_engine_global->console_handle, inp);
 }
 
