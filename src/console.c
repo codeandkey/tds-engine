@@ -31,6 +31,8 @@ struct tds_console* tds_console_create(void) {
 
 	output->curs_row = output->curs_col = 0;
 	output->enabled = 0;
+	output->input_ind = 0;
+	memset(output->input_buf, 0, sizeof output->input_buf / sizeof output->input_buf[0]);
 
 	tds_console_print(output, "$ ");
 
@@ -77,11 +79,24 @@ void tds_console_key_pressed(struct tds_console* ptr, int key) {
 		ptr->enabled = !ptr->enabled;
 		return;
 	}
-	
+
 	if (key == GLFW_KEY_ENTER) {
 		tds_console_print(ptr, "\n");
 		_tds_console_execute(ptr);
 		tds_console_print(ptr, "$ ");
+	}
+
+	if (key == GLFW_KEY_BACKSPACE && ptr->input_ind > 0) {
+		ptr->input_buf[--ptr->input_ind] = 0;
+
+		if (--ptr->curs_col < 0) {
+			if (ptr->curs_row > 0) {
+				ptr->curs_col = ptr->cols - 1;
+				ptr->curs_row--;
+			}
+		}
+
+		ptr->buffers[ptr->curs_row][ptr->curs_col] = 0;
 	}
 }
 
@@ -98,10 +113,12 @@ int tds_console_char_pressed(struct tds_console* ptr, unsigned int chr) {
 		return 0;
 	}
 
+	if (ptr->input_ind < TDS_CONSOLE_INPUT_SIZE) {
+		ptr->input_buf[ptr->input_ind++] = chr;
+	}
+
 	char str[2] = {0};
 	str[0] = chr;
-
-	tds_logf(TDS_LOG_DEBUG, "printing string [%s]\n", str);
 
 	tds_console_print(ptr, str);
 	return 1;
@@ -164,14 +181,10 @@ void tds_console_print(struct tds_console* ptr, const char* str) {
 }
 
 void _tds_console_execute(struct tds_console* ptr) {
-	char* cmd = tds_malloc(ptr->cols);
-	memcpy(cmd, ptr->buffers[ptr->curs_row - 1], ptr->cols);
-
-	char* cur_cmd = strtok(cmd, " ");
-	cur_cmd = strtok(NULL, " ");
+	char* cur_cmd = strtok(ptr->input_buf, " ");
 
 	if (!cur_cmd) {
-		return;
+		goto EXECUTE_CLEANUP;
 	} else if (!strcmp(cur_cmd, "echo")) {
 		while ( (cur_cmd = strtok(NULL, " ")) ) {
 			tds_console_print(ptr, cur_cmd);
@@ -179,15 +192,12 @@ void _tds_console_execute(struct tds_console* ptr) {
 		}
 
 		tds_console_print(ptr, "\n");
-
-		return;
 	} else if (!strcmp(cur_cmd, "create")) {
 		char* type = strtok(NULL, " "), *x = strtok(NULL, " "), *y = strtok(NULL, " ");
 
 		if (!(type && x && y)) {
 			tds_console_print(ptr, "invalid number of arguments\n");
-			tds_free(cmd);
-			return;
+			goto EXECUTE_CLEANUP;
 		}
 
 		tds_console_print(ptr, "searching for object type : [");
@@ -198,8 +208,7 @@ void _tds_console_execute(struct tds_console* ptr) {
 
 		if (!obj_type) {
 			tds_console_print(ptr, "object type lookup failed\n");
-			tds_free(cmd);
-			return;
+			goto EXECUTE_CLEANUP;
 		}
 
 		tds_console_print(ptr, "located object type : [");
@@ -220,8 +229,7 @@ void _tds_console_execute(struct tds_console* ptr) {
 
 		if (!file) {
 			tds_console_print(ptr, "usage: save <filename>\n");
-			tds_free(cmd);
-			return;
+			goto EXECUTE_CLEANUP;
 		}
 
 		tds_engine_save(tds_engine_global, file);
@@ -234,8 +242,7 @@ void _tds_console_execute(struct tds_console* ptr) {
 
 		if (!file) {
 			tds_console_print(ptr, "usage: load <filename>\n");
-			tds_free(cmd);
-			return;
+			goto EXECUTE_CLEANUP;
 		}
 
 		tds_console_print(ptr, "loading from ");
@@ -272,5 +279,7 @@ void _tds_console_execute(struct tds_console* ptr) {
 		tds_console_print(ptr, "unknown command\n");
 	}
 
-	tds_free(cmd);
+	EXECUTE_CLEANUP:
+	memset(ptr->input_buf, 0, sizeof ptr->input_buf / sizeof ptr->input_buf[0]);
+	ptr->input_ind = 0;
 }

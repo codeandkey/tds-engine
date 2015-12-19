@@ -4,11 +4,15 @@
 /* This was originally going to be a part of the ECS, but adding global objects would complicate the architecture more than just hard-coding this in. */
 /* Also, having a global console to work with is seriously useful. */
 
+#define TDS_CONSOLE_INPUT_SIZE 128
+
 struct tds_console {
 	int rows, cols, curs_row, curs_col;
 	char** buffers;
 	int enabled;
 	struct tds_sprite* font;
+	char input_buf[TDS_CONSOLE_INPUT_SIZE];
+	int input_ind;
 };
 
 struct tds_console* tds_console_create(void);

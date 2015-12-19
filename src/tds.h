@@ -22,6 +22,7 @@
 #include "object.h"
 #include "object_type_cache.h"
 #include "render.h"
+#include "savestate.h"
 #include "signal.h"
 #include "sound_buffer.h"
 #include "sound_cache.h"
