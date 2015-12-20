@@ -12,9 +12,15 @@ struct tds_world_hblock {
 	struct tds_vertex_buffer* vb;
 };
 
+struct tds_world_segment {
+	float x1, y1, x2, y2, nx, ny;
+	struct tds_world_segment* next;
+};
+
 struct tds_world {
 	int** buffer, width, height;
 	struct tds_world_hblock* block_list_head, *block_list_tail;
+	struct tds_world_segment* segment_list;
 };
 
 struct tds_world* tds_world_create(void);

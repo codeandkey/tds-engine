@@ -6,6 +6,7 @@
 #include <GLXW/glxw.h>
 
 static void _tds_world_generate_hblocks(struct tds_world* ptr);
+static void _tds_world_generate_segments(struct tds_world* ptr);
 
 struct tds_world* tds_world_create(void) {
 	struct tds_world* output = tds_malloc(sizeof *output);
@@ -34,6 +35,14 @@ void tds_world_free(struct tds_world* ptr) {
 			tds_free(cur);
 			cur = tmp;
 		}
+	}
+
+	struct tds_world_segment* head = ptr->segment_list, *cur = NULL;
+
+	while (head) {
+		cur = head->next;
+		tds_free(head);
+		head = cur;
 	}
 
 	tds_free(ptr);
@@ -270,4 +279,16 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, fl
 	}
 
 	return 0;
+}
+
+void _tds_world_generate_segments(struct tds_world* ptr) {
+	struct tds_world_segment* head = ptr->segment_list, *cur = NULL;
+
+	while (head) {
+		cur = head->next;
+		tds_free(head);
+		head = cur;
+	}
+
+	/* TODO : this whole thing */
 }
