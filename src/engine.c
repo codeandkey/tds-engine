@@ -8,6 +8,7 @@
 #include "sprite.h"
 #include "sound_buffer.h"
 #include "log.h"
+#include "msg.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -105,6 +106,10 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->world_handle = tds_world_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized world subsystem.\n");
 
+	output->savestate_handle = tds_savestate_create();
+	tds_savestate_set_index(output->savestate_handle, desc.save_index);
+	tds_logf(TDS_LOG_MESSAGE, "Initialized savestate subsystem.\n");
+
 	if (desc.func_load_sprites) {
 		desc.func_load_sprites(output->sc_handle, output->tc_handle);
 		tds_logf(TDS_LOG_MESSAGE, "Loaded sprites.\n");
@@ -169,6 +174,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_sound_manager_free(ptr->sound_manager_handle);
 	tds_handle_manager_free(ptr->object_buffer);
 	tds_console_free(ptr->console_handle);
+	tds_savestate_free(ptr->savestate_handle);
 	tds_free(ptr);
 }
 
@@ -383,6 +389,8 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 			fread(&param_type, sizeof param_type, 1, fd_input);
 			fread(&param_valsize, sizeof param_valsize, 1, fd_input);
 
+			tds_logf(TDS_LOG_DEBUG, "Reading param; key %d, type %d\n", param_key, param_type);
+
 			switch (param_type) {
 			case TDS_PARAM_INT:
 				if (param_valsize != sizeof new_param->ipart) {
@@ -434,6 +442,8 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 	fclose(fd_input);
 	tds_free(str_filename);
+
+	tds_engine_broadcast(ptr, TDS_MSG_MAP_READY, 0);
 }
 
 void tds_engine_save(struct tds_engine* ptr, const char* mapname) {

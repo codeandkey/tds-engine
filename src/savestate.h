@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#define TDS_SAVESTATE_FILE_PREFIX "save"
+#define TDS_SAVESTATE_FILE_PREFIX "save/"
 #define TDS_SAVESTATE_MAX_DIGITS 2
 
 struct tds_savestate_entry {

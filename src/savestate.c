@@ -9,7 +9,9 @@
 static void _tds_savestate_flush(struct tds_savestate* ptr);
 
 struct tds_savestate* tds_savestate_create(void) {
-	return tds_malloc(sizeof(struct tds_savestate));
+	struct tds_savestate* output = tds_malloc(sizeof(struct tds_savestate));
+	tds_savestate_read(output);
+	return output;
 }
 
 void tds_savestate_free(struct tds_savestate* ptr) {
@@ -35,7 +37,6 @@ struct tds_savestate_entry tds_savestate_get(struct tds_savestate* ptr, unsigned
 		cur = cur->next;
 	}
 
-	tds_logf(TDS_LOG_WARNING, "savestate index %d not found in list!\n", index);
 	return def;
 }
 
@@ -45,7 +46,8 @@ void tds_savestate_set(struct tds_savestate* ptr, unsigned int index, void* data
 	while (cur) {
 		if (cur->index == index) {
 			tds_free(cur->data);
-			cur->data = data;
+			cur->data = tds_malloc(data_len);
+			memcpy(cur->data, data, data_len);
 			cur->data_len = data_len;
 			return;
 		}
@@ -56,7 +58,8 @@ void tds_savestate_set(struct tds_savestate* ptr, unsigned int index, void* data
 	tds_logf(TDS_LOG_DEBUG, "Savestate index %d wasn't in the list, I will append it.\n", index);
 
 	cur = tds_malloc(sizeof *cur);
-	cur->data = data;
+	cur->data = tds_malloc(data_len);
+	memcpy(cur->data, data, data_len);
 	cur->data_len = data_len;
 	cur->index = index;
 
@@ -93,6 +96,7 @@ void tds_savestate_write(struct tds_savestate* ptr) {
 	}
 
 	fclose(fd);
+	tds_logf(TDS_LOG_MESSAGE, "Wrote savestate to [%s]\n", filename);
 	tds_free(filename);
 }
 
@@ -112,11 +116,25 @@ void tds_savestate_read(struct tds_savestate* ptr) {
 	while (!feof(fd)) {
 		struct tds_savestate_entry* new_entry = tds_malloc(sizeof(*new_entry));
 
-		fread(&new_entry->index, sizeof(new_entry->index), 1, fd);
-		fread(&new_entry->data_len, sizeof(new_entry->data_len), 1, fd);
+		if (!fread(&new_entry->index, sizeof(new_entry->index), 1, fd)) {
+			tds_free(new_entry);
+			break;
+		}
+
+		if (!fread(&new_entry->data_len, sizeof(new_entry->data_len), 1, fd)) {
+			tds_free(new_entry);
+			break;
+		}
+
+		tds_logf(TDS_LOG_DEBUG, "Parsed savestate entry %d, size %d\n", new_entry->index, new_entry->data_len);
 
 		new_entry->data = tds_malloc(new_entry->data_len);
-		fread(new_entry->data, 1, new_entry->data_len, fd);
+
+		if (!fread(new_entry->data, 1, new_entry->data_len, fd)) {
+			tds_free(new_entry->data);
+			tds_free(new_entry);
+			break;
+		}
 
 		if (ptr->tail) {
 			ptr->tail->next = new_entry;
