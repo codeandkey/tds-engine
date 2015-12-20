@@ -1,8 +1,5 @@
 #pragma once
 
-/* Gives the selector a target to follow. */
-#define OBJ_EDITOR_SELECTOR_MSG_TARGET 0
-
 #include "../object.h"
 
 void obj_editor_selector_init(struct tds_object* ptr);

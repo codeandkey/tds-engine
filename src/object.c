@@ -17,8 +17,6 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->func_draw = type->func_draw;
 	output->func_msg = type->func_msg;
 	output->func_destroy = type->func_destroy;
-	output->func_import = type->func_import;
-	output->func_export = type->func_export;
 
 	output->x = x;
 	output->y = y;
@@ -47,6 +45,7 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->anim_running = (output->sprite_handle != NULL);
 
 	output->snd_src = tds_sound_source_create();
+	output->param_list = param_list;
 
 	if (output->sprite_handle) {
 		output->cbox_width = output->sprite_handle->width;
@@ -55,10 +54,6 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 
 	if (output->func_init) {
 		tds_object_init(output);
-	}
-
-	if (output->func_import && param_list) {
-		tds_object_import(output, param_list);
 	}
 
 	tds_logf(TDS_LOG_MESSAGE, "created object with handle %d, sprite %X\n", output->object_handle, (unsigned long) output->sprite_handle);
@@ -77,6 +72,14 @@ void tds_object_free(struct tds_object* ptr) {
 
 	if (ptr->object_data) {
 		tds_free(ptr->object_data);
+	}
+
+	struct tds_object_param* head = ptr->param_list, *tmp = NULL;
+
+	while (head) {
+		tmp = head->next;
+		tds_free(head);
+		head = tmp;
 	}
 
 	tds_free(ptr->snd_src);
@@ -198,17 +201,211 @@ void tds_object_destroy(struct tds_object* ptr) {
 	}
 }
 
-void tds_object_import(struct tds_object* ptr, struct tds_object_param* param_list) {
-	ptr->func_import(ptr, param_list);
-}
-
-struct tds_object_param* tds_object_export(struct tds_object* ptr) {
-	return ptr->func_export(ptr);
-}
-
 void tds_object_update_sndsrc(struct tds_object* ptr) {
 	tds_sound_source_set_pos(ptr->snd_src, ptr->x, ptr->y);
 	tds_sound_source_set_vel(ptr->snd_src, ptr->xspeed, ptr->yspeed);
 	tds_sound_source_set_vol(ptr->snd_src, ptr->snd_volume);
 	tds_sound_source_set_loop(ptr->snd_src, ptr->snd_loop);
+}
+
+int* tds_object_get_ipart(struct tds_object* ptr, unsigned int index) {
+	struct tds_object_param* head = ptr->param_list;
+
+	while (head) {
+		if (head->key == index) {
+			if (head->type == TDS_PARAM_INT) {
+				return &head->ipart;
+			} else {
+				tds_logf(TDS_LOG_WARNING, "Type mismatch in parameter.\n");
+				return NULL;
+			}
+		}
+
+		head = head->next;
+	}
+
+	return NULL;
+}
+
+char* tds_object_get_spart(struct tds_object* ptr, unsigned int index) {
+	struct tds_object_param* head = ptr->param_list;
+
+	while (head) {
+		if (head->key == index) {
+			if (head->type == TDS_PARAM_STRING) {
+				return head->spart;
+			} else {
+				tds_logf(TDS_LOG_WARNING, "Type mismatch in parameter.\n");
+				return NULL;
+			}
+		}
+
+		head = head->next;
+	}
+
+	return NULL;
+}
+
+unsigned int* tds_object_get_upart(struct tds_object* ptr, unsigned int index) {
+	struct tds_object_param* head = ptr->param_list;
+
+	while (head) {
+		if (head->key == index) {
+			if (head->type == TDS_PARAM_UINT) {
+				return &head->upart;
+			} else {
+				tds_logf(TDS_LOG_WARNING, "Type mismatch in parameter.\n");
+				return NULL;
+			}
+		}
+
+		head = head->next;
+	}
+
+	return NULL;
+}
+
+float* tds_object_get_fpart(struct tds_object* ptr, unsigned int index) {
+	struct tds_object_param* head = ptr->param_list;
+
+	while (head) {
+		if (head->key == index) {
+			if (head->type == TDS_PARAM_FLOAT) {
+				return &head->fpart;
+			} else {
+				tds_logf(TDS_LOG_WARNING, "Type mismatch in parameter.\n");
+				return NULL;
+			}
+		}
+
+		head = head->next;
+	}
+
+	return NULL;
+}
+
+void tds_object_set_ipart(struct tds_object* ptr, unsigned int index, int value) {
+	struct tds_object_param* cur = ptr->param_list, *head = ptr->param_list, *new = NULL;
+
+	while (cur) {
+		if (cur->key == index) {
+			cur->type = TDS_PARAM_INT;
+			cur->ipart = value;
+
+			return;
+		}
+
+		cur = cur->next;
+	}
+
+	new = tds_malloc(sizeof *new);
+
+	new->key = index;
+	new->type = TDS_PARAM_INT;
+	new->ipart = value;
+
+	// Growing the list from the head decreases code size. A lot.
+	new->next = head;
+	ptr->param_list = new;
+}
+
+void tds_object_set_spart(struct tds_object* ptr, unsigned int index, char* value, int value_len) {
+	struct tds_object_param* cur = ptr->param_list, *head = ptr->param_list, *new = NULL;
+
+	int copy_len = value_len > TDS_PARAM_VALSIZE ? TDS_PARAM_VALSIZE : value_len;
+
+	if (copy_len < 0) {
+		tds_logf(TDS_LOG_WARNING, "Invalid parameter string length.\n");
+		return;
+	}
+
+	while (cur) {
+		if (cur->key == index) {
+			cur->type = TDS_PARAM_INT;
+			memset(cur->spart, 0, TDS_PARAM_VALSIZE);
+			memcpy(cur->spart, value, copy_len);
+
+			return;
+		}
+
+		cur = cur->next;
+	}
+
+	new = tds_malloc(sizeof *new);
+
+	new->key = index;
+	new->type = TDS_PARAM_INT;
+	memset(new->spart, 0, TDS_PARAM_VALSIZE);
+	memcpy(new->spart, value, copy_len);
+
+	new->next = head;
+	ptr->param_list = new;
+}
+
+void tds_object_set_upart(struct tds_object* ptr, unsigned int index, unsigned int value) {
+	struct tds_object_param* cur = ptr->param_list, *head = ptr->param_list, *new = NULL;
+
+	while (cur) {
+		if (cur->key == index) {
+			cur->type = TDS_PARAM_UINT;
+			cur->upart = value;
+
+			return;
+		}
+
+		cur = cur->next;
+	}
+
+	new = tds_malloc(sizeof *new);
+
+	new->key = index;
+	new->type = TDS_PARAM_UINT;
+	new->upart = value;
+
+	new->next = head;
+	ptr->param_list = new;
+}
+
+void tds_object_set_fpart(struct tds_object* ptr, unsigned int index, float value) {
+	struct tds_object_param* cur = ptr->param_list, *head = ptr->param_list, *new = NULL;
+
+	while (cur) {
+		if (cur->key == index) {
+			cur->type = TDS_PARAM_FLOAT;
+			cur->fpart = value;
+
+			return;
+		}
+
+		cur = cur->next;
+	}
+
+	new = tds_malloc(sizeof *new);
+
+	new->key = index;
+	new->type = TDS_PARAM_FLOAT;
+	new->fpart = value;
+
+	new->next = head;
+	ptr->param_list = new;
+}
+
+void tds_object_unset(struct tds_object* ptr, unsigned int index) {
+	struct tds_object_param* cur = ptr->param_list, *prev = NULL;
+
+	while (cur) {
+		if (cur->key == index) {
+			if (prev) {
+				prev->next = cur->next;
+			} else {
+				ptr->param_list = cur->next;
+			}
+
+			tds_free(cur);
+			return;
+		}
+
+		cur = cur->next;
+		prev = cur;
+	}
 }

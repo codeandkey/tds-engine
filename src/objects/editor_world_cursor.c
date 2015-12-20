@@ -5,6 +5,7 @@
 #include "../input.h"
 #include "../collision.h"
 #include "../msg.h"
+#include "../log.h"
 
 #define OBJ_EDITOR_WORLD_CURSOR_SENS 0.01
 
@@ -13,16 +14,12 @@
 struct tds_object_type obj_editor_world_cursor_type = {
 	.type_name = "obj_editor_world_cursor",
 	.default_sprite = "spr_editor_cursor",
-	.default_params = 0,
-	.default_params_size = 0,
 	.data_size = sizeof(struct obj_editor_world_cursor_data),
 	.func_init = obj_editor_world_cursor_init,
 	.func_destroy = obj_editor_world_cursor_destroy,
 	.func_update = obj_editor_world_cursor_update,
 	.func_draw = obj_editor_world_cursor_draw,
-	.func_msg = (void*) 0,
-	.func_import = (void*) 0,
-	.func_export = (void*) 0,
+	.func_msg = obj_editor_world_cursor_msg,
 	.save = 0
 };
 
@@ -46,7 +43,7 @@ void obj_editor_world_cursor_draw(struct tds_object* ptr) {
 		int block_x = floorf(ptr->x / TDS_WORLD_BLOCK_SIZE) + tds_engine_global->world_handle->width / 2;
 		int block_y = floorf(ptr->y / TDS_WORLD_BLOCK_SIZE) + tds_engine_global->world_handle->height / 2;
 
-		tds_world_set_block(tds_engine_global->world_handle, block_x, block_y, data->current_block_id & 0xFF); 
+		tds_world_set_block(tds_engine_global->world_handle, block_x, block_y, data->current_block_id & 0xFF);
 	}
 
 	ptr->x = tds_engine_global->input_handle->mx * OBJ_EDITOR_WORLD_CURSOR_SENS + tds_engine_global->camera_handle->x;

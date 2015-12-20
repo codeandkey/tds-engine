@@ -21,3 +21,5 @@ void tds_destroy_editor_objects(void);
 
 int tds_editor_get_mode(void);
 void tds_editor_add_selector(struct tds_object* ptr);
+
+struct tds_object* editor_cursor;

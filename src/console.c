@@ -113,9 +113,11 @@ int tds_console_char_pressed(struct tds_console* ptr, unsigned int chr) {
 		return 0;
 	}
 
-	if (ptr->input_ind < TDS_CONSOLE_INPUT_SIZE) {
-		ptr->input_buf[ptr->input_ind++] = chr;
+	if (ptr->input_ind >= TDS_CONSOLE_INPUT_SIZE) {
+		return 1;
 	}
+
+	ptr->input_buf[ptr->input_ind++] = chr;
 
 	char str[2] = {0};
 	str[0] = chr;
@@ -182,6 +184,16 @@ void tds_console_print(struct tds_console* ptr, const char* str) {
 
 void _tds_console_execute(struct tds_console* ptr) {
 	char* cur_cmd = strtok(ptr->input_buf, " ");
+
+	struct tds_object* selected = NULL, *selector = NULL;
+
+	if (editor_cursor) {
+		selector = ((struct obj_editor_cursor_data*) editor_cursor->object_data)->last;
+
+		if (selector) {
+			selected = ((struct obj_editor_selector_data*) selector->object_data)->target;
+		}
+	}
 
 	if (!cur_cmd) {
 		goto EXECUTE_CLEANUP;
@@ -275,6 +287,53 @@ void _tds_console_execute(struct tds_console* ptr) {
 		int w = strtol(strtok(NULL, " "), 0, 0), h = strtol(strtok(NULL, " "), 0, 0);
 		tds_console_print(ptr, "generating world\n");
 		tds_world_init(tds_engine_global->world_handle, w, h);
+	} else if (!strcmp(cur_cmd, "ipart")) {
+		int key = strtol(strtok(NULL, " "), 0, 0), val = strtol(strtok(NULL, " "), 0, 0);
+
+		if (selected) {
+			tds_object_set_ipart(selected, key, val);
+			tds_console_print(ptr, "set ipart for ");
+			tds_console_print(ptr, selected->type_name);
+			tds_console_print(ptr, "\n");
+		} else {
+			tds_console_print(ptr, "no object selected\n");
+		}
+	} else if (!strcmp(cur_cmd, "upart")) {
+		int key = strtol(strtok(NULL, " "), 0, 0);
+		unsigned int val = strtol(strtok(NULL, " "), 0, 0);
+
+		if (selected) {
+			tds_object_set_upart(selected, key, val);
+			tds_console_print(ptr, "set ipart for ");
+			tds_console_print(ptr, selected->type_name);
+			tds_console_print(ptr, "\n");
+		} else {
+			tds_console_print(ptr, "no object selected\n");
+		}
+	} else if (!strcmp(cur_cmd, "fpart")) {
+		int key = strtol(strtok(NULL, " "), 0, 0);
+		float val = strtof(strtok(NULL, " "), 0);
+
+		if (selected) {
+			tds_object_set_fpart(selected, key, val);
+			tds_console_print(ptr, "set fpart for ");
+			tds_console_print(ptr, selected->type_name);
+			tds_console_print(ptr, "\n");
+		} else {
+			tds_console_print(ptr, "no object selected\n");
+		}
+	} else if (!strcmp(cur_cmd, "spart")) {
+		int key = strtol(strtok(NULL, " "), 0, 0);
+		char* val = strtok(NULL, " ");
+
+		if (selected) {
+			tds_object_set_spart(selected, key, val, strlen(val));
+			tds_console_print(ptr, "set spart for ");
+			tds_console_print(ptr, selected->type_name);
+			tds_console_print(ptr, "\n");
+		} else {
+			tds_console_print(ptr, "no object selected\n");
+		}
 	} else {
 		tds_console_print(ptr, "unknown command\n");
 	}

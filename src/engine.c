@@ -370,30 +370,45 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 		tds_logf(TDS_LOG_DEBUG, "Parameter count : %d\n", param_count);
 
-		struct tds_object_param* param_list_head = NULL, *param_list_tail = NULL;
+		struct tds_object_param* param_list_head = NULL, *param_list_tail = NULL, *new_param = NULL;
 
 		for (int i = 0; i < param_count; ++i) {
-			int param_keysize, param_valsize, param_type;
-			char* param_key, *param_val;
+			new_param = tds_malloc(sizeof *new_param);
 
-			fread(&param_keysize, sizeof(int), 1, fd_input);
-			fread(&param_valsize, sizeof(int), 1, fd_input);
-			fread(&param_type, sizeof(int) , 1, fd_input);
+			int param_valsize, param_type;
 
-			param_key = tds_malloc(param_keysize + 1);
-			param_val = tds_malloc(param_valsize + 1);
+			unsigned int param_key;
 
-			fread(param_key, param_keysize, 1, fd_input);
-			fread(param_val, param_valsize, 1, fd_input);
+			fread(&param_key, sizeof param_key, 1, fd_input);
+			fread(&param_type, sizeof param_type, 1, fd_input);
+			fread(&param_valsize, sizeof param_valsize, 1, fd_input);
 
-			param_key[param_keysize] = 0;
-			param_val[param_valsize] = 0;
-
-			struct tds_object_param* new_param = tds_malloc(sizeof(struct tds_object_param));
-
-			strncpy(new_param->key, param_key, TDS_PARAM_KEYSIZE);
-			strncpy(new_param->value, param_val, TDS_PARAM_VALSIZE);
-			new_param->type = param_type;
+			switch (param_type) {
+			case TDS_PARAM_INT:
+				if (param_valsize != sizeof new_param->ipart) {
+					tds_logf(TDS_LOG_CRITICAL, "Type size mismatch!\n");
+				}
+				fread(&new_param->ipart, param_valsize, 1, fd_input);
+				break;
+			case TDS_PARAM_UINT:
+				if (param_valsize != sizeof new_param->upart) {
+					tds_logf(TDS_LOG_CRITICAL, "Type size mismatch!\n");
+				}
+				fread(&new_param->upart, param_valsize, 1, fd_input);
+				break;
+			case TDS_PARAM_FLOAT:
+				if (param_valsize != sizeof new_param->fpart) {
+					tds_logf(TDS_LOG_CRITICAL, "Type size mismatch!\n");
+				}
+				fread(&new_param->fpart, param_valsize, 1, fd_input);
+				break;
+			case TDS_PARAM_STRING:
+				if (param_valsize != sizeof new_param->spart / sizeof new_param->spart[0]) {
+					tds_logf(TDS_LOG_CRITICAL, "Type size mismatch!\n");
+				}
+				fread(new_param->spart, param_valsize, 1, fd_input);
+				break;
+			}
 
 			if (param_list_tail) {
 				param_list_tail->next = new_param;
@@ -401,9 +416,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 			} else {
 				param_list_tail = param_list_head = new_param;
 			}
-
-			tds_free(param_key);
-			tds_free(param_val);
 		}
 
 		/* We have the object param list ready. */
@@ -413,15 +425,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 		struct tds_object* obj_new = tds_object_create(type_ptr, ptr->object_buffer, ptr->sc_handle, x, y, 0.0f, param_list_head);
 
 		obj_new->angle = angle;
-
-		struct tds_object_param* cur = param_list_head, *tmp = NULL;
-
-		while (cur) {
-			tmp = cur;
-			cur = cur->next;
-			tds_free(tmp);
-		}
-
 		tds_free(type_name);
 
 		if (tds_editor_get_mode() == TDS_EDITOR_MODE_OBJECTS) {
@@ -490,15 +493,8 @@ void tds_engine_save(struct tds_engine* ptr, const char* mapname) {
 		fwrite(&type_size, sizeof(int), 1, fd_output);
 		fwrite(target->type_name, type_size, 1, fd_output);
 
-		struct tds_object_param* param_list_head, *current_param;
+		struct tds_object_param* param_list_head = target->param_list, *current_param = target->param_list;
 		int param_count = 0;
-
-		if (target->func_export) {
-			param_list_head = current_param = target->func_export(target);
-		} else {
-			fwrite(&param_count, sizeof(int), 1, fd_output);
-			continue;
-		}
 
 		/* We run through the list once to get the count, twice to save all of the params. */
 
@@ -511,13 +507,41 @@ void tds_engine_save(struct tds_engine* ptr, const char* mapname) {
 		current_param = param_list_head;
 
 		while (current_param) {
-			int keysize = TDS_PARAM_KEYSIZE, valsize = TDS_PARAM_VALSIZE;
-			fwrite(&keysize, sizeof(int), 1, fd_output);
-			fwrite(&valsize, sizeof(int), 1, fd_output);
+			int valsize = 0;
 
+			switch (current_param->type) {
+			case TDS_PARAM_INT:
+				valsize = sizeof current_param->ipart;
+				break;
+			case TDS_PARAM_UINT:
+				valsize = sizeof current_param->upart;
+				break;
+			case TDS_PARAM_FLOAT:
+				valsize = sizeof current_param->fpart;
+				break;
+			case TDS_PARAM_STRING:
+				valsize = sizeof current_param->spart / sizeof current_param->spart[0];
+				break;
+			}
+
+			fwrite(&current_param->key, sizeof current_param->key, 1, fd_output);
 			fwrite(&current_param->type, sizeof(int), 1, fd_output);
-			fwrite(current_param->key, TDS_PARAM_KEYSIZE, 1, fd_output);
-			fwrite(current_param->value, TDS_PARAM_VALSIZE, 1, fd_output);
+			fwrite(&valsize, sizeof valsize, 1, fd_output);
+
+			switch (current_param->type) {
+			case TDS_PARAM_INT:
+				fwrite(&current_param->ipart, sizeof current_param->ipart, 1, fd_output);
+				break;
+			case TDS_PARAM_UINT:
+				fwrite(&current_param->upart, sizeof current_param->upart, 1, fd_output);
+				break;
+			case TDS_PARAM_FLOAT:
+				fwrite(&current_param->fpart, sizeof current_param->fpart, 1, fd_output);
+				break;
+			case TDS_PARAM_STRING:
+				fwrite(current_param->spart, sizeof current_param->spart / sizeof current_param->spart[0], 1, fd_output);
+				break;
+			}
 
 			current_param = current_param->next;
 		}

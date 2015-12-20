@@ -50,6 +50,7 @@ struct tds_input* tds_input_create(struct tds_display* display_handle) {
 
 	glfwSetWindowUserPointer(display_handle->win_handle, output);
 	glfwSetCharCallback(display_handle->win_handle, _tds_input_char_callback);
+	glfwSetMouseButtonCallback(display_handle->win_handle, _tds_input_mouse_button_callback);
 	glfwSetCursorPosCallback(display_handle->win_handle, _tds_input_mouse_callback);
 	glfwSetScrollCallback(display_handle->win_handle, _tds_input_scroll_callback);
 	glfwSetKeyCallback(display_handle->win_handle, _tds_input_key_callback);
