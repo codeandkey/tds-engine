@@ -41,6 +41,7 @@ void tds_world_free(struct tds_world* ptr) {
 
 	while (head) {
 		cur = head->next;
+		tds_vertex_buffer_free(head->vb);
 		tds_free(head);
 		head = cur;
 	}
@@ -81,6 +82,7 @@ void tds_world_load(struct tds_world* ptr, const uint8_t* block_buffer, int widt
 	}
 
 	_tds_world_generate_hblocks(ptr);
+	_tds_world_generate_segments(ptr);
 }
 
 void tds_world_save(struct tds_world* ptr, uint8_t* block_buffer, int width, int height) {
@@ -106,6 +108,7 @@ void tds_world_set_block(struct tds_world* ptr, int x, int y, uint8_t block) {
 
 	ptr->buffer[y][x] = block;
 	_tds_world_generate_hblocks(ptr); /* This is not the most efficient way to do this, but it really shouldn't matter with small worlds. */
+	_tds_world_generate_segments(ptr); /* This is the worst. Likely a huge bottleneck. TODO : find a way around this if it gets too bad */
 
 	/* If worlds end up not being small for some reason, we can regenerate only the block which the target resided in along with it's neighbors. */
 	/* This shouldn't be called often anyway, so.. not a big deal. */
@@ -286,9 +289,345 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 
 	while (head) {
 		cur = head->next;
+		tds_vertex_buffer_free(head->vb);
 		tds_free(head);
 		head = cur;
 	}
 
-	/* TODO : this whole thing */
+	ptr->segment_list = NULL;
+
+	tds_logf(TDS_LOG_DEBUG, "Starting redundant segment generation phase.\n");
+
+	/* We start by generating a large list of segments without any reduction. */
+	for (int x = 0; x < ptr->width; ++x) {
+		for (int y = 0; y < ptr->height; ++y) {
+			/* For each index, we only consider out-facing edges at the current location. */
+			if (!ptr->buffer[y][x]) {
+				continue;
+			}
+
+			float block_left = (x - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+			float block_right = (x + 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+			float block_top = (y + 0.5f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+			float block_bottom = (y - ptr->height / 2.0f - 0.5f) * TDS_WORLD_BLOCK_SIZE;
+
+			if (x < ptr->width - 1 && !ptr->buffer[y][x + 1]) {
+				/* Out-facing right segment. */
+				cur = tds_malloc(sizeof *cur);
+				cur->x1 = block_right;
+				cur->y1 = block_bottom;
+				cur->x2 = block_right;
+				cur->y2 = block_top;
+				cur->nx = 1.0f;
+				cur->ny = 0.0f;
+				cur->next = ptr->segment_list;
+				if (ptr->segment_list) {
+					ptr->segment_list->prev = cur;
+				}
+				ptr->segment_list = cur;
+			}
+
+			if (x > 0 && !ptr->buffer[y][x - 1]) {
+				/* Out-facing left segment. */
+				cur = tds_malloc(sizeof *cur);
+				cur->x1 = block_left;
+				cur->y1 = block_top;
+				cur->x2 = block_left;
+				cur->y2 = block_bottom;
+				cur->nx = -1.0f;
+				cur->ny = 0.0f;
+				cur->next = ptr->segment_list;
+				if (ptr->segment_list) {
+					ptr->segment_list->prev = cur;
+				}
+				ptr->segment_list = cur;
+			}
+
+			if (y < ptr->height - 1 && !ptr->buffer[y + 1][x]) {
+				/* Out-facing up segment. */
+				cur = tds_malloc(sizeof *cur);
+				cur->x1 = block_right;
+				cur->y1 = block_top;
+				cur->x2 = block_left;
+				cur->y2 = block_top;
+				cur->nx = 0.0f;
+				cur->ny = 1.0f;
+				cur->next = ptr->segment_list;
+				if (ptr->segment_list) {
+					ptr->segment_list->prev = cur;
+				}
+				ptr->segment_list = cur;
+			}
+
+			if (y > 0 && !ptr->buffer[y - 1][x]) {
+				/* Out-facing down segment. */
+				cur = tds_malloc(sizeof *cur);
+				cur->x1 = block_left;
+				cur->y1 = block_bottom;
+				cur->x2 = block_right;
+				cur->y2 = block_bottom;
+				cur->nx = 0.0f;
+				cur->ny = -1.0f;
+				cur->next = ptr->segment_list;
+				if (ptr->segment_list) {
+					ptr->segment_list->prev = cur;
+				}
+				ptr->segment_list = cur;
+			}
+		}
+	}
+
+	tds_logf(TDS_LOG_DEBUG, "Starting linear reduction phase.\n");
+
+	/* We will use a brute-force approach to keep the code small as this is not going to be called very often. */
+	int complete = 1, iterations = 0;
+
+	while (complete) {
+		complete = 0;
+
+		struct tds_world_segment* reduction_cur = NULL, *reduction_target = ptr->segment_list, *tmp = NULL;
+
+		/* In this pass, we consider all segments for reduction with other segments. If any actual reduction is done, we set the flag for another pass. */
+		tds_logf(TDS_LOG_DEBUG, "Starting linear reduction subphase iteration %d\n", iterations);
+
+		while (reduction_target) {
+			reduction_cur = ptr->segment_list;
+
+			while (reduction_cur) {
+				/* Three nested while loops for linear reduction and n^2 traversal of a linked list. Crazy. */
+
+				if (reduction_cur == reduction_target) {
+					reduction_cur = reduction_cur->next;
+					continue;
+				}
+
+				if (reduction_cur->nx == 0.0f && reduction_target->nx == 0.0f && reduction_cur->ny == 1.0f && reduction_target->ny == 1.0f) {
+					/* Both of these lines are horizontal, and each segment's x2 is less than the x1. */
+
+					if (reduction_cur->y1 != reduction_target->y1) {
+						reduction_cur = reduction_cur->next;
+						continue;
+					}
+
+					if (reduction_cur->x2 == reduction_target->x1) {
+						/* reduction_cur is on the right and we can reduce. */
+						reduction_target->x1 = reduction_cur->x1;
+
+						if (reduction_cur->prev) {
+							reduction_cur->prev->next = reduction_cur->next;
+						} else {
+							ptr->segment_list = reduction_cur->next;
+						}
+
+						if (reduction_cur->next) {
+							reduction_cur->next->prev = reduction_cur->prev;
+						}
+
+						tmp = reduction_cur->next;
+						tds_free(reduction_cur);
+						reduction_cur = tmp;
+						complete = 1;
+						continue;
+					}
+
+					if (reduction_target->x2 == reduction_cur->x1) {
+						/* reduction_target is on the right and we can reduce. */
+						reduction_target->x2 = reduction_cur->x2;
+
+						if (reduction_cur->prev) {
+							reduction_cur->prev->next = reduction_cur->next;
+						} else {
+							ptr->segment_list = reduction_cur->next;
+						}
+
+						if (reduction_cur->next) {
+							reduction_cur->next->prev = reduction_cur->prev;
+						}
+
+						tmp = reduction_cur->next;
+						tds_free(reduction_cur);
+						reduction_cur = tmp;
+						complete = 1;
+						continue;
+					}
+				}
+
+				if (reduction_cur->nx == 0.0f && reduction_target->nx == 0.0f && reduction_cur->ny == -1.0f && reduction_target->ny == -1.0f) {
+					/* Both of these lines are horizontal, and each segment's x2 is greater than the x1. */
+
+					if (reduction_cur->y1 != reduction_target->y1) {
+						reduction_cur = reduction_cur->next;
+						continue;
+					}
+
+					if (reduction_cur->x1 == reduction_target->x2) {
+						/* reduction_cur is on the right and we can reduce. */
+						reduction_target->x2 = reduction_cur->x2;
+
+						if (reduction_cur->prev) {
+							reduction_cur->prev->next = reduction_cur->next;
+						} else {
+							ptr->segment_list = reduction_cur->next;
+						}
+
+						if (reduction_cur->next) {
+							reduction_cur->next->prev = reduction_cur->prev;
+						}
+
+						tmp = reduction_cur->next;
+						tds_free(reduction_cur);
+						reduction_cur = tmp;
+						complete = 1;
+						continue;
+					}
+
+					if (reduction_target->x1 == reduction_cur->x2) {
+						/* reduction_target is on the right and we can reduce. */
+						reduction_target->x1 = reduction_cur->x1;
+
+						if (reduction_cur->prev) {
+							reduction_cur->prev->next = reduction_cur->next;
+						} else {
+							ptr->segment_list = reduction_cur->next;
+						}
+
+						if (reduction_cur->next) {
+							reduction_cur->next->prev = reduction_cur->prev;
+						}
+
+						tmp = reduction_cur->next;
+						tds_free(reduction_cur);
+						reduction_cur = tmp;
+						complete = 1;
+						continue;
+					}
+				}
+
+				if (reduction_cur->nx == 1.0f && reduction_target->nx == 1.0f && reduction_cur->ny == 0.0f && reduction_target->ny == 0.0f) {
+					/* Both of these lines are vertical, and each segment's y2 is greater than the y1. */
+
+					if (reduction_cur->x1 != reduction_target->x1) {
+						reduction_cur = reduction_cur->next;
+						continue;
+					}
+
+					if (reduction_cur->y2 == reduction_target->y1) {
+						/* reduction_cur is on the bottom and we can reduce. */
+						reduction_target->y1 = reduction_cur->y1;
+
+						if (reduction_cur->prev) {
+							reduction_cur->prev->next = reduction_cur->next;
+						} else {
+							ptr->segment_list = reduction_cur->next;
+						}
+
+						if (reduction_cur->next) {
+							reduction_cur->next->prev = reduction_cur->prev;
+						}
+
+						tmp = reduction_cur->next;
+						tds_free(reduction_cur);
+						reduction_cur = tmp;
+						complete = 1;
+						continue;
+					}
+
+					if (reduction_target->y2 == reduction_cur->y1) {
+						/* reduction_target is on the bottom and we can reduce. */
+						reduction_target->y2 = reduction_cur->y2;
+
+						if (reduction_cur->prev) {
+							reduction_cur->prev->next = reduction_cur->next;
+						} else {
+							ptr->segment_list = reduction_cur->next;
+						}
+
+						if (reduction_cur->next) {
+							reduction_cur->next->prev = reduction_cur->prev;
+						}
+
+						tds_free(reduction_cur);
+						tmp = reduction_cur->next;
+						tds_free(reduction_cur);
+						reduction_cur = tmp;
+						complete = 1;
+						continue;
+					}
+				}
+
+				if (reduction_cur->nx == -1.0f && reduction_target->nx == -1.0f && reduction_cur->ny == 0.0f && reduction_target->ny == 0.0f) {
+					/* Both of these lines are vertical, and each segment's y2 is less than the y1. */
+
+					if (reduction_cur->x1 != reduction_target->x1) {
+						reduction_cur = reduction_cur->next;
+						continue;
+					}
+
+					if (reduction_cur->y2 == reduction_target->y1) {
+						/* reduction_cur is on the top and we can reduce. */
+						reduction_target->y1 = reduction_cur->y1;
+
+						if (reduction_cur->prev) {
+							reduction_cur->prev->next = reduction_cur->next;
+						} else {
+							ptr->segment_list = reduction_cur->next;
+						}
+
+						if (reduction_cur->next) {
+							reduction_cur->next->prev = reduction_cur->prev;
+						}
+
+						tmp = reduction_cur->next;
+						tds_free(reduction_cur);
+						reduction_cur = tmp;
+						complete = 1;
+						continue;
+					}
+
+					if (reduction_target->y2 == reduction_cur->y1) {
+						/* reduction_target is on the top and we can reduce. */
+						reduction_target->y2 = reduction_cur->y2;
+
+						if (reduction_cur->prev) {
+							reduction_cur->prev->next = reduction_cur->next;
+						} else {
+							ptr->segment_list = reduction_cur->next;
+						}
+
+						if (reduction_cur->next) {
+							reduction_cur->next->prev = reduction_cur->prev;
+						}
+
+						tmp = reduction_cur->next;
+						tds_free(reduction_cur);
+						reduction_cur = tmp;
+						complete = 1;
+						continue;
+					}
+				}
+
+				reduction_cur = reduction_cur->next;
+			}
+
+			reduction_target = reduction_target->next;
+		}
+
+		++iterations;
+	}
+
+	tds_logf(TDS_LOG_DEBUG, "Finished linear reduction phase in %d passes.\n", iterations);
+
+	cur = ptr->segment_list;
+
+	while (cur) {
+		tds_logf(TDS_LOG_DEBUG, "Reduced segment : [%f %f -> %f %f]\n", cur->x1, cur->y1, cur->x2, cur->y2);
+
+		struct tds_vertex verts[] = {
+			{cur->x1, cur->y1, 0.0f, cur->nx, cur->ny}, /* We hide the normal in the texcoords, saving some time. */
+			{cur->x2, cur->y2, 0.0f, cur->nx, cur->ny},
+		};
+
+		cur->vb = tds_vertex_buffer_create(verts, sizeof verts / sizeof verts[0], GL_LINES);
+		cur = cur->next;
+	}
 }

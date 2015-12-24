@@ -30,8 +30,12 @@ void tds_camera_set(struct tds_camera* ptr, float size, float x, float y) {
 		camera_width = size * (disp_width / disp_height);
 	}
 
-	ptr->width = camera_width;
-	ptr->height = camera_height;
+	tds_camera_set_raw(ptr, camera_width, camera_height, x, y);
+}
+
+void tds_camera_set_raw(struct tds_camera* ptr, float width, float height, float x, float y) {
+	ptr->width = width;
+	ptr->height = height;
 
 	ptr->x = x;
 	ptr->y = y;
@@ -39,7 +43,7 @@ void tds_camera_set(struct tds_camera* ptr, float size, float x, float y) {
 	mat4x4 translate, ortho;
 
 	mat4x4_identity(ptr->mat_transform);
-	mat4x4_ortho(ortho, -camera_width / 2.0f, camera_width / 2.0f, -camera_height / 2.0f, camera_height / 2.0f, 1.0f, -1.0f);
+	mat4x4_ortho(ortho, -ptr->width / 2.0f, ptr->width / 2.0f, -ptr->height / 2.0f, ptr->height / 2.0f, 1.0f, -1.0f);
 	mat4x4_translate(translate, -x, -y, 0.0f);
 
 	mat4x4_mul(ptr->mat_transform, ortho, translate);

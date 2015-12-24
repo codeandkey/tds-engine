@@ -250,6 +250,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		tds_render_draw(ptr->render_handle, ptr->world_handle);
 		tds_display_swap(ptr->display_handle);
+
+		tds_render_clear_lights(ptr->render_handle);
 	}
 
 	tds_logf(TDS_LOG_MESSAGE, "Finished engine mainloop.\n");

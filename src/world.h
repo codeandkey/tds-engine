@@ -13,8 +13,9 @@ struct tds_world_hblock {
 };
 
 struct tds_world_segment {
-	float x1, y1, x2, y2, nx, ny;
-	struct tds_world_segment* next;
+	float x1, y1, x2, y2, nx, ny; /* Segment locations are not in world space, they are in game space. No conversion necessary. */
+	struct tds_world_segment* next, *prev;
+	struct tds_vertex_buffer* vb;
 };
 
 struct tds_world {

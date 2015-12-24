@@ -15,3 +15,4 @@ struct tds_camera* tds_camera_create(struct tds_display* win);
 void tds_camera_free(struct tds_camera* ptr);
 
 void tds_camera_set(struct tds_camera* ptr, float camera_size, float x, float y);
+void tds_camera_set_raw(struct tds_camera* ptr, float width, float height, float x, float y);
