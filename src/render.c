@@ -70,6 +70,7 @@ void tds_render_free(struct tds_render* ptr) {
 }
 
 void tds_render_clear(struct tds_render* ptr) {
+	glClearColor(0.0f, 0.0f, 0.2f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	tds_text_clear(ptr->text_handle);
 }
@@ -200,7 +201,10 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world) {
 	glBindVertexArray(vb_square->vao);
 	glBindTexture(GL_TEXTURE_2D, ptr->lightmap_rt->gl_tex);
 	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	glDrawArrays(vb_square->render_mode, 0, 6);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	tds_vertex_buffer_free(vb_square);
 
@@ -678,6 +682,13 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 	/* This function should fill the ptr->lightmap_rt with the world's light information. */
 	/* We render each light individually and construct the shadowmap. */
 
+	tds_rt_bind(ptr->lightmap_rt);
+
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	tds_rt_bind(NULL);
+
 	/* We will use a basic [-1:1] square VBO to do most of the light rendering.
 	 * It will come in handy later. */
 
@@ -698,6 +709,8 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 	struct tds_camera* cam_use = cam_point;
 
 	while (cur) {
+		tds_logf(TDS_LOG_DEBUG, "rendering light %f, %f, %f at %f, %f\n", cur->r, cur->g, cur->b, cur->x, cur->y);
+
 		switch(cur->type) {
 		case TDS_RENDER_LIGHT_POINT:
 			glUseProgram(ptr->render_program_point);
@@ -711,7 +724,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 			break;
 		}
 
-		glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+		glClearColor(cur->r, cur->g, cur->b, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		_tds_render_segments(ptr, world, cam_use, (cam_use == cam_point) ? 1 : 0, (cam_use == cam_point) ? ptr->p_uniform_transform : ptr->d_uniform_transform);
@@ -724,10 +737,9 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 		 */
 
 		glUseProgram(ptr->render_program_recomb);
-
 		tds_rt_bind(ptr->lightmap_rt);
-		glClearColor(0.0f, 0.0f, 1.0f, 0.2f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
 		mat4x4 ident, pt_final, pt_scaled, pt_translate;
 		mat4x4_identity(ident);
@@ -762,6 +774,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 			break;
 		}
 
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		tds_rt_bind(NULL);
 		cur = cur->next;
 	}

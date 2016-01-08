@@ -94,19 +94,18 @@ void* tds_malloc_dbg(const char* func, int size) {
 	tds_mem_bytes += size;
 
 	blk->size = size;
-	blk->next = NULL;
-	blk->prev = _tds_mem_dbg_tail;
+	blk->next = _tds_mem_dbg_head;
+	blk->prev = NULL;
 	blk->func = func;
 
-	if (_tds_mem_dbg_tail) {
-		_tds_mem_dbg_tail->next = blk;
+	if (!_tds_mem_dbg_tail) {
+		_tds_mem_dbg_tail = blk;
 	}
 
-	if (!_tds_mem_dbg_head) {
-		_tds_mem_dbg_head = blk;
+	if (_tds_mem_dbg_head) {
+		_tds_mem_dbg_head->prev = blk;
 	}
 
-	_tds_mem_dbg_tail = blk;
 	return blk->ptr;
 }
 

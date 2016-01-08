@@ -1,6 +1,7 @@
 #include "rt.h"
 #include "log.h"
 #include "memory.h"
+#include "engine.h"
 
 #include <GLXW/glxw.h>
 
@@ -33,6 +34,9 @@ struct tds_rt* tds_rt_create(unsigned int width, unsigned int height) {
 		return NULL;
 	}
 
+	output->width = width;
+	output->height = height;
+
 	return output;
 }
 
@@ -59,4 +63,10 @@ void tds_rt_free(struct tds_rt* ptr) {
 void tds_rt_bind(struct tds_rt* ptr) {
 	unsigned int t_fb = ptr ? ptr->gl_fb : 0;
 	glBindFramebuffer(GL_FRAMEBUFFER, t_fb);
+
+	if (ptr) {
+		glViewport(0, 0, ptr->width, ptr->height);
+	} else {
+		glViewport(0, 0, tds_engine_global->display_handle->desc.width, tds_engine_global->display_handle->desc.height);
+	}
 }
