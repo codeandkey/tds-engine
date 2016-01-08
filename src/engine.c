@@ -142,8 +142,12 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_logf(TDS_LOG_MESSAGE, "Engine is ready to roll!\n");
 
 	if (desc.map_filename) {
-		tds_logf(TDS_LOG_MESSAGE, "Loading initial map [%s].\n", desc.map_filename);
-		tds_engine_load(output, desc.map_filename);
+		if (strcmp(desc.map_filename, "none")) {
+			tds_logf(TDS_LOG_MESSAGE, "Loading initial map [%s].\n", desc.map_filename);
+			tds_engine_load(output, desc.map_filename);
+		} else {
+			tds_logf(TDS_LOG_WARNING, "Not loading a map.\n");
+		}
 	}
 
 	return output;
