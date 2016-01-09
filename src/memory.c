@@ -12,9 +12,9 @@ struct _tds_mem_block {
 	struct _tds_mem_block* next, *prev;
 };
 
-static struct _tds_mem_block *_tds_mem_dbg_head, *_tds_mem_dbg_tail;
+static struct _tds_mem_block *_tds_mem_dbg_head = NULL;
 
-static int tds_mem_blocks = 0;
+static int tds_mem_blocks = 0, tds_mem_blocks_dbg = 0;
 static unsigned long tds_mem_bytes = 0;
 
 void* tds_malloc_rel(int size) {
@@ -90,7 +90,7 @@ void* tds_malloc_dbg(const char* func, int size) {
 
 	memset(blk->ptr, 0, size);
 
-	tds_mem_blocks++;
+	tds_mem_blocks_dbg++;
 	tds_mem_bytes += size;
 
 	blk->size = size;
@@ -98,13 +98,11 @@ void* tds_malloc_dbg(const char* func, int size) {
 	blk->prev = NULL;
 	blk->func = func;
 
-	if (!_tds_mem_dbg_tail) {
-		_tds_mem_dbg_tail = blk;
-	}
-
 	if (_tds_mem_dbg_head) {
 		_tds_mem_dbg_head->prev = blk;
 	}
+
+	_tds_mem_dbg_head = blk;
 
 	return blk->ptr;
 }
@@ -117,7 +115,7 @@ void tds_free_dbg(const char* func, void* ptr) {
 			free(ptr);
 
 			tds_mem_bytes -= blk->size;
-			tds_mem_blocks--;
+			tds_mem_blocks_dbg--;
 
 			if (blk->next) {
 				blk->next->prev = blk->prev;
@@ -129,10 +127,6 @@ void tds_free_dbg(const char* func, void* ptr) {
 
 			if (_tds_mem_dbg_head == blk) {
 				_tds_mem_dbg_head = blk->next;
-			}
-
-			if (_tds_mem_dbg_tail == blk) {
-				_tds_mem_dbg_tail = blk->prev;
 			}
 
 			free(blk);
@@ -171,11 +165,11 @@ void* tds_realloc_dbg(void* ptr, int size) {
 }
 
 int tds_get_blocks_dbg(void) {
-	return tds_mem_blocks;
+	return tds_mem_blocks_dbg;
 }
 
 void tds_memcheck_dbg(void) {
-	tds_logf(TDS_LOG_MESSAGE, "Starting debug memcheck. Blocks = %d\n", tds_mem_blocks);
+	tds_logf(TDS_LOG_MESSAGE, "Starting debug memcheck. Blocks = %d [rel blocks = %d]\n", tds_mem_blocks_dbg, tds_mem_blocks);
 
 	struct _tds_mem_block* blk = _tds_mem_dbg_head, *tmp = NULL;
 

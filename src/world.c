@@ -32,6 +32,7 @@ void tds_world_free(struct tds_world* ptr) {
 
 		while (cur) {
 			tmp = cur->next;
+			tds_vertex_buffer_free(cur->vb);
 			tds_free(cur);
 			cur = tmp;
 		}
@@ -106,9 +107,12 @@ void tds_world_set_block(struct tds_world* ptr, int x, int y, uint8_t block) {
 		return;
 	}
 
-	ptr->buffer[y][x] = block;
-	_tds_world_generate_hblocks(ptr); /* This is not the most efficient way to do this, but it really shouldn't matter with small worlds. */
-	_tds_world_generate_segments(ptr); /* This is the worst. Likely a huge bottleneck. TODO : find a way around this if it gets too bad */
+	if (ptr->buffer[y][x] != block) {
+		ptr->buffer[y][x] = block;
+
+		_tds_world_generate_hblocks(ptr); /* This is not the most efficient way to do this, but it really shouldn't matter with small worlds. */
+		_tds_world_generate_segments(ptr); /* This is the worst. Likely a huge bottleneck. */
+	}
 
 	/* If worlds end up not being small for some reason, we can regenerate only the block which the target resided in along with it's neighbors. */
 	/* This shouldn't be called often anyway, so.. not a big deal. */

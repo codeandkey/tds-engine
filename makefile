@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=gnu99 -Wall -g -fPIC
+CFLAGS = -std=gnu99 -Wall -g -fPIC -DTDS_MEMORY_DEBUG
 LDFLAGS = -shared -fPIC
 
 SOURCES = $(wildcard src/*.c src/objects/*.c src/libs/*.c)
