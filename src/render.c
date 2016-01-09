@@ -709,8 +709,6 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 	struct tds_camera* cam_use = cam_point;
 
 	while (cur) {
-		tds_logf(TDS_LOG_DEBUG, "rendering light %f, %f, %f at %f, %f\n", cur->r, cur->g, cur->b, cur->x, cur->y);
-
 		switch(cur->type) {
 		case TDS_RENDER_LIGHT_POINT:
 			glUseProgram(ptr->render_program_point);

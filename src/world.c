@@ -624,8 +624,6 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 	cur = ptr->segment_list;
 
 	while (cur) {
-		tds_logf(TDS_LOG_DEBUG, "Reduced segment : [%f %f -> %f %f]\n", cur->x1, cur->y1, cur->x2, cur->y2);
-
 		struct tds_vertex verts[] = {
 			{cur->x1, cur->y1, 0.0f, cur->nx, cur->ny}, /* We hide the normal in the texcoords, saving some time. */
 			{cur->x2, cur->y2, 0.0f, cur->nx, cur->ny},
