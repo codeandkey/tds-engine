@@ -20,7 +20,7 @@
 #define TDS_RENDER_LIGHT_POINT 0
 #define TDS_RENDER_LIGHT_DIRECTIONAL 1
 
-#define TDS_RENDER_POINT_RT_SIZE 1024
+#define TDS_RENDER_POINT_RT_SIZE 2048
 
 struct tds_render_light {
 	unsigned int type;

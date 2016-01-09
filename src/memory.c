@@ -139,7 +139,7 @@ void tds_free_dbg(const char* func, void* ptr) {
 	tds_logf(TDS_LOG_WARNING, "Pointer %p not found in list! [called from %s]\n", ptr, func);
 }
 
-void* tds_realloc_dbg(void* ptr, int size) {
+void* tds_realloc_dbg(const char* func, void* ptr, int size) {
 	struct _tds_mem_block* blk = _tds_mem_dbg_head;
 
 	while (blk) {
@@ -160,8 +160,8 @@ void* tds_realloc_dbg(void* ptr, int size) {
 		blk = blk->next;
 	}
 
-	tds_logf(TDS_LOG_CRITICAL, "Pointer %p not found in list!\n", ptr);
-	return NULL;
+	tds_logf(TDS_LOG_WARNING, "Pointer %p not found in list! (called from %s)\n", ptr, func);
+	return tds_malloc_dbg(func, size);
 }
 
 int tds_get_blocks_dbg(void) {
