@@ -9,6 +9,7 @@
 #include "sound_buffer.h"
 #include "log.h"
 #include "msg.h"
+#include "yxml.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -323,248 +324,309 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 	str_filename[strlen(TDS_MAP_PREFIX) + strlen(mapname)] = 0;
 	tds_logf(TDS_LOG_DEBUG, "Loading map [%s]\n", str_filename);
 
-	FILE* fd_input = fopen(str_filename, "rb");
+	FILE* fd = fopen(str_filename, "r");
 
-	if (!fd_input) {
-		tds_logf(TDS_LOG_CRITICAL, "Loading failed : the file could not be opened.\n");
+	if (!fd) {
+		tds_logf(TDS_LOG_WARNING, "Failed to load map %s.\n", mapname);
+		tds_free(str_filename);
 		return;
 	}
 
-	uint32_t world_width, world_height;
+	yxml_t* ctx = tds_malloc(sizeof(yxml_t) + TDS_LOAD_BUFFER_SIZE); // We hide the buffer with the YXML context
+	yxml_init(ctx, ctx + 1, TDS_LOAD_BUFFER_SIZE);
 
-	fread(&world_width, sizeof(world_width), 1, fd_input);
-	fread(&world_height, sizeof(world_height), 1, fd_input);
+	int in_layer = 0, in_object = 0, in_parameter = 0, in_data = 0;
 
-	if (world_width && world_height) {
-		uint8_t* block_buffer = tds_malloc(sizeof(*block_buffer) * world_width * world_height);
+	struct tds_object* cur_object = NULL;
+	struct tds_object_param* cur_object_param = NULL;
 
-		for (int i = 0; i < world_height * world_width; ++i) {
-			fread(block_buffer + i, sizeof *block_buffer, 1, fd_input);
-		}
+	char obj_type_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
+	char obj_x_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
+	char obj_y_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
+	char obj_width_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
+	char obj_height_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
+	char obj_angle_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
+	char obj_visible_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
 
-		tds_world_load(ptr->world_handle, block_buffer, world_width, world_height);
-		tds_free(block_buffer);
-	}
+	char* target_attr = obj_type_buf;
 
-	while(!feof(fd_input)) {
-		float x, y, dx, dy, angle;
-		int type_size, param_count, result = 1;
-		char* type_name;
+	char data_encoding_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
 
-		result &= fread(&x, sizeof(float), 1, fd_input);
+	char world_width_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
+	char world_height_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
 
-		if (!result) {
+	int world_width = 1, world_height = 1;
+
+	char world_buffer[TDS_LOAD_WORLD_SIZE + 1] = {0};
+	uint8_t* id_buffer = NULL;
+
+	char prop_name_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
+	char prop_val_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
+
+	int dont_load_world = 0;
+
+	char c_char = 0;
+	while ((c_char = fgetc(fd)) != EOF) {
+
+		if (!c_char) {
 			break;
 		}
 
-		result &= fread(&y, sizeof(float), 1, fd_input);
+		yxml_ret_t r = yxml_parse(ctx, c_char);
 
-		result &= fread(&dx, sizeof(float), 1, fd_input);
-		result &= fread(&dy, sizeof(float), 1, fd_input);
-		result &= fread(&angle, sizeof(float), 1, fd_input);
-
-		if (!result) {
-			tds_logf(TDS_LOG_CRITICAL, "Loading failed : malformed header, could not finish read.\n");
+		if (r < 0) {
+			tds_logf(TDS_LOG_WARNING, "yxml parsing error while loading %s.\n", str_filename);
+			tds_free(str_filename);
+			tds_free(ctx);
 			return;
 		}
 
-		tds_logf(TDS_LOG_DEBUG, "Header : x %f y %f dx %f dy %f angle %f\n", x, y, dx, dy, angle);
+		switch (r) {
+		case YXML_ELEMSTART:
+			tds_logf(TDS_LOG_DEBUG, "Starting to parse element %s\n", ctx->elem);
+			if (!strcmp(ctx->elem, "object")) {
+				in_object = 1;
+			}
+			if (!strcmp(ctx->elem, "layer")) {
+				in_layer = 1;
+			}
+			if (!strcmp(ctx->elem, "data")) {
+				in_data = 1;
+			}
+			if (!strcmp(ctx->elem, "property")) {
+				in_parameter = 1;
+			}
+			break;
+		case YXML_ATTRSTART:
+			tds_logf(TDS_LOG_DEBUG, "Starting to parse attribute %s\n", ctx->attr);
+			target_attr = NULL;
 
-		result &= fread(&type_size, sizeof(int), 1, fd_input);
-		tds_logf(TDS_LOG_DEBUG, "Typename size : %d\n", type_size);
-		type_name = tds_malloc(type_size + 1);
-		result &= fread(type_name, type_size, 1, fd_input);
-		type_name[type_size] = 0;
-
-		tds_logf(TDS_LOG_DEBUG, "Typename : [%s]\n", type_name);
-
-		result &= fread(&param_count, sizeof(int), 1, fd_input);
-
-		tds_logf(TDS_LOG_DEBUG, "Parameter count : %d\n", param_count);
-
-		struct tds_object_param* param_list_head = NULL, *param_list_tail = NULL, *new_param = NULL;
-
-		for (int i = 0; i < param_count; ++i) {
-			new_param = tds_malloc(sizeof *new_param);
-
-			int param_valsize, param_type;
-
-			unsigned int param_key;
-
-			fread(&param_key, sizeof param_key, 1, fd_input);
-			fread(&param_type, sizeof param_type, 1, fd_input);
-			fread(&param_valsize, sizeof param_valsize, 1, fd_input);
-
-			tds_logf(TDS_LOG_DEBUG, "Reading param; key %d, type %d\n", param_key, param_type);
-
-			switch (param_type) {
-			case TDS_PARAM_INT:
-				if (param_valsize != sizeof new_param->ipart) {
-					tds_logf(TDS_LOG_CRITICAL, "Type size mismatch!\n");
+			if (in_object) {
+				if (!strcmp(ctx->attr, "type")) {
+					target_attr = obj_type_buf;
 				}
-				fread(&new_param->ipart, param_valsize, 1, fd_input);
-				break;
-			case TDS_PARAM_UINT:
-				if (param_valsize != sizeof new_param->upart) {
-					tds_logf(TDS_LOG_CRITICAL, "Type size mismatch!\n");
+
+				if (!strcmp(ctx->attr, "x")) {
+					target_attr = obj_x_buf;
 				}
-				fread(&new_param->upart, param_valsize, 1, fd_input);
-				break;
-			case TDS_PARAM_FLOAT:
-				if (param_valsize != sizeof new_param->fpart) {
-					tds_logf(TDS_LOG_CRITICAL, "Type size mismatch!\n");
+
+				if (!strcmp(ctx->attr, "y")) {
+					target_attr = obj_y_buf;
 				}
-				fread(&new_param->fpart, param_valsize, 1, fd_input);
-				break;
-			case TDS_PARAM_STRING:
-				if (param_valsize != sizeof new_param->spart / sizeof new_param->spart[0]) {
-					tds_logf(TDS_LOG_CRITICAL, "Type size mismatch!\n");
+
+				if (!strcmp(ctx->attr, "width")) {
+					target_attr = obj_width_buf;
 				}
-				fread(new_param->spart, param_valsize, 1, fd_input);
+
+				if (!strcmp(ctx->attr, "height")) {
+					target_attr = obj_height_buf;
+				}
+
+				if (!strcmp(ctx->attr, "visible")) {
+					target_attr = obj_visible_buf;
+				}
+
+				if (!strcmp(ctx->attr, "angle")) {
+					target_attr = obj_angle_buf;
+				}
+			}
+
+			if (in_layer && !in_data) {
+				if (!strcmp(ctx->attr, "width")) {
+					target_attr = world_width_buf;
+				}
+
+				if (!strcmp(ctx->attr, "height")) {
+					target_attr = world_height_buf;
+				}
+			}
+
+			if (in_data) {
+				if (!strcmp(ctx->attr, "encoding")) {
+					target_attr = data_encoding_buf;
+				}
+			}
+
+			if (in_parameter) {
+				if (!strcmp(ctx->attr, "name"))	{
+					target_attr = prop_name_buf;
+				}
+
+				if (!strcmp(ctx->attr, "value")) {
+					target_attr = prop_val_buf;
+				}
+			}
+			break;
+		case YXML_ATTRVAL:
+			if (!target_attr) {
 				break;
 			}
 
-			if (param_list_tail) {
-				param_list_tail->next = new_param;
-				param_list_tail = new_param;
-			} else {
-				param_list_tail = param_list_head = new_param;
+			if (strlen(target_attr) >= TDS_LOAD_ATTR_SIZE) {
+				tds_logf(TDS_LOG_WARNING, "Attribute value too large, truncating! %s=%s..\n", ctx->attr, target_attr);
+				break;
 			}
-		}
 
-		/* We have the object param list ready. */
-		/* We try and retrieve the type information. */
+			target_attr[strlen(target_attr)] = *(ctx->data);
+			break;
+		case YXML_ATTREND:
+			if (in_data) {
+				if (strcmp(data_encoding_buf, "csv")) {
+					tds_logf(TDS_LOG_WARNING, "World data should be encoded as CSV. [%s]\n", data_encoding_buf);
+					dont_load_world = 1;
+				}
+			}
+			break;
+		case YXML_CONTENT:
+			if (in_data) {
+				if (strlen(world_buffer) >= TDS_LOAD_WORLD_SIZE) {
+					tds_logf(TDS_LOG_WARNING, "World data too large!\n");
+					break;
+				}
 
-		struct tds_object_type* type_ptr = tds_object_type_cache_get(ptr->otc_handle, type_name);
-		struct tds_object* obj_new = tds_object_create(type_ptr, ptr->object_buffer, ptr->sc_handle, x, y, 0.0f, param_list_head);
+				world_buffer[strlen(world_buffer)] = *(ctx->data);
+			}
+			break;
+		case YXML_ELEMEND:
+			if (in_object && !in_parameter) {
+				in_object = 0;
 
-		obj_new->angle = angle;
-		tds_free(type_name);
+				struct tds_object_type* type_ptr = tds_object_type_cache_get(ptr->otc_handle, obj_type_buf);
 
-		if (tds_editor_get_mode() == TDS_EDITOR_MODE_OBJECTS) {
-			tds_editor_add_selector(obj_new);
+				if (!type_ptr) {
+					tds_logf(TDS_LOG_WARNING, "Unknown typename in map file [%s]!\n", type_ptr);
+					break;
+				}
+
+
+				float map_x = strtof(obj_x_buf, NULL), map_y = strtof(obj_y_buf, NULL);
+				float map_block_size = TDS_WORLD_BLOCK_SIZE * 32.0f;
+				float map_width = map_block_size * world_width;
+				float map_height = map_block_size * world_height;
+				float game_width = TDS_WORLD_BLOCK_SIZE * world_width;
+				float game_height = TDS_WORLD_BLOCK_SIZE * world_height;
+				float real_width = (strtof(obj_width_buf, NULL) / map_width) * game_width;
+				float real_height = (strtof(obj_height_buf, NULL) / map_height) * game_height;
+				float real_x = -game_width / 2.0f+ game_width * (map_x / map_width) + real_width / 2.0f;
+				float real_y = -game_height / 2.0f + game_height * ((map_height - map_y) / map_height) - real_height / 2.0f;
+
+				cur_object = tds_object_create(type_ptr, ptr->object_buffer, ptr->sc_handle, real_x, real_y, 0.0f, cur_object_param);
+
+				cur_object->cbox_width = real_width;
+				cur_object->cbox_height = real_height;
+
+				cur_object->visible = strcmp(obj_visible_buf, "0") ? 1 : 0;
+				cur_object->angle = strtof(obj_angle_buf, NULL) * 3.141f / 180.0f;
+
+				memset(obj_type_buf, 0, sizeof obj_type_buf / sizeof *obj_type_buf);
+				memset(obj_visible_buf, 0, sizeof obj_visible_buf / sizeof *obj_visible_buf);
+				memset(obj_angle_buf, 0, sizeof obj_angle_buf / sizeof *obj_angle_buf);
+				memset(obj_x_buf, 0, sizeof obj_x_buf / sizeof *obj_x_buf);
+				memset(obj_y_buf, 0, sizeof obj_y_buf / sizeof *obj_y_buf);
+				memset(obj_width_buf, 0, sizeof obj_width_buf / sizeof *obj_width_buf);
+				memset(obj_height_buf, 0, sizeof obj_height_buf / sizeof *obj_height_buf);
+
+				cur_object_param = NULL;
+			} else if (in_parameter) {
+				in_parameter = 0;
+
+				struct tds_object_param* next_param = tds_malloc(sizeof *next_param);
+
+				next_param->next = cur_object_param;
+				cur_object_param = next_param;
+
+				switch (prop_name_buf[0]) {
+				default:
+					tds_logf(TDS_LOG_WARNING, "Invalid type prefix [%c] in object parameter; default to int\n", prop_name_buf[0]);
+				case 'i':
+					next_param->type = TDS_PARAM_INT;
+					next_param->ipart = strtol(prop_val_buf, NULL, 10);
+					break;
+				case 'u':
+					next_param->type = TDS_PARAM_UINT;
+					next_param->upart = strtol(prop_val_buf, NULL, 10);
+					break;
+				case 'f':
+					next_param->type = TDS_PARAM_FLOAT;
+					next_param->fpart = strtof(prop_val_buf, NULL);
+					break;
+				case 's':
+					{
+						next_param->type = TDS_PARAM_STRING;
+						int srclen = strlen(prop_val_buf), writelen = srclen;
+						if (srclen > TDS_PARAM_VALSIZE) {
+							tds_logf(TDS_LOG_WARNING, "Parameter string longer than %d. Truncating..\n", TDS_PARAM_VALSIZE);
+							writelen = TDS_PARAM_VALSIZE;
+						}
+						memcpy(next_param->spart, prop_val_buf, writelen);
+					}
+					break;
+				}
+
+				next_param->key = strtol(prop_name_buf + 1, NULL, 10);
+				tds_logf(TDS_LOG_DEBUG, "Created object parameter with type %c, key %d, valbuf [%s], namebuf [%s]\n", prop_name_buf[0], next_param->key, prop_val_buf, prop_name_buf);
+			} else if (in_layer && in_data) {
+				in_data = 0;
+			} else if (in_layer && !in_data) {
+				if (id_buffer) {
+					in_layer = 0;
+					tds_logf(TDS_LOG_WARNING, "There was more than one layer in the map file. Only using the first..\n");
+					break;
+				}
+
+				if (dont_load_world) {
+					break;
+				}
+
+				in_layer = 0;
+				/* Construct the world! */
+
+				world_width = strtol(world_width_buf, NULL, 10);
+				world_height = strtol(world_height_buf, NULL, 10);
+
+				id_buffer = tds_malloc(world_width * world_height * sizeof *id_buffer);
+
+				char* c_block = strtok(world_buffer, ",");
+				int x = 0, y = world_height - 1;
+
+				do {
+					if (y < 0) {
+						tds_logf(TDS_LOG_WARNING, "World was larger than map said it was. Ignoring..\n");
+						break;
+					}
+
+					id_buffer[x++ + y * world_width] = strtol(c_block, NULL, 10);
+
+					if (x >= world_width) {
+						--y;
+						x = 0;
+					}
+				} while ((c_block = strtok(NULL, ",")));
+
+				/* The block IDs are stored now in id_buffer, with the correct winding order. */
+
+				tds_world_init(ptr->world_handle, world_width, world_height);
+				tds_world_load(ptr->world_handle, id_buffer, world_width, world_height);
+			}
+			break;
+		default:
+			break;
 		}
 	}
 
-	fclose(fd_input);
-	tds_free(str_filename);
+	if (id_buffer) {
+		tds_free(id_buffer);
+	}
 
+	yxml_ret_t ret = yxml_eof(ctx);
+
+	if (ret < 0) {
+		tds_logf(TDS_LOG_WARNING, "yxml reported incorrectly formatted map file at EOF!\n");
+	}
+
+	tds_free(ctx);
+	tds_free(str_filename);
 	tds_engine_broadcast(ptr, TDS_MSG_MAP_READY, 0);
-}
-
-void tds_engine_save(struct tds_engine* ptr, const char* mapname) {
-	char* str_filename = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
-
-	memcpy(str_filename, TDS_MAP_PREFIX, strlen(TDS_MAP_PREFIX));
-	memcpy(str_filename + strlen(TDS_MAP_PREFIX), mapname, strlen(mapname));
-
-	str_filename[strlen(TDS_MAP_PREFIX) + strlen(mapname)] = 0;
-
-	tds_logf(TDS_LOG_DEBUG, "Saving to map [%s]\n", str_filename);
-
-	FILE* fd_output = fopen(str_filename, "wb");
-
-	if (!fd_output) {
-		tds_logf(TDS_LOG_CRITICAL, "Saving failed : could not open file\n");
-		return;
-	}
-
-	/* We then serialize the world into a buffer and write it. */
-	int world_width = ptr->world_handle->width, world_height = ptr->world_handle->height;
-	uint8_t* block_buffer = tds_malloc(sizeof(*block_buffer) * world_width * world_height);
-
-	tds_world_save(ptr->world_handle, block_buffer, world_width, world_height);
-
-	fwrite(&world_width, sizeof world_width, 1, fd_output);
-	fwrite(&world_height, sizeof world_height, 1, fd_output);
-
-	fwrite(block_buffer, sizeof(*block_buffer) * world_width * world_height, 1, fd_output);
-	tds_free(block_buffer);
-
-	/* To serialize, we must iterate through each object and save entity info + type params. */
-
-	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
-		/* We want to save position, angle, spritename, typename, etc.. */
-		/* We also want to store object type parameters to be passed to/from the import/export functions. */
-
-		struct tds_object* target = ptr->object_buffer->buffer[i].data;
-
-		if (!target) {
-			continue;
-		}
-
-		if (!target->save) {
-			continue;
-		}
-
-		/* First save primitiva values, then move through the parameter list. */
-
-		int type_size = strlen(target->type_name);
-
-		fwrite(&target->x, sizeof(float), 1, fd_output);
-		fwrite(&target->y, sizeof(float), 1, fd_output);
-		fwrite(&target->xspeed, sizeof(float), 1, fd_output);
-		fwrite(&target->yspeed, sizeof(float), 1, fd_output);
-		fwrite(&target->angle, sizeof(float), 1, fd_output);
-		fwrite(&type_size, sizeof(int), 1, fd_output);
-		fwrite(target->type_name, type_size, 1, fd_output);
-
-		struct tds_object_param* param_list_head = target->param_list, *current_param = target->param_list;
-		int param_count = 0;
-
-		/* We run through the list once to get the count, twice to save all of the params. */
-
-		while (current_param) {
-			param_count++;
-			current_param = current_param->next;
-		}
-
-		fwrite(&param_count, sizeof(int), 1, fd_output);
-		current_param = param_list_head;
-
-		while (current_param) {
-			int valsize = 0;
-
-			switch (current_param->type) {
-			case TDS_PARAM_INT:
-				valsize = sizeof current_param->ipart;
-				break;
-			case TDS_PARAM_UINT:
-				valsize = sizeof current_param->upart;
-				break;
-			case TDS_PARAM_FLOAT:
-				valsize = sizeof current_param->fpart;
-				break;
-			case TDS_PARAM_STRING:
-				valsize = sizeof current_param->spart / sizeof current_param->spart[0];
-				break;
-			}
-
-			fwrite(&current_param->key, sizeof current_param->key, 1, fd_output);
-			fwrite(&current_param->type, sizeof(int), 1, fd_output);
-			fwrite(&valsize, sizeof valsize, 1, fd_output);
-
-			switch (current_param->type) {
-			case TDS_PARAM_INT:
-				fwrite(&current_param->ipart, sizeof current_param->ipart, 1, fd_output);
-				break;
-			case TDS_PARAM_UINT:
-				fwrite(&current_param->upart, sizeof current_param->upart, 1, fd_output);
-				break;
-			case TDS_PARAM_FLOAT:
-				fwrite(&current_param->fpart, sizeof current_param->fpart, 1, fd_output);
-				break;
-			case TDS_PARAM_STRING:
-				fwrite(current_param->spart, sizeof current_param->spart / sizeof current_param->spart[0], 1, fd_output);
-				break;
-			}
-
-			current_param = current_param->next;
-		}
-	}
-
-	tds_free(str_filename);
-	fclose(fd_output);
 }
 
 void tds_engine_destroy_objects(struct tds_engine* ptr, const char* type_name) {

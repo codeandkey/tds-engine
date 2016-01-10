@@ -21,6 +21,10 @@
 
 #define TDS_MAP_PREFIX "res/maps/"
 
+#define TDS_LOAD_BUFFER_SIZE 2048
+#define TDS_LOAD_ATTR_SIZE 64
+#define TDS_LOAD_WORLD_SIZE 32768
+
 /* TDS engine map spec :
  *
  * Maps in TDS are saved in JSON format to allow for easy structuring and editing.

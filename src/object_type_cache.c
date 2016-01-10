@@ -56,6 +56,6 @@ struct tds_object_type* tds_object_type_cache_get(struct tds_object_type_cache* 
 		current = current->next;
 	}
 
-	tds_logf(TDS_LOG_WARNING, "%s not found in object_type cache\n", object_type_name);
+	tds_logf(TDS_LOG_WARNING, "[%s] not found in object_type cache\n", object_type_name);
 	return NULL;
 }

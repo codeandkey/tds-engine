@@ -236,19 +236,6 @@ void _tds_console_execute(struct tds_console* ptr) {
 		}
 	} else if (!strcmp(cur_cmd, "exit") || !strcmp(cur_cmd, "quit")) {
 		tds_engine_terminate(tds_engine_global);
-	} else if (!strcmp(cur_cmd, "save")) {
-		char* file = strtok(NULL, " ");
-
-		if (!file) {
-			tds_console_print(ptr, "usage: save <filename>\n");
-			goto EXECUTE_CLEANUP;
-		}
-
-		tds_engine_save(tds_engine_global, file);
-
-		tds_console_print(ptr, "saved map to ");
-		tds_console_print(ptr, file);
-		tds_console_print(ptr, "\n");
 	} else if (!strcmp(cur_cmd, "load")) {
 		char* file = strtok(NULL, " ");
 
