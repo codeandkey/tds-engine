@@ -238,6 +238,7 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, fl
 
 	while (cblock) {
 		if (!tds_block_map_get(tds_engine_global->block_map_handle, cblock->id).solid) {
+			cblock = cblock->next;
 			continue;
 		}
 
