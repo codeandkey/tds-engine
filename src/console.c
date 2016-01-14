@@ -93,6 +93,8 @@ void tds_console_key_pressed(struct tds_console* ptr, int key) {
 			if (ptr->curs_row > 0) {
 				ptr->curs_col = ptr->cols - 1;
 				ptr->curs_row--;
+			} else {
+				ptr->curs_col = 0;
 			}
 		}
 

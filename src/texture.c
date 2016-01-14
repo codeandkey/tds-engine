@@ -18,9 +18,10 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 	 */
 
 	unsigned char* img_data = tds_malloc(sizeof *img_data * w * h * 4);
+	unsigned int img_rw = 4 * w;
 
 	for (int i = 0; i < h; ++i) {
-		memcpy(img_data + i * w * 4, stb_data + h * w * 4 - i * w * 4, w * 4 * sizeof *img_data);
+		memcpy(img_data + i * img_rw, stb_data + (h - 1) * img_rw - i * img_rw, w * 4 * sizeof *img_data);
 	}
 
 	glGenTextures(1, &output->gl_id);
