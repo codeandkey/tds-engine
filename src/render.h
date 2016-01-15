@@ -15,7 +15,8 @@
 #define TDS_RENDER_SHADER_POINT_FS "res/shaders/point_fs.glsl"
 #define TDS_RENDER_SHADER_DIR_GS "res/shaders/dir_gs.glsl"
 #define TDS_RENDER_SHADER_DIR_FS "res/shaders/dir_fs.glsl"
-#define TDS_RENDER_SHADER_RECOMB_FS "res/shaders/recomb_fs.glsl"
+#define TDS_RENDER_SHADER_RECOMB_FS_POINT "res/shaders/recomb_fs_point.glsl"
+#define TDS_RENDER_SHADER_RECOMB_FS_DIR "res/shaders/recomb_fs_dir.glsl"
 
 #define TDS_RENDER_LIGHT_POINT 0
 #define TDS_RENDER_LIGHT_DIRECTIONAL 1
@@ -38,13 +39,16 @@ struct tds_render {
 
 	unsigned int render_vs, render_fs, render_program;
 	unsigned int render_pgs, render_pfs, render_dgs, render_dfs, render_program_point, render_program_dir;
-	unsigned int render_rfs, render_program_recomb;
+	unsigned int render_rfsp, render_program_recomb_point;
+	unsigned int render_rdfs, render_rpfs;
+	unsigned int render_rfsd, render_program_recomb_dir;
 
 	int uniform_texture, uniform_color, uniform_transform;
 
 	int p_uniform_texture, p_uniform_color, p_uniform_transform; /* Each lightmap rendering shader has their own set of uniform locations. */
-	int d_uniform_texture, d_uniform_color, d_uniform_transform;
-	int r_uniform_texture, r_uniform_color, r_uniform_transform;
+	int d_uniform_texture, d_uniform_color, d_uniform_transform, d_uniform_dir;
+	int rp_uniform_texture, rp_uniform_color, rp_uniform_transform;
+	int rd_uniform_texture, rd_uniform_color, rd_uniform_transform;
 };
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr, struct tds_text* text);
