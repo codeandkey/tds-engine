@@ -22,7 +22,7 @@ static void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world
 static void _tds_render_segments(struct tds_render* ptr, struct tds_world* world, struct tds_camera* cam, int occlude, unsigned int u_transform);
 static int _tds_load_world_shaders(struct tds_render* ptr, const char* vs, const char* fs);
 static int _tds_load_lightmap_shaders(struct tds_render* ptr, const char* point_gs, const char* dir_gs, const char* point_fs, const char* dir_fs);
-static int _tds_load_recomb_shaders(struct tds_render* ptr, const char* recomb_fs);
+static int _tds_load_recomb_shaders(struct tds_render* ptr, const char* recomb_fs_point, const char* recomb_fs_dir);
 static struct _tds_file _tds_load_file(const char* filename);
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr, struct tds_text* text) {
@@ -34,7 +34,7 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 
 	_tds_load_world_shaders(output, TDS_RENDER_SHADER_WORLD_VS, TDS_RENDER_SHADER_WORLD_FS);
 	_tds_load_lightmap_shaders(output, TDS_RENDER_SHADER_POINT_GS, TDS_RENDER_SHADER_DIR_GS, TDS_RENDER_SHADER_POINT_FS, TDS_RENDER_SHADER_DIR_FS);
-	_tds_load_recomb_shaders(output, TDS_RENDER_SHADER_RECOMB_FS);
+	_tds_load_recomb_shaders(output, TDS_RENDER_SHADER_RECOMB_FS_POINT, TDS_RENDER_SHADER_RECOMB_FS_DIR);
 
 	glDisable(GL_DEPTH_TEST);
 
@@ -56,11 +56,38 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 }
 
 void tds_render_free(struct tds_render* ptr) {
+	glUseProgram(0);
+
+	glDetachShader(ptr->render_program_point, ptr->render_vs);
+	glDetachShader(ptr->render_program_point, ptr->render_pgs);
+	glDetachShader(ptr->render_program_point, ptr->render_pfs);
+	glDeleteShader(ptr->render_pgs);
+	glDeleteShader(ptr->render_pfs);
+	glDeleteProgram(ptr->render_program_point);
+
+	glDetachShader(ptr->render_program_dir, ptr->render_vs);
+	glDetachShader(ptr->render_program_dir, ptr->render_dgs);
+	glDetachShader(ptr->render_program_dir, ptr->render_dfs);
+	glDeleteShader(ptr->render_dgs);
+	glDeleteShader(ptr->render_dfs);
+	glDeleteProgram(ptr->render_program_dir);
+
+	glDetachShader(ptr->render_program_recomb_point, ptr->render_vs);
+	glDetachShader(ptr->render_program_recomb_point, ptr->render_rpfs);
+	glDeleteShader(ptr->render_rpfs);
+	glDeleteProgram(ptr->render_program_recomb_point);
+
+	glDetachShader(ptr->render_program_recomb_dir, ptr->render_vs);
+	glDetachShader(ptr->render_program_recomb_dir, ptr->render_rdfs);
+	glDeleteShader(ptr->render_rdfs);
+	glDeleteProgram(ptr->render_program_recomb_dir);
+
 	glDetachShader(ptr->render_program, ptr->render_vs);
 	glDetachShader(ptr->render_program, ptr->render_fs);
 	glDeleteShader(ptr->render_vs);
 	glDeleteShader(ptr->render_fs);
 	glDeleteProgram(ptr->render_program);
+
 	tds_rt_free(ptr->lightmap_rt);
 	tds_rt_free(ptr->dir_rt);
 	tds_rt_free(ptr->point_rt);
@@ -335,68 +362,122 @@ int _tds_load_world_shaders(struct tds_render* ptr, const char* vs, const char* 
 	return 1;
 }
 
-int _tds_load_recomb_shaders(struct tds_render* ptr, const char* recomb_fs) {
+int _tds_load_recomb_shaders(struct tds_render* ptr, const char* recomb_fs_point, const char* recomb_fs_dir) {
 	int result = 0;
 
-	struct _tds_file fs_file = _tds_load_file(recomb_fs);
+	struct _tds_file dfs_file = _tds_load_file(recomb_fs_point);
+	struct _tds_file pfs_file = _tds_load_file(recomb_fs_dir);
 
-	ptr->render_rfs = glCreateShader(GL_FRAGMENT_SHADER);
+	ptr->render_rpfs = glCreateShader(GL_FRAGMENT_SHADER);
+	ptr->render_rdfs = glCreateShader(GL_FRAGMENT_SHADER);
 
-	glShaderSource(ptr->render_rfs, 1, (const char**) &fs_file.data, (const int*) &fs_file.size);
+	glShaderSource(ptr->render_rpfs, 1, (const char**) &pfs_file.data, (const int*) &pfs_file.size);
+	glShaderSource(ptr->render_rdfs, 1, (const char**) &dfs_file.data, (const int*) &dfs_file.size);
 
-	tds_free(fs_file.data);
+	tds_free(pfs_file.data);
+	tds_free(dfs_file.data);
 
-	glCompileShader(ptr->render_rfs);
-	glGetShaderiv(ptr->render_rfs, GL_COMPILE_STATUS, &result);
+	glCompileShader(ptr->render_rpfs);
+	glGetShaderiv(ptr->render_rpfs, GL_COMPILE_STATUS, &result);
 
 	if (!result) {
-		tds_logf(TDS_LOG_WARNING, "Failed to compile fragment shader.\n");
+		tds_logf(TDS_LOG_WARNING, "Failed to compile recombination point shader.\n");
 
 		char buf[1024];
-		glGetShaderInfoLog(ptr->render_rfs, 1024, NULL, buf);
+		glGetShaderInfoLog(ptr->render_rpfs, 1024, NULL, buf);
 		tds_logf(TDS_LOG_CRITICAL, "Error log : %s\n", buf);
 	}
 
-	ptr->render_program_recomb = glCreateProgram();
+	glCompileShader(ptr->render_rdfs);
+	glGetShaderiv(ptr->render_rdfs, GL_COMPILE_STATUS, &result);
 
-	glAttachShader(ptr->render_program_recomb, ptr->render_vs);
-	glAttachShader(ptr->render_program_recomb, ptr->render_rfs);
-	glLinkProgram(ptr->render_program_recomb);
+	if (!result) {
+		tds_logf(TDS_LOG_WARNING, "Failed to compile recombination directional shader.\n");
 
-	glGetProgramiv(ptr->render_program_recomb, GL_LINK_STATUS, &result);
+		char buf[1024];
+		glGetShaderInfoLog(ptr->render_rdfs, 1024, NULL, buf);
+		tds_logf(TDS_LOG_CRITICAL, "Error log : %s\n", buf);
+	}
+
+	ptr->render_program_recomb_dir = glCreateProgram();
+	ptr->render_program_recomb_point = glCreateProgram();
+
+	glAttachShader(ptr->render_program_recomb_point, ptr->render_vs);
+	glAttachShader(ptr->render_program_recomb_point, ptr->render_rpfs);
+	glLinkProgram(ptr->render_program_recomb_point);
+
+	glGetProgramiv(ptr->render_program_recomb_point, GL_LINK_STATUS, &result);
 
 	if (!result) {
 		tds_logf(TDS_LOG_WARNING, "Failed to link shader program.\n");
 
 		char buf[1024];
-		glGetProgramInfoLog(ptr->render_program_recomb, 1024, NULL, buf);
+		glGetProgramInfoLog(ptr->render_program_recomb_point, 1024, NULL, buf);
 		tds_logf(TDS_LOG_CRITICAL, "Error log : %s\n", buf);
 	}
 
-	glUseProgram(ptr->render_program_recomb);
+	glAttachShader(ptr->render_program_recomb_dir, ptr->render_vs);
+	glAttachShader(ptr->render_program_recomb_dir, ptr->render_rdfs);
+	glLinkProgram(ptr->render_program_recomb_dir);
 
-	ptr->r_uniform_texture = glGetUniformLocation(ptr->render_program_recomb, "tds_texture");
-	ptr->r_uniform_color = glGetUniformLocation(ptr->render_program_recomb, "tds_color");
-	ptr->r_uniform_transform = glGetUniformLocation(ptr->render_program_recomb, "tds_transform");
+	glGetProgramiv(ptr->render_program_recomb_dir, GL_LINK_STATUS, &result);
 
-	if (ptr->r_uniform_texture < 0) {
-		tds_logf(TDS_LOG_WARNING, "Texture uniform not found in shader.\n");
+	if (!result) {
+		tds_logf(TDS_LOG_WARNING, "Failed to link shader program.\n");
+
+		char buf[1024];
+		glGetProgramInfoLog(ptr->render_program_recomb_dir, 1024, NULL, buf);
+		tds_logf(TDS_LOG_CRITICAL, "Error log : %s\n", buf);
 	}
 
-	if (ptr->r_uniform_color < 0) {
-		tds_logf(TDS_LOG_WARNING, "Color uniform not found in shader.\n");
+	glUseProgram(ptr->render_program_recomb_point);
+
+	ptr->rp_uniform_texture = glGetUniformLocation(ptr->render_program_recomb_point, "tds_texture");
+	ptr->rp_uniform_color = glGetUniformLocation(ptr->render_program_recomb_point, "tds_color");
+	ptr->rp_uniform_transform = glGetUniformLocation(ptr->render_program_recomb_point, "tds_transform");
+
+	if (ptr->rp_uniform_texture < 0) {
+		tds_logf(TDS_LOG_WARNING, "Texture uniform not found in point shader.\n");
 	}
 
-	if (ptr->r_uniform_transform < 0) {
-		tds_logf(TDS_LOG_WARNING, "Transform uniform not found in shader.\n");
+	if (ptr->rp_uniform_color < 0) {
+		tds_logf(TDS_LOG_WARNING, "Color uniform not found in point shader.\n");
 	}
 
-	glUniform1i(ptr->r_uniform_texture, 0);
-	glUniform4f(ptr->r_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+	if (ptr->rp_uniform_transform < 0) {
+		tds_logf(TDS_LOG_WARNING, "Transform uniform not found in point shader.\n");
+	}
+
+	glUniform1i(ptr->rp_uniform_texture, 0);
+	glUniform4f(ptr->rp_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
 
 	mat4x4 identity;
 	mat4x4_identity(identity);
-	glUniformMatrix4fv(ptr->r_uniform_transform, 1, GL_FALSE, (float*) *identity);
+	glUniformMatrix4fv(ptr->rp_uniform_transform, 1, GL_FALSE, (float*) *identity);
+
+	glUseProgram(ptr->render_program_recomb_dir);
+
+	ptr->rd_uniform_texture = glGetUniformLocation(ptr->render_program_recomb_dir, "tds_texture");
+	ptr->rd_uniform_color = glGetUniformLocation(ptr->render_program_recomb_dir, "tds_color");
+	ptr->rd_uniform_transform = glGetUniformLocation(ptr->render_program_recomb_dir, "tds_transform");
+
+	if (ptr->rd_uniform_texture < 0) {
+		tds_logf(TDS_LOG_WARNING, "Texture uniform not found in directional shader.\n");
+	}
+
+	if (ptr->rd_uniform_color < 0) {
+		tds_logf(TDS_LOG_WARNING, "Color uniform not found in directional shader.\n");
+	}
+
+	if (ptr->rd_uniform_transform < 0) {
+		tds_logf(TDS_LOG_WARNING, "Transform uniform not found in directional shader.\n");
+	}
+
+	glUniform1i(ptr->rd_uniform_texture, 0);
+	glUniform4f(ptr->rd_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+
+	mat4x4_identity(identity);
+	glUniformMatrix4fv(ptr->rd_uniform_transform, 1, GL_FALSE, (float*) *identity);
 
 	return 1;
 }
@@ -529,6 +610,7 @@ int _tds_load_lightmap_shaders(struct tds_render* ptr, const char* point_gs, con
 	ptr->d_uniform_texture = glGetUniformLocation(ptr->render_program_dir, "tds_texture");
 	ptr->d_uniform_color = glGetUniformLocation(ptr->render_program_dir, "tds_color");
 	ptr->d_uniform_transform = glGetUniformLocation(ptr->render_program_dir, "tds_transform");
+	ptr->d_uniform_dir = glGetUniformLocation(ptr->render_program_dir, "light_dir");
 
 	if (ptr->d_uniform_texture < 0) {
 		tds_logf(TDS_LOG_WARNING, "Texture uniform not found in directional shader.\n");
@@ -716,6 +798,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 			break;
 		case TDS_RENDER_LIGHT_DIRECTIONAL:
 			glUseProgram(ptr->render_program_dir);
+			glUniform2f(ptr->d_uniform_dir, cur->x, cur->y);
 			tds_rt_bind(ptr->dir_rt);
 			cam_use = cam_dir;
 			break;
@@ -733,7 +816,15 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 		 * We can occlude with point lights as we know the casting distance. We cannot occlude any segments with directional lighting.
 		 */
 
-		glUseProgram(ptr->render_program_recomb);
+		switch (cur->type) {
+		case TDS_RENDER_LIGHT_POINT:
+			glUseProgram(ptr->render_program_recomb_point);
+			break;
+		case TDS_RENDER_LIGHT_DIRECTIONAL:
+			glUseProgram(ptr->render_program_recomb_dir);
+			break;
+		}
+
 		tds_rt_bind(ptr->lightmap_rt);
 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -756,7 +847,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 				struct tds_vertex_buffer* vb_point = tds_vertex_buffer_create(verts, sizeof verts / sizeof *verts, GL_TRIANGLES);
 				mat4x4_translate(point_light_transform, cur->x, cur->y, 0.0f);
 				mat4x4_mul(pt_final, ptr->camera_handle->mat_transform, point_light_transform);
-				glUniformMatrix4fv(ptr->r_uniform_transform, 1, GL_FALSE, (float*) *pt_final);
+				glUniformMatrix4fv(ptr->rp_uniform_transform, 1, GL_FALSE, (float*) *pt_final);
 				glBindVertexArray(vb_point->vao);
 				glBindTexture(GL_TEXTURE_2D, ptr->point_rt->gl_tex);
 				glDrawArrays(vb_point->render_mode, 0, 6);
@@ -764,7 +855,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 			}
 			break;
 		case TDS_RENDER_LIGHT_DIRECTIONAL:
-			glUniformMatrix4fv(ptr->r_uniform_transform, 1, GL_FALSE, (float*) *ident);
+			glUniformMatrix4fv(ptr->rd_uniform_transform, 1, GL_FALSE, (float*) *ident);
 			glBindVertexArray(vb_square->vao);
 			glBindTexture(GL_TEXTURE_2D, ptr->dir_rt->gl_tex);
 			glDrawArrays(vb_square->render_mode, 0, 6);

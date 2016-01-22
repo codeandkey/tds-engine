@@ -1,24 +1,35 @@
 #include "texture.h"
 #include "memory.h"
 #include "log.h"
+#include "stb_image.h"
 
-#include <SOIL/SOIL.h>
 #include <GLXW/glxw.h>
+#include <string.h>
 
 struct tds_texture* tds_texture_create(const char* filename, int tile_x, int tile_y) {
 	struct tds_texture* output = tds_malloc(sizeof(struct tds_texture));
-	output->gl_id = SOIL_load_OGL_texture(filename, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
 
-	if (!output->gl_id) {
-		tds_logf(TDS_LOG_CRITICAL, "Failed to load texture %s\n", filename);
-		return NULL;
+	int w = 0, h = 0;
+
+	unsigned char* stb_data = stbi_load(filename, &w, &h, NULL, 4);
+
+	/*
+	 * stb_image doesn't seem to be cooperative towards LD when it comes to linking stbi_set_flip_vertically_on_load; we will manually cycle the rows
+	 */
+
+	unsigned char* img_data = tds_malloc(sizeof *img_data * w * h * 4);
+	unsigned int img_rw = 4 * w;
+
+	for (int i = 0; i < h; ++i) {
+		memcpy(img_data + i * img_rw, stb_data + (h - 1) * img_rw - i * img_rw, w * 4 * sizeof *img_data);
 	}
 
+	glGenTextures(1, &output->gl_id);
 	glBindTexture(GL_TEXTURE_2D, output->gl_id);
 
-	int w, h;
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	stbi_image_free(stb_data);
+	tds_free(img_data);
 
 	tds_logf(TDS_LOG_DEBUG, "Loaded texture %s : width %d, height %d\n", filename, w, h);
 

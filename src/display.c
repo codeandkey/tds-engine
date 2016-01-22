@@ -13,6 +13,11 @@ struct tds_display* tds_display_create(struct tds_display_desc desc) {
 	}
 
 	glfwWindowHint(GLFW_SAMPLES, desc.msaa);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
 	output->win_handle = glfwCreateWindow(desc.width, desc.height, "TDS", desc.fs ? glfwGetPrimaryMonitor() : NULL, NULL);
 	output->desc = desc;
