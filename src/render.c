@@ -36,7 +36,6 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	_tds_load_lightmap_shaders(output, TDS_RENDER_SHADER_POINT_GS, TDS_RENDER_SHADER_DIR_GS, TDS_RENDER_SHADER_POINT_FS, TDS_RENDER_SHADER_DIR_FS);
 	_tds_load_recomb_shaders(output, TDS_RENDER_SHADER_RECOMB_FS);
 
-	glClearColor(0.0f, 0.25f, 0.25f, 0.0f);
 	glDisable(GL_DEPTH_TEST);
 
 	glEnable(GL_BLEND);
@@ -70,7 +69,7 @@ void tds_render_free(struct tds_render* ptr) {
 }
 
 void tds_render_clear(struct tds_render* ptr) {
-	glClearColor(0.0f, 0.0f, 0.2f, 0.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	tds_text_clear(ptr->text_handle);
 }

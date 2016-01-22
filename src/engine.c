@@ -507,8 +507,8 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 				float game_height = TDS_WORLD_BLOCK_SIZE * world_height;
 				float real_width = (strtof(obj_width_buf, NULL) / map_width) * game_width;
 				float real_height = (strtof(obj_height_buf, NULL) / map_height) * game_height;
-				float real_x = -game_width / 2.0f+ game_width * (map_x / map_width) + real_width / 2.0f;
-				float real_y = -game_height / 2.0f + game_height * ((map_height - map_y) / map_height) - real_height / 2.0f;
+				float real_x = -game_width / 2.0f + (game_width * (map_x / map_width)) + (real_width / 2.0f);
+				float real_y = -game_height / 2.0f + (game_height * ((map_height - map_y) / map_height)) - (real_height / 2.0f);
 
 				cur_object = tds_object_create(type_ptr, ptr->object_buffer, ptr->sc_handle, real_x, real_y, 0.0f, cur_object_param);
 
