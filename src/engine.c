@@ -498,6 +498,7 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 					break;
 				}
 
+				tds_logf(TDS_LOG_DEBUG, "Constructing object of type [%s]\n", obj_type_buf);
 
 				float map_x = strtof(obj_x_buf, NULL), map_y = strtof(obj_y_buf, NULL);
 				float map_block_size = TDS_WORLD_BLOCK_SIZE * 32.0f;
@@ -565,6 +566,9 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 				next_param->key = strtol(prop_name_buf + 1, NULL, 10);
 				tds_logf(TDS_LOG_DEBUG, "Created object parameter with type %c, key %d, valbuf [%s], namebuf [%s]\n", prop_name_buf[0], next_param->key, prop_val_buf, prop_name_buf);
+
+				memset(prop_name_buf, 0, sizeof prop_name_buf / sizeof *prop_name_buf);
+				memset(prop_val_buf, 0, sizeof prop_val_buf / sizeof *prop_val_buf);
 			} else if (in_layer && in_data) {
 				in_data = 0;
 			} else if (in_layer && !in_data) {
