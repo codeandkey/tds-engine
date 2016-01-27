@@ -369,8 +369,8 @@ int _tds_load_world_shaders(struct tds_render* ptr, const char* vs, const char* 
 int _tds_load_recomb_shaders(struct tds_render* ptr, const char* recomb_fs_point, const char* recomb_fs_dir) {
 	int result = 0;
 
-	struct _tds_file dfs_file = _tds_load_file(recomb_fs_point);
-	struct _tds_file pfs_file = _tds_load_file(recomb_fs_dir);
+	struct _tds_file dfs_file = _tds_load_file(recomb_fs_dir);
+	struct _tds_file pfs_file = _tds_load_file(recomb_fs_point);
 
 	ptr->render_rpfs = glCreateShader(GL_FRAGMENT_SHADER);
 	ptr->render_rdfs = glCreateShader(GL_FRAGMENT_SHADER);
@@ -799,6 +799,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 			glUseProgram(ptr->render_program_point);
 			tds_rt_bind(ptr->point_rt);
 			tds_camera_set_raw(cam_point, cur->dist * 2.0f, cur->dist * 2.0f, cur->x, cur->y);
+			cam_use = cam_point;
 			break;
 		case TDS_RENDER_LIGHT_DIRECTIONAL:
 			glUseProgram(ptr->render_program_dir);
@@ -831,7 +832,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 
 		tds_rt_bind(ptr->lightmap_rt);
 
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
 
 		mat4x4 ident, pt_final, pt_scaled, pt_translate;
 		mat4x4_identity(ident);
