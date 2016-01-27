@@ -89,6 +89,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer, output->text_handle);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized render system.\n");
 
+	output->overlay_handle = tds_overlay_create(output->display_handle->desc.width, output->display_handle->desc.height);
+	tds_logf(TDS_LOG_MESSAGE, "Initialized overlay system.\n");
+
 	output->input_handle = tds_input_create(output->display_handle);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized input system.\n");
 
@@ -170,6 +173,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_input_map_free(ptr->input_map_handle);
 	tds_key_map_free(ptr->key_map_handle);
 	tds_render_free(ptr->render_handle);
+	tds_overlay_free(ptr->overlay_handle);
 	tds_camera_free(ptr->camera_handle);
 	tds_display_free(ptr->display_handle);
 	tds_texture_cache_free(ptr->tc_handle);
@@ -237,7 +241,10 @@ void tds_engine_run(struct tds_engine* ptr) {
 		}
 
 		/* Run game draw logic. */
+		tds_overlay_set_color(ptr->overlay_handle, 1.0f, 0.0f, 0.0f, 0.5f);
+
 		tds_render_clear(ptr->render_handle); /* We clear before executing the draw functions, otherwise the text buffer would be destroyed */
+		tds_overlay_clear(ptr->overlay_handle);
 
 		if (ptr->enable_draw) {
 			for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
@@ -253,7 +260,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		tds_console_draw(ptr->console_handle);
 
-		tds_render_draw(ptr->render_handle, ptr->world_handle);
+		tds_render_draw(ptr->render_handle, ptr->world_handle, ptr->overlay_handle);
 		tds_display_swap(ptr->display_handle);
 
 		tds_render_clear_lights(ptr->render_handle);

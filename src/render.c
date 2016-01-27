@@ -101,7 +101,7 @@ void tds_render_clear(struct tds_render* ptr) {
 	tds_text_clear(ptr->text_handle);
 }
 
-void tds_render_draw(struct tds_render* ptr, struct tds_world* world) {
+void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds_overlay* overlay) {
 	/* Drawing will be done linearly on a per-layer basis, using a list of occluded objects. */
 	int render_objects = 1, render_text = 1;
 
@@ -232,9 +232,13 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world) {
 	glDrawArrays(vb_square->render_mode, 0, 6);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	tds_vertex_buffer_free(vb_square);
+	/* Overlay is drawn over everything else (including the lightmap) */
+	/* We get the image data and dump it into a texture here. We can also reuse the square VB from the lightmap blending. */
 
-	glUseProgram(ptr->render_program);
+	glBindTexture(GL_TEXTURE_2D, tds_overlay_update_texture(overlay));
+	glDrawArrays(vb_square->render_mode, 0, 6);
+
+	tds_vertex_buffer_free(vb_square);
 }
 
 void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int layer) {
