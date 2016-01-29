@@ -5,9 +5,9 @@
 
 struct tds_input {
 	struct GLFWwindow* window_handle;
-	int kb_state[512];
+	int kb_state[312];
 	int controller_state[32];
-	int mb_state[16];
+	int mb_state[5];
 	float controller_axis_state[32];
 	double mx, my, mx_last, my_last;
 };

@@ -63,11 +63,11 @@ void tds_input_free(struct tds_input* ptr) {
 }
 
 void tds_input_update(struct tds_input* ptr) {
-	for (int i = 0; i < 512; ++i) {
+	for (int i = 0; i < sizeof ptr->kb_state / sizeof *(ptr->kb_state); ++i) {
 		ptr->kb_state[i] = glfwGetKey(ptr->window_handle, i);
 	}
 
-	for (int i = 0; i < 16; ++i) {
+	for (int i = 0; i < sizeof ptr->mb_state / sizeof *(ptr->mb_state); ++i) {
 		ptr->mb_state[i] = glfwGetMouseButton(ptr->window_handle, i);
 	}
 

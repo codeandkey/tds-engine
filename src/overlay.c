@@ -58,7 +58,7 @@ void tds_overlay_render_quad(struct tds_overlay* ptr, float l, float r, float t,
 	_tds_overlay_get_coords(ptr, l, t, &l, &t, flags);
 	_tds_overlay_get_coords(ptr, r, b, &r, &b, flags);
 
-	cairo_rectangle(ptr->ctx, l, t, (r - l), (b - t));
+	cairo_rectangle(ptr->ctx, l, b, (r - l), (t - b));
 
 	if (flags & TDS_OVERLAY_OUTLINE) {
 		cairo_stroke(ptr->ctx);
@@ -80,7 +80,7 @@ void _tds_overlay_get_coords(struct tds_overlay* ptr, float x, float y, float* _
 		if (_y) *_y = (1.0f - ((y - camera_bottom) / (camera_top - camera_bottom))) * ptr->height;
 	} else if (flags & TDS_OVERLAY_REL_SCREENSPACE) {
 		if (_x) *_x = (x + 1.0f) / 2.0f * ptr->width;
-		if (_y) *_y = (y - 1.0f) / 2.0f * ptr->height;
+		if (_y) *_y = (y + 1.0f) / 2.0f * ptr->height;
 	} else {
 		if (_x) *_x = x;
 		if (_y) *_y = y;
