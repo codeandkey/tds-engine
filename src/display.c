@@ -21,6 +21,8 @@ struct tds_display* tds_display_create(struct tds_display_desc desc) {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
+	glfwSetErrorCallback(_tds_display_err_callback);
+
 	output->win_handle = glfwCreateWindow(desc.width, desc.height, "TDS", desc.fs ? glfwGetPrimaryMonitor() : NULL, NULL);
 	output->desc = desc;
 
@@ -38,8 +40,6 @@ struct tds_display* tds_display_create(struct tds_display_desc desc) {
 
 	glfwSetInputMode(output->win_handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwGetWindowSize(output->win_handle, &output->desc.width, &output->desc.height);
-
-	glfwSetErrorCallback(_tds_display_err_callback);
 
 	glViewport(0, 0, output->desc.width, output->desc.height);
 
