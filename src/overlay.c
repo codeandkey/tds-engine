@@ -17,6 +17,9 @@ struct tds_overlay* tds_overlay_create(int width, int height) {
 	glGenTextures(1, &output->gl_texture);
 	glBindTexture(GL_TEXTURE_2D, output->gl_texture);
 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, output->width, output->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 	return output;

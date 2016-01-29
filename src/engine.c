@@ -241,7 +241,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 		}
 
 		/* Run game draw logic. */
-		tds_overlay_set_color(ptr->overlay_handle, 1.0f, 0.0f, 0.0f, 0.5f);
+		tds_overlay_set_color(ptr->overlay_handle, 0.0f, 0.0f, 0.0f, 0.0f);
 
 		tds_render_clear(ptr->render_handle); /* We clear before executing the draw functions, otherwise the text buffer would be destroyed */
 		tds_overlay_clear(ptr->overlay_handle);
