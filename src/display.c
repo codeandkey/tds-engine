@@ -2,6 +2,8 @@
 #include "memory.h"
 #include "log.h"
 
+static void _tds_display_err_callback(int code, const char* msg);
+
 struct tds_display* tds_display_create(struct tds_display_desc desc) {
 	struct tds_display* output = tds_malloc(sizeof(struct tds_display));
 
@@ -37,6 +39,8 @@ struct tds_display* tds_display_create(struct tds_display_desc desc) {
 	glfwSetInputMode(output->win_handle, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwGetWindowSize(output->win_handle, &output->desc.width, &output->desc.height);
 
+	glfwSetErrorCallback(_tds_display_err_callback);
+
 	glViewport(0, 0, output->desc.width, output->desc.height);
 
 	return output;
@@ -59,4 +63,8 @@ void tds_display_update(struct tds_display* ptr) {
 
 int tds_display_get_close(struct tds_display* ptr) {
 	return glfwWindowShouldClose(ptr->win_handle);
+}
+
+void _tds_display_err_callback(int code, const char* msg) {
+	tds_logf(TDS_LOG_CRITICAL, "GLFW error %d : [%s]\n", code, msg);
 }
