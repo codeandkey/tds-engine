@@ -21,6 +21,7 @@
 #define TDS_RENDER_SHADER_HBLUR_VS "res/shaders/hblur_vs.glsl"
 #define TDS_RENDER_SHADER_VBLUR_VS "res/shaders/vblur_vs.glsl"
 #define TDS_RENDER_SHADER_BLUR_FS "res/shaders/blur_fs.glsl"
+#define TDS_RENDER_SHADER_BLOOM_FS "res/shaders/bloom_fs.glsl"
 
 #define TDS_RENDER_LIGHT_POINT 0
 #define TDS_RENDER_LIGHT_DIRECTIONAL 1
@@ -47,6 +48,7 @@ struct tds_render {
 	unsigned int render_rdfs, render_rpfs;
 	unsigned int render_rfsd, render_program_recomb_dir;
 	unsigned int render_program_hblur, render_program_vblur, render_hbvs, render_vbvs, render_bfs;
+	unsigned int render_program_bloom, render_blfs;
 
 	int uniform_texture, uniform_color, uniform_transform;
 
@@ -57,6 +59,8 @@ struct tds_render {
 
 	int hb_uniform_texture, hb_uniform_color, hb_uniform_transform;
 	int vb_uniform_texture, vb_uniform_color, vb_uniform_transform;
+
+	int bl_uniform_texture, bl_uniform_color, bl_uniform_transform;
 };
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr, struct tds_text* text);

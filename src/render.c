@@ -24,6 +24,7 @@ static int _tds_load_world_shaders(struct tds_render* ptr, const char* vs, const
 static int _tds_load_lightmap_shaders(struct tds_render* ptr, const char* point_gs, const char* dir_gs, const char* point_fs, const char* dir_fs);
 static int _tds_load_recomb_shaders(struct tds_render* ptr, const char* recomb_fs_point, const char* recomb_fs_dir);
 static int _tds_load_blur_shaders(struct tds_render* ptr, const char* hblur_vs, const char* vblur_vs, const char* blur_fs);
+static int _tds_load_bloom_shaders(struct tds_render* ptr, const char* bloom_fs);
 static struct _tds_file _tds_load_file(const char* filename);
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr, struct tds_text* text) {
@@ -37,6 +38,7 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	_tds_load_lightmap_shaders(output, TDS_RENDER_SHADER_POINT_GS, TDS_RENDER_SHADER_DIR_GS, TDS_RENDER_SHADER_POINT_FS, TDS_RENDER_SHADER_DIR_FS);
 	_tds_load_recomb_shaders(output, TDS_RENDER_SHADER_RECOMB_FS_POINT, TDS_RENDER_SHADER_RECOMB_FS_DIR);
 	_tds_load_blur_shaders(output, TDS_RENDER_SHADER_HBLUR_VS, TDS_RENDER_SHADER_VBLUR_VS, TDS_RENDER_SHADER_BLUR_FS);
+	_tds_load_bloom_shaders(output, TDS_RENDER_SHADER_BLOOM_FS);
 
 	glDisable(GL_DEPTH_TEST);
 
@@ -232,6 +234,8 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 	mat4x4 ident;
 	mat4x4_identity(ident);
 
+	tds_rt_bind(ptr->post_rt1); // _tds_render_lightmap changes the RT, reset it here
+
 	glUseProgram(ptr->render_program);
 	glBindVertexArray(vb_square->vao);
 	glBindTexture(GL_TEXTURE_2D, ptr->lightmap_rt->gl_tex);
@@ -244,23 +248,58 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 	/* The world and lightmaps are done rendering.. we perform post-processing before the OSD */
 	/* First, a gaussian hblur */
 
+	tds_rt_bind(NULL); /* First, we render to the screen with the normal world info. */
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glUseProgram(ptr->render_program);
+	glBindVertexArray(vb_square->vao);
+	glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
+	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+
+	glBlendFunc(GL_ONE, GL_ZERO); /* Copy the textures to preserve alpha. */
+	glDrawArrays(vb_square->render_mode, 0, 6);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	tds_rt_bind(ptr->post_rt2);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glUseProgram(ptr->render_program_bloom);
+	glBindVertexArray(vb_square->vao);
+	glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
+	glUniformMatrix4fv(ptr->bl_uniform_transform, 1, GL_FALSE, (float*) *ident);
+
+	glBlendFunc(GL_ONE, GL_ZERO); /* Copy the textures to preserve alpha. */
+	glDrawArrays(vb_square->render_mode, 0, 6);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	tds_rt_bind(ptr->post_rt1);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glUseProgram(ptr->render_program_hblur);
 	glBindVertexArray(vb_square->vao);
-	glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
+	glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
 	glUniformMatrix4fv(ptr->hb_uniform_transform, 1, GL_FALSE, (float*) *ident);
 	glDrawArrays(vb_square->render_mode, 0, 6);
 
-	tds_rt_bind(NULL);
+	tds_rt_bind(ptr->post_rt2);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glUseProgram(ptr->render_program_vblur);
 	glBindVertexArray(vb_square->vao);
-	glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
+	glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
 	glUniformMatrix4fv(ptr->vb_uniform_transform, 1, GL_FALSE, (float*) *ident);
 	glDrawArrays(vb_square->render_mode, 0, 6);
+
+	tds_rt_bind(NULL); /* We don't clear the NULL rt, it already has world data */
+
+	glUseProgram(ptr->render_program);
+	glBindVertexArray(vb_square->vao);
+	glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
+	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	glDrawArrays(vb_square->render_mode, 0, 6);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	/* Overlay is drawn over everything else (including the lightmap) */
 	/* We get the image data and dump it into a texture here. We can also reuse the square VB from the lightmap blending. */
@@ -392,6 +431,73 @@ int _tds_load_world_shaders(struct tds_render* ptr, const char* vs, const char* 
 	mat4x4 identity;
 	mat4x4_identity(identity);
 	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *identity);
+
+	return 1;
+}
+
+int _tds_load_bloom_shaders(struct tds_render* ptr, const char* bloom_fs) {
+	int result = 0;
+
+	/* First, load the shader file content into memory. */
+	struct _tds_file fs_file = _tds_load_file(bloom_fs);
+
+	ptr->render_blfs = glCreateShader(GL_FRAGMENT_SHADER);
+
+	glShaderSource(ptr->render_blfs, 1, (const char**) &fs_file.data, (const int*) &fs_file.size);
+
+	tds_free(fs_file.data);
+
+	glCompileShader(ptr->render_blfs);
+	glGetShaderiv(ptr->render_blfs, GL_COMPILE_STATUS, &result);
+
+	if (!result) {
+		tds_logf(TDS_LOG_WARNING, "Failed to compile vertex shader.\n");
+
+		char buf[1024];
+		glGetShaderInfoLog(ptr->render_blfs, 1024, NULL, buf);
+		tds_logf(TDS_LOG_CRITICAL, "Error log : %s\n", buf);
+	}
+
+	ptr->render_program_bloom = glCreateProgram();
+
+	glAttachShader(ptr->render_program_bloom, ptr->render_vs);
+	glAttachShader(ptr->render_program_bloom, ptr->render_blfs);
+	glLinkProgram(ptr->render_program_bloom);
+
+	glGetProgramiv(ptr->render_program_bloom, GL_LINK_STATUS, &result);
+
+	if (!result) {
+		tds_logf(TDS_LOG_WARNING, "Failed to link bloom shader program.\n");
+
+		char buf[1024];
+		glGetProgramInfoLog(ptr->render_program_bloom, 1024, NULL, buf);
+		tds_logf(TDS_LOG_CRITICAL, "Error log : %s\n", buf);
+	}
+
+	glUseProgram(ptr->render_program_bloom);
+
+	ptr->bl_uniform_texture = glGetUniformLocation(ptr->render_program_bloom, "tds_texture");
+	ptr->bl_uniform_color = glGetUniformLocation(ptr->render_program_bloom, "tds_color");
+	ptr->bl_uniform_transform = glGetUniformLocation(ptr->render_program_bloom, "tds_transform");
+
+	if (ptr->bl_uniform_texture < 0) {
+		tds_logf(TDS_LOG_WARNING, "Texture uniform not found in bloom shader.\n");
+	}
+
+	if (ptr->bl_uniform_color < 0) {
+		tds_logf(TDS_LOG_WARNING, "Color uniform not found in bloom shader.\n");
+	}
+
+	if (ptr->bl_uniform_transform < 0) {
+		tds_logf(TDS_LOG_WARNING, "Transform uniform not found in bloom shader.\n");
+	}
+
+	glUniform1i(ptr->bl_uniform_texture, 0);
+	glUniform4f(ptr->bl_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+
+	mat4x4 identity;
+	mat4x4_identity(identity);
+	glUniformMatrix4fv(ptr->bl_uniform_transform, 1, GL_FALSE, (float*) *identity);
 
 	return 1;
 }
