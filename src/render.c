@@ -426,7 +426,7 @@ int _tds_load_world_shaders(struct tds_render* ptr, const char* vs, const char* 
 	}
 
 	glUniform1i(ptr->uniform_texture, 0);
-	glUniform4f(ptr->uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+	glUniform4f(ptr->uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	mat4x4 identity;
 	mat4x4_identity(identity);
@@ -493,7 +493,7 @@ int _tds_load_bloom_shaders(struct tds_render* ptr, const char* bloom_fs) {
 	}
 
 	glUniform1i(ptr->bl_uniform_texture, 0);
-	glUniform4f(ptr->bl_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+	glUniform4f(ptr->bl_uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	mat4x4 identity;
 	mat4x4_identity(identity);
@@ -589,7 +589,7 @@ int _tds_load_recomb_shaders(struct tds_render* ptr, const char* recomb_fs_point
 	}
 
 	glUniform1i(ptr->rp_uniform_texture, 0);
-	glUniform4f(ptr->rp_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+	glUniform4f(ptr->rp_uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	mat4x4 identity;
 	mat4x4_identity(identity);
@@ -614,7 +614,7 @@ int _tds_load_recomb_shaders(struct tds_render* ptr, const char* recomb_fs_point
 	}
 
 	glUniform1i(ptr->rd_uniform_texture, 0);
-	glUniform4f(ptr->rd_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+	glUniform4f(ptr->rd_uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	mat4x4_identity(identity);
 	glUniformMatrix4fv(ptr->rd_uniform_transform, 1, GL_FALSE, (float*) *identity);
@@ -724,7 +724,7 @@ int _tds_load_blur_shaders(struct tds_render* ptr, const char* hblur_vs, const c
 	}
 
 	glUniform1i(ptr->hb_uniform_texture, 0);
-	glUniform4f(ptr->hb_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+	glUniform4f(ptr->hb_uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	mat4x4 identity;
 	mat4x4_identity(identity);
@@ -749,7 +749,7 @@ int _tds_load_blur_shaders(struct tds_render* ptr, const char* hblur_vs, const c
 	}
 
 	glUniform1i(ptr->vb_uniform_texture, 0);
-	glUniform4f(ptr->vb_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+	glUniform4f(ptr->vb_uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
 	glUniformMatrix4fv(ptr->vb_uniform_transform, 1, GL_FALSE, (float*) *identity);
 
 	glUseProgram(0);
@@ -874,7 +874,7 @@ int _tds_load_lightmap_shaders(struct tds_render* ptr, const char* point_gs, con
 	}
 
 	glUniform1i(ptr->p_uniform_texture, 0);
-	glUniform4f(ptr->p_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+	glUniform4f(ptr->p_uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	mat4x4 identity;
 	mat4x4_identity(identity);
@@ -900,7 +900,7 @@ int _tds_load_lightmap_shaders(struct tds_render* ptr, const char* point_gs, con
 	}
 
 	glUniform1i(ptr->d_uniform_texture, 0);
-	glUniform4f(ptr->d_uniform_color, 0.5f, 1.0f, 0.5f, 1.0f);
+	glUniform4f(ptr->d_uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
 	glUniformMatrix4fv(ptr->d_uniform_transform, 1, GL_FALSE, (float*) *identity);
 
 	glUseProgram(0);
