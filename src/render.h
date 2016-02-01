@@ -18,6 +18,9 @@
 #define TDS_RENDER_SHADER_DIR_FS "res/shaders/dir_fs.glsl"
 #define TDS_RENDER_SHADER_RECOMB_FS_POINT "res/shaders/recomb_fs_point.glsl"
 #define TDS_RENDER_SHADER_RECOMB_FS_DIR "res/shaders/recomb_fs_dir.glsl"
+#define TDS_RENDER_SHADER_HBLUR_VS "res/shaders/hblur_vs.glsl"
+#define TDS_RENDER_SHADER_VBLUR_VS "res/shaders/vblur_vs.glsl"
+#define TDS_RENDER_SHADER_BLUR_FS "res/shaders/blur_fs.glsl"
 
 #define TDS_RENDER_LIGHT_POINT 0
 #define TDS_RENDER_LIGHT_DIRECTIONAL 1
@@ -34,7 +37,7 @@ struct tds_render {
 	struct tds_camera* camera_handle;
 	struct tds_handle_manager* object_buffer;
 	struct tds_text* text_handle;
-	struct tds_rt* lightmap_rt, *point_rt, *dir_rt;
+	struct tds_rt* lightmap_rt, *point_rt, *dir_rt, *post_rt1, *post_rt2;
 
 	struct tds_render_light* light_list;
 
@@ -43,6 +46,7 @@ struct tds_render {
 	unsigned int render_rfsp, render_program_recomb_point;
 	unsigned int render_rdfs, render_rpfs;
 	unsigned int render_rfsd, render_program_recomb_dir;
+	unsigned int render_program_hblur, render_program_vblur, render_hbvs, render_vbvs, render_bfs;
 
 	int uniform_texture, uniform_color, uniform_transform;
 
@@ -50,6 +54,9 @@ struct tds_render {
 	int d_uniform_texture, d_uniform_color, d_uniform_transform, d_uniform_dir;
 	int rp_uniform_texture, rp_uniform_color, rp_uniform_transform;
 	int rd_uniform_texture, rd_uniform_color, rd_uniform_transform;
+
+	int hb_uniform_texture, hb_uniform_color, hb_uniform_transform;
+	int vb_uniform_texture, vb_uniform_color, vb_uniform_transform;
 };
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr, struct tds_text* text);
