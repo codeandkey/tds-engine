@@ -1,6 +1,5 @@
 #include "console.h"
 #include "engine.h"
-#include "text.h"
 #include "log.h"
 #include "memory.h"
 #include "input_map.h"
@@ -11,15 +10,15 @@
 
 static void _tds_console_execute(struct tds_console* ptr);
 
+#define TDS_CONSOLE_FONT_SIZE 10.0f
+
 struct tds_console* tds_console_create(void) {
 	struct tds_console* output = tds_malloc(sizeof(struct tds_console));
 
-	output->font = tds_sprite_cache_get(tds_engine_global->sc_handle, "font_debug");
-
 	/* We can't control anything but rows and cols, so 1:1 may be hard */
 
-	output->rows = tds_engine_global->camera_handle->height / output->font->height;
-	output->cols = tds_engine_global->camera_handle->width / output->font->width;
+	output->rows = tds_engine_global->display_handle->desc.height / (int) TDS_CONSOLE_FONT_SIZE;
+	output->cols = tds_engine_global->display_handle->desc.width / (int) TDS_CONSOLE_FONT_SIZE;
 
 	tds_logf(TDS_LOG_MESSAGE, "Creating console with %d rows and %d cols\n", output->rows, output->cols);
 
@@ -59,8 +58,8 @@ void tds_console_resize(struct tds_console* ptr) {
 
 	tds_free(ptr->buffers);
 
-	ptr->rows = tds_engine_global->camera_handle->height / ptr->font->height;
-	ptr->cols = tds_engine_global->camera_handle->width / ptr->font->width;
+	ptr->rows = tds_engine_global->display_handle->desc.height / (int) TDS_CONSOLE_FONT_SIZE;
+	ptr->cols = tds_engine_global->display_handle->desc.width / (int) TDS_CONSOLE_FONT_SIZE;
 
 	tds_logf(TDS_LOG_MESSAGE, "Resizing console to %d rows and %d cols\n", ptr->rows, ptr->cols);
 
@@ -133,27 +132,19 @@ void tds_console_draw(struct tds_console* ptr) {
 		return;
 	}
 
-	struct tds_text_batch render_batch = {0};
-
-	render_batch.font = ptr->font;
-	render_batch.x = tds_engine_global->camera_handle->x - tds_engine_global->camera_handle->width / 2.0f + ptr->font->width / 2.0f;
-	render_batch.y = tds_engine_global->camera_handle->y + tds_engine_global->camera_handle->height / 2.0f + ptr->font->width / 2.0f;
-	render_batch.z = 0.0f;
-
-	render_batch.r = render_batch.g = render_batch.b = render_batch.a = 1.0f;
-	render_batch.angle = 0.0f;
-	render_batch.layer = 1000;
-
 	for (int i = 0; i < ptr->rows; ++i) {
-		render_batch.y -= ptr->font->height;
-		render_batch.str = ptr->buffers[i];
-		render_batch.str_len = ptr->cols;
-
-		if (!*render_batch.str) {
+		if (!*(ptr->buffers[i])) {
 			continue;
 		}
 
-		tds_text_submit(tds_engine_global->text_handle, &render_batch);
+		int len = strlen(ptr->buffers[i]);
+
+		if (len > ptr->cols) {
+			len = ptr->cols;
+		}
+
+		float offset = (float) ptr->rows / (float) tds_engine_global->display_handle->desc.height;
+		tds_overlay_render_text(tds_engine_global->overlay_handle, -0.9f, 1.0f, 1.0f - offset * i, -1.0f, TDS_CONSOLE_FONT_SIZE, ptr->buffers[i], len, TDS_OVERLAY_REL_SCREENSPACE);
 	}
 }
 

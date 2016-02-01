@@ -10,7 +10,6 @@ struct tds_console {
 	int rows, cols, curs_row, curs_col;
 	char** buffers;
 	int enabled;
-	struct tds_sprite* font;
 	char input_buf[TDS_CONSOLE_INPUT_SIZE];
 	int input_ind;
 };

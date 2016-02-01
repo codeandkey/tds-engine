@@ -16,7 +16,6 @@ struct _tds_file {
 };
 
 static void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int layer);
-static void _tds_render_text_batch(struct tds_render* ptr, struct tds_text_batch* data);
 static void _tds_render_world(struct tds_render* ptr, struct tds_world* world);
 static void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world);
 static void _tds_render_segments(struct tds_render* ptr, struct tds_world* world, struct tds_camera* cam, int occlude, unsigned int u_transform);
@@ -25,12 +24,11 @@ static int _tds_load_lightmap_shaders(struct tds_render* ptr, const char* point_
 static int _tds_load_recomb_shaders(struct tds_render* ptr, const char* recomb_fs_point, const char* recomb_fs_dir);
 static struct _tds_file _tds_load_file(const char* filename);
 
-struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr, struct tds_text* text) {
+struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr) {
 	struct tds_render* output = tds_malloc(sizeof(struct tds_render));
 
 	output->object_buffer = hmgr;
 	output->camera_handle = camera;
-	output->text_handle = text;
 
 	_tds_load_world_shaders(output, TDS_RENDER_SHADER_WORLD_VS, TDS_RENDER_SHADER_WORLD_FS);
 	_tds_load_lightmap_shaders(output, TDS_RENDER_SHADER_POINT_GS, TDS_RENDER_SHADER_DIR_GS, TDS_RENDER_SHADER_POINT_FS, TDS_RENDER_SHADER_DIR_FS);
@@ -98,27 +96,17 @@ void tds_render_free(struct tds_render* ptr) {
 void tds_render_clear(struct tds_render* ptr) {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	tds_text_clear(ptr->text_handle);
 }
 
 void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds_overlay* overlay) {
 	/* Drawing will be done linearly on a per-layer basis, using a list of occluded objects. */
-	int render_objects = 1, render_text = 1;
+	int render_objects = 1;
 
 	if (ptr->object_buffer->max_index <= 0) {
 		render_objects = 0;
 	}
 
-	if (!ptr->text_handle->head) {
-		render_text = 0;
-	}
-
 	int* object_rendered = NULL;
-	int* text_rendered = NULL;
-
-	if (render_text) {
-		text_rendered = tds_malloc(ptr->text_handle->size * sizeof(int));
-	}
 
 	if (render_objects) {
 		object_rendered = tds_malloc(ptr->object_buffer->max_index * sizeof(int));
@@ -148,20 +136,6 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 		}
 	}
 
-	int ind = 0; /* Local index for the following loop, we need to index a linked list. */
-
-	for (struct tds_text_batch_entry* i = ptr->text_handle->head; i; i = i->next) {
-		text_rendered[ind] = 0;
-
-		if (i->data.layer < min_layer) {
-			min_layer = i->data.layer;
-		} else if (i->data.layer > max_layer) {
-			max_layer = i->data.layer;
-		}
-
-		ind++;
-	}
-
 	for (int i = min_layer; i <= max_layer; ++i) {
 		if (!i) {
 			/* We render the world at depth 0. */
@@ -180,30 +154,10 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 				_tds_render_object(ptr, target, i);
 			}
 		}
-
-		int ind = 0;
-
-		for (struct tds_text_batch_entry* entry = ptr->text_handle->head; entry; entry = entry->next) {
-			if (text_rendered[ind]) {
-				++ind;
-				continue;
-			}
-
-			if (i == entry->data.layer) {
-				_tds_render_text_batch(ptr, &entry->data);
-				text_rendered[ind] = 1;
-			}
-
-			++ind;
-		}
 	}
 
 	if (object_rendered) {
 		tds_free(object_rendered);
-	}
-
-	if (text_rendered) {
-		tds_free(text_rendered);
 	}
 
 	_tds_render_lightmap(ptr, world);
@@ -258,31 +212,6 @@ void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int laye
 
 	glBindVertexArray(obj->sprite_handle->vbo_handle->vao);
 	glDrawArrays(obj->sprite_handle->vbo_handle->render_mode, obj->current_frame * 6, 6);
-}
-
-void _tds_render_text_batch(struct tds_render* ptr, struct tds_text_batch* data) {
-	vec4* sprite_transform = tds_sprite_get_transform(data->font);
-	mat4x4 obj_transform, transform_full;
-
-	/* If we pass the glyph X and Y to the transform function, everything should be taken care of. */
-
-	for (int i = 0; i < data->str_len; ++i) {
-		if (!data->str[i]) {
-			break;
-		}
-
-		vec4* glyph_transform = tds_text_batch_get_transform(data, i);
-		mat4x4_mul(obj_transform, glyph_transform, sprite_transform);
-		mat4x4_mul(transform_full, ptr->camera_handle->mat_transform, obj_transform);
-
-		glUniform4f(ptr->uniform_color, data->r, data->g, data->b, data->a);
-		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) transform_full);
-
-		glBindTexture(GL_TEXTURE_2D, data->font->texture->gl_id);
-
-		glBindVertexArray(data->font->vbo_handle->vao);
-		glDrawArrays(data->font->vbo_handle->render_mode, data->str[i] * 6, 6);
-	}
 }
 
 int _tds_load_world_shaders(struct tds_render* ptr, const char* vs, const char* fs) {

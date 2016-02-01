@@ -83,10 +83,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_camera_set(output->camera_handle, 10.0f, 0.0f, 0.0f);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized camera system.\n");
 
-	output->text_handle = tds_text_create();
-	tds_logf(TDS_LOG_MESSAGE, "Initialized text system.\n");
-
-	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer, output->text_handle);
+	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized render system.\n");
 
 	output->overlay_handle = tds_overlay_create(output->display_handle->desc.width, output->display_handle->desc.height);
@@ -168,7 +165,6 @@ void tds_engine_free(struct tds_engine* ptr) {
 
 	tds_block_map_free(ptr->block_map_handle);
 	tds_world_free(ptr->world_handle);
-	tds_text_free(ptr->text_handle);
 	tds_input_free(ptr->input_handle);
 	tds_input_map_free(ptr->input_map_handle);
 	tds_key_map_free(ptr->key_map_handle);
@@ -245,6 +241,12 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		tds_render_clear(ptr->render_handle); /* We clear before executing the draw functions, otherwise the text buffer would be destroyed */
 		tds_overlay_clear(ptr->overlay_handle);
+
+		char fps_string[16] = {0};
+		snprintf(fps_string, 16, "FPS: %.2f", ptr->state.fps);
+
+		tds_overlay_set_color(ptr->overlay_handle, 1.0f, 1.0f, 1.0f, 1.0f);
+		tds_overlay_render_text(ptr->overlay_handle, -0.95f, 1.0f, 1.0f, -0.95f, 10.0f, fps_string, strlen(fps_string), TDS_OVERLAY_REL_SCREENSPACE | TDS_OVERLAY_HLEFT | TDS_OVERLAY_VBOTTOM);
 
 		if (ptr->enable_draw) {
 			for (int i = 0; i < ptr->object_buffer->max_index; ++i) {

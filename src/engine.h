@@ -10,7 +10,6 @@
 #include "sound_manager.h"
 #include "console.h"
 #include "render.h"
-#include "text.h"
 #include "key_map.h"
 #include "input.h"
 #include "input_map.h"
@@ -84,7 +83,6 @@ struct tds_engine {
 	struct tds_input_map* input_map_handle;
 	struct tds_key_map* key_map_handle;
 	struct tds_sound_manager* sound_manager_handle;
-	struct tds_text* text_handle;
 	struct tds_console* console_handle;
 	struct tds_block_map* block_map_handle;
 	struct tds_world* world_handle;

@@ -5,7 +5,6 @@
 
 #include "handle.h"
 #include "camera.h"
-#include "text.h"
 #include "world.h"
 #include "rt.h"
 #include "overlay.h"
@@ -33,7 +32,6 @@ struct tds_render_light {
 struct tds_render {
 	struct tds_camera* camera_handle;
 	struct tds_handle_manager* object_buffer;
-	struct tds_text* text_handle;
 	struct tds_rt* lightmap_rt, *point_rt, *dir_rt;
 
 	struct tds_render_light* light_list;
@@ -52,7 +50,7 @@ struct tds_render {
 	int rd_uniform_texture, rd_uniform_color, rd_uniform_transform;
 };
 
-struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr, struct tds_text* text);
+struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr);
 void tds_render_free(struct tds_render* ptr);
 
 void tds_render_clear(struct tds_render* ptr);
