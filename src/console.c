@@ -143,8 +143,10 @@ void tds_console_draw(struct tds_console* ptr) {
 			len = ptr->cols;
 		}
 
-		float offset = (float) ptr->rows / (float) tds_engine_global->display_handle->desc.height;
-		tds_overlay_render_text(tds_engine_global->overlay_handle, -0.9f, 1.0f, 1.0f - offset * i, -1.0f, TDS_CONSOLE_FONT_SIZE, ptr->buffers[i], len, TDS_OVERLAY_REL_SCREENSPACE);
+		float w = tds_engine_global->display_handle->desc.width, h = tds_engine_global->display_handle->desc.height;
+
+		float offset = h / (float) ptr->rows;
+		tds_overlay_render_text(tds_engine_global->overlay_handle, 0.0f, w, offset * i, h, TDS_CONSOLE_FONT_SIZE, ptr->buffers[i], len, TDS_OVERLAY_SCREENSPACE);
 	}
 }
 
@@ -284,7 +286,7 @@ void _tds_console_execute(struct tds_console* ptr) {
 
 		if (selected) {
 			tds_object_set_upart(selected, key, val);
-			tds_console_print(ptr, "set ipart for ");
+			tds_console_print(ptr, "set upart for ");
 			tds_console_print(ptr, selected->type_name);
 			tds_console_print(ptr, "\n");
 		} else {

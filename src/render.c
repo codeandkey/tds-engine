@@ -987,7 +987,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 	};
 
 	struct tds_vertex_buffer* vb_square = tds_vertex_buffer_create(verts, sizeof verts / sizeof *verts, GL_TRIANGLES);
-	mat4x4 point_light_transform, point_light_camera;
+	mat4x4 point_light_transform;
 
 	struct tds_render_light* cur = ptr->light_list;
 	struct tds_camera* cam_point = tds_camera_create(tds_engine_global->display_handle), *cam_dir = ptr->camera_handle;
@@ -1034,7 +1034,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 
 		glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
 
-		mat4x4 ident, pt_final, pt_scaled, pt_translate;
+		mat4x4 pt_final, ident;
 		mat4x4_identity(ident);
 
 		switch(cur->type) {
