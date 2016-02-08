@@ -19,6 +19,7 @@ static void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, i
 static void _tds_render_world(struct tds_render* ptr, struct tds_world* world);
 static void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world);
 static void _tds_render_segments(struct tds_render* ptr, struct tds_world* world, struct tds_camera* cam, int occlude, unsigned int u_transform);
+static void _tds_render_background(struct tds_render* ptr, struct tds_bg* bg);
 static int _tds_load_world_shaders(struct tds_render* ptr, const char* vs, const char* fs);
 static int _tds_load_lightmap_shaders(struct tds_render* ptr, const char* point_gs, const char* dir_gs, const char* point_fs, const char* dir_fs);
 static int _tds_load_recomb_shaders(struct tds_render* ptr, const char* recomb_fs_point, const char* recomb_fs_dir);
@@ -1074,6 +1075,50 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 
 	tds_vertex_buffer_free(vb_square);
 	tds_camera_free(cam_point);
+}
+
+void tds_render_background(struct tds_render* ptr, struct tds_bg* bg) {
+	/*
+	 * We walk each layer and perform the positioning/texture rendering
+	 */
+
+	for (int i = 0; i < TDS_BG_LAYERS; ++i) {
+		struct tds_bg_entry* cur = bg->layers[i];
+		float factor = (float) i / (float) (TDS_BG_LAYERS - 1);
+
+		/* We alter the placement of the background by changing the texcoords of the VBO. */
+
+		float cx = tds_engine_global->camera_handle->x, cy = tds_engine_global->camera_handle->y; /* quick camera vars */
+		float c_left = cx - tds_engine_global->camera_handle->width / 2.0f, c_right = c_left + tds_engine_global->camera_handle->width;
+		float c_bottom = cy - tds_engine_global->camera_handle->height / 2.0f, c_top = c_bottom + tds_engine_global->camera_handle->height;
+
+		float b_size = c_top - c_bottom; // size background based on camera
+
+		float dx = factor * cx, dy = factor * cy; /* Position of background origin in cameraspace */
+		float tx_left = 0.5f - (dx - c_left) / b_size, tx_right = 0.5f + (c_right - dx) / b_size;
+		float tx_bottom = 0.5f - (dy - c_botom) / b_size, tx_top = 0.5f + (c_top - dy) / b_size;
+
+		struct tds_vertex verts[] = {
+			{-1.0f, 1.0f, 0.0f, 0.0f, 1.0f},
+			{1.0f, -1.0f, 0.0f, 1.0f, 0.0f},
+			{1.0f, 1.0f, 0.0f, 1.0f, 1.0f},
+			{-1.0f, 1.0f, 0.0f, 0.0f, 1.0f},
+			{1.0f, -1.0f, 0.0f, 1.0f, 0.0f},
+			{-1.0f, -1.0f, 0.0f, 0.0f, 0.0f}
+		};
+
+		mat4x4 id;
+		mat4x4_identity(id);
+
+		glUseProgram(ptr->render_program);
+
+		struct tds_vertex_buffer* vb_point = tds_vertex_buffer_create(verts, sizeof verts / sizeof *verts, GL_TRIANGLES);
+		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+		glBindVertexArray(vb_point->vao);
+		glBindTexture(GL_TEXTURE_2D, cur->tex->gl_tex);
+		glDrawArrays(vb_point->render_mode, 0, 6);
+		tds_vertex_buffer_free(vb_point);
+	}
 }
 
 void tds_render_submit_light(struct tds_render* ptr, struct tds_render_light lt) {

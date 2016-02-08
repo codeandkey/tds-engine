@@ -18,6 +18,7 @@
 #include "signal.h"
 #include "savestate.h"
 #include "overlay.h"
+#include "bg.h"
 
 #define TDS_MAP_PREFIX "res/maps/"
 
@@ -88,6 +89,7 @@ struct tds_engine {
 	struct tds_world* world_handle;
 	struct tds_savestate* savestate_handle;
 	struct tds_overlay* overlay_handle;
+	struct tds_bg* bg_handle;
 
 	int run_flag;
 	struct tds_object** object_list;

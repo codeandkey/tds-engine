@@ -104,6 +104,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->block_map_handle = tds_block_map_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized block mapping subsystem.\n");
 
+	output->bg_handle = tds_bg_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized background subsystem.\n");
+
 	output->world_handle = tds_world_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized world subsystem.\n");
 
