@@ -132,6 +132,8 @@ void tds_console_draw(struct tds_console* ptr) {
 		return;
 	}
 
+	tds_overlay_set_color(tds_engine_global->overlay_handle, 1.0f, 1.0f, 1.0f, 1.0f);
+
 	for (int i = 0; i < ptr->rows; ++i) {
 		if (!*(ptr->buffers[i])) {
 			continue;
