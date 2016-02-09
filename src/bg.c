@@ -25,7 +25,7 @@ void tds_bg_flush(struct tds_bg* ptr) {
 	}
 }
 
-void tds_bg_push(struct tds_bg* ptr, struct tds_texture* tex, int layer) {
+void tds_bg_push(struct tds_bg* ptr, int layer, struct tds_texture* tex, int fx, int fy) {
 	if (layer < 0 || layer >= TDS_BG_LAYERS) {
 		tds_logf(TDS_LOG_WARNING, "Layer out of range!\n");
 		return;
@@ -35,6 +35,9 @@ void tds_bg_push(struct tds_bg* ptr, struct tds_texture* tex, int layer) {
 
 	new->tex = tex;
 	new->next = ptr->layers[layer];
+	new->factor_x = fx;
+	new->factor_y = fy;
+
 	ptr->layers[layer] = new;
 }
 

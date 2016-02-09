@@ -173,6 +173,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_key_map_free(ptr->key_map_handle);
 	tds_render_free(ptr->render_handle);
 	tds_overlay_free(ptr->overlay_handle);
+	tds_bg_free(ptr->bg_handle);
 	tds_camera_free(ptr->camera_handle);
 	tds_display_free(ptr->display_handle);
 	tds_texture_cache_free(ptr->tc_handle);

@@ -12,6 +12,7 @@
 struct tds_bg_entry {
 	struct tds_texture* tex;
 	struct tds_bg_entry* next;
+	int factor_y, factor_x;
 };
 
 struct tds_bg {
@@ -21,7 +22,7 @@ struct tds_bg {
 struct tds_bg* tds_bg_create(void);
 void tds_bg_free(struct tds_bg* ptr);
 
-void tds_bg_push(struct tds_bg* ptr, int layer, struct tds_texture* tex);
+void tds_bg_push(struct tds_bg* ptr, int layer, struct tds_texture* tex, int factor_x, int factor_y);
 
 void tds_bg_flush(struct tds_bg* ptr);
 void tds_bg_flush_layer(struct tds_bg* ptr, int layer);

@@ -149,6 +149,8 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 	tds_rt_bind(ptr->post_rt1); /* Bind the post RT, we will be doing some post-processing */
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	_tds_render_background(ptr, tds_engine_global->bg_handle);
+
 	for (int i = min_layer; i <= max_layer; ++i) {
 		if (!i) {
 			/* We render the world at depth 0. */
@@ -1077,7 +1079,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 	tds_camera_free(cam_point);
 }
 
-void tds_render_background(struct tds_render* ptr, struct tds_bg* bg) {
+void _tds_render_background(struct tds_render* ptr, struct tds_bg* bg) {
 	/*
 	 * We walk each layer and perform the positioning/texture rendering
 	 */
@@ -1086,38 +1088,56 @@ void tds_render_background(struct tds_render* ptr, struct tds_bg* bg) {
 		struct tds_bg_entry* cur = bg->layers[i];
 		float factor = (float) i / (float) (TDS_BG_LAYERS - 1);
 
-		/* We alter the placement of the background by changing the texcoords of the VBO. */
+		while (cur) {
+			/* We alter the placement of the background by changing the texcoords of the VBO. */
 
-		float cx = tds_engine_global->camera_handle->x, cy = tds_engine_global->camera_handle->y; /* quick camera vars */
-		float c_left = cx - tds_engine_global->camera_handle->width / 2.0f, c_right = c_left + tds_engine_global->camera_handle->width;
-		float c_bottom = cy - tds_engine_global->camera_handle->height / 2.0f, c_top = c_bottom + tds_engine_global->camera_handle->height;
+			float cx = tds_engine_global->camera_handle->x, cy = tds_engine_global->camera_handle->y; /* quick camera vars */
+			float c_left = cx - tds_engine_global->camera_handle->width / 2.0f, c_right = c_left + tds_engine_global->camera_handle->width;
+			float c_bottom = cy - tds_engine_global->camera_handle->height / 2.0f, c_top = c_bottom + tds_engine_global->camera_handle->height;
 
-		float b_size = c_top - c_bottom; // size background based on camera
+			float b_size = c_top - c_bottom; // size background based on camera
 
-		float dx = factor * cx, dy = factor * cy; /* Position of background origin in cameraspace */
-		float tx_left = 0.5f - (dx - c_left) / b_size, tx_right = 0.5f + (c_right - dx) / b_size;
-		float tx_bottom = 0.5f - (dy - c_botom) / b_size, tx_top = 0.5f + (c_top - dy) / b_size;
+			float dx, dy;
 
-		struct tds_vertex verts[] = {
-			{-1.0f, 1.0f, 0.0f, 0.0f, 1.0f},
-			{1.0f, -1.0f, 0.0f, 1.0f, 0.0f},
-			{1.0f, 1.0f, 0.0f, 1.0f, 1.0f},
-			{-1.0f, 1.0f, 0.0f, 0.0f, 1.0f},
-			{1.0f, -1.0f, 0.0f, 1.0f, 0.0f},
-			{-1.0f, -1.0f, 0.0f, 0.0f, 0.0f}
-		};
+			if (cur->factor_x) {
+				dx = factor * cx;
+			} else {
+				dx = cx;
+			}
 
-		mat4x4 id;
-		mat4x4_identity(id);
+			if (cur->factor_y) {
+				dy = factor * cy; /* Position of background origin in cameraspace */
+			} else {
+				dy = cy;
+			}
 
-		glUseProgram(ptr->render_program);
+			float tx_left = 0.5f - (dx - c_left) / b_size, tx_right = 0.5f + (c_right - dx) / b_size;
+			float tx_bottom = 0.5f - (dy - c_bottom) / b_size, tx_top = 0.5f + (c_top - dy) / b_size;
 
-		struct tds_vertex_buffer* vb_point = tds_vertex_buffer_create(verts, sizeof verts / sizeof *verts, GL_TRIANGLES);
-		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
-		glBindVertexArray(vb_point->vao);
-		glBindTexture(GL_TEXTURE_2D, cur->tex->gl_tex);
-		glDrawArrays(vb_point->render_mode, 0, 6);
-		tds_vertex_buffer_free(vb_point);
+			struct tds_vertex verts[] = {
+				{-1.0f, 1.0f, 0.0f, tx_left, tx_top},
+				{1.0f, -1.0f, 0.0f, tx_right, tx_bottom},
+				{1.0f, 1.0f, 0.0f, tx_right, tx_top},
+				{-1.0f, 1.0f, 0.0f, tx_left, tx_top},
+				{1.0f, -1.0f, 0.0f, tx_right, tx_bottom},
+				{-1.0f, -1.0f, 0.0f, tx_left, tx_bottom}
+			};
+
+			mat4x4 id;
+			mat4x4_identity(id);
+
+			glUseProgram(ptr->render_program);
+
+			struct tds_vertex_buffer* vb_point = tds_vertex_buffer_create(verts, sizeof verts / sizeof *verts, GL_TRIANGLES);
+			glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *id);
+			glBindVertexArray(vb_point->vao);
+
+			glBindTexture(GL_TEXTURE_2D, cur->tex->gl_id);
+			glDrawArrays(vb_point->render_mode, 0, 6);
+
+			tds_vertex_buffer_free(vb_point);
+			cur = cur->next;
+		}
 	}
 }
 
