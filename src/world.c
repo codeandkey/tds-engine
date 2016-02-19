@@ -74,6 +74,8 @@ void tds_world_init(struct tds_world* ptr, int width, int height) {
 }
 
 void tds_world_load(struct tds_world* ptr, const uint8_t* block_buffer, int width, int height) {
+	tds_logf(TDS_LOG_DEBUG, "Initializing world structure with size %d by %d\n", width, height);
+
 	tds_world_init(ptr, width, height);
 
 	for (int y = 0; y < height; ++y) {

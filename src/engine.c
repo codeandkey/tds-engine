@@ -370,7 +370,10 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 	int world_width = 1, world_height = 1;
 
-	char world_buffer[TDS_LOAD_WORLD_SIZE + 1] = {0};
+	char world_read_buf[TDS_LOAD_WORLD_SIZE + 1] = {0};
+	int world_read_len = 0;
+	int world_read_pos = 0;
+
 	uint8_t* id_buffer = NULL;
 
 	char prop_name_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
@@ -396,7 +399,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 		switch (r) {
 		case YXML_ELEMSTART:
-			tds_logf(TDS_LOG_DEBUG, "Starting to parse element %s\n", ctx->elem);
 			if (!strcmp(ctx->elem, "object")) {
 				in_object = 1;
 			}
@@ -411,7 +413,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 			}
 			break;
 		case YXML_ATTRSTART:
-			tds_logf(TDS_LOG_DEBUG, "Starting to parse attribute %s\n", ctx->attr);
 			target_attr = NULL;
 
 			if (in_object) {
@@ -492,12 +493,38 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 			break;
 		case YXML_CONTENT:
 			if (in_data) {
-				if (strlen(world_buffer) >= TDS_LOAD_WORLD_SIZE) {
+				if (!id_buffer) {
+					world_width = strtol(world_width_buf, NULL, 10);
+					world_height = strtol(world_width_buf, NULL, 10);
+
+					id_buffer = tds_malloc(world_width * world_height * sizeof *id_buffer);
+				}
+
+				if (world_read_len >= (sizeof world_read_buf / sizeof *world_read_buf) - 1) {
 					tds_logf(TDS_LOG_WARNING, "World data too large!\n");
 					break;
 				}
 
-				world_buffer[strlen(world_buffer)] = *(ctx->data);
+
+				if (*(ctx->data) == ',') {
+					/* Push the current readbuf to the id buffer and reset the readbuf. */
+					int tx = world_read_pos % world_width, ty = (world_height - 1) - (world_read_pos / world_width);
+					++world_read_pos;
+
+					if (world_read_pos >= world_width * world_height) {
+						tds_logf(TDS_LOG_DEBUG, "World read pos extended past the end of the world.\n");
+						memset(world_read_buf, 0, sizeof world_read_buf / sizeof *world_read_buf);
+						world_read_len = 0;
+						break;
+					}
+
+					id_buffer[ty * world_width + tx] = strtol(world_read_buf, NULL, 10);
+
+					memset(world_read_buf, 0, sizeof world_read_buf / sizeof *world_read_buf);
+					world_read_len = 0;
+				} else {
+					world_read_buf[world_read_len++] = *(ctx->data);
+				}
 			}
 			break;
 		case YXML_ELEMEND:
@@ -585,40 +612,11 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 			} else if (in_layer && in_data) {
 				in_data = 0;
 			} else if (in_layer && !in_data) {
-				if (id_buffer) {
-					in_layer = 0;
-					tds_logf(TDS_LOG_WARNING, "There was more than one layer in the map file. Only using the first..\n");
-					break;
-				}
-
 				if (dont_load_world) {
 					break;
 				}
 
 				in_layer = 0;
-				/* Construct the world! */
-
-				world_width = strtol(world_width_buf, NULL, 10);
-				world_height = strtol(world_height_buf, NULL, 10);
-
-				id_buffer = tds_malloc(world_width * world_height * sizeof *id_buffer);
-
-				char* c_block = strtok(world_buffer, ",");
-				int x = 0, y = world_height - 1;
-
-				do {
-					if (y < 0) {
-						tds_logf(TDS_LOG_WARNING, "World was larger than map said it was. Ignoring..\n");
-						break;
-					}
-
-					id_buffer[x++ + y * world_width] = strtol(c_block, NULL, 10);
-
-					if (x >= world_width) {
-						--y;
-						x = 0;
-					}
-				} while ((c_block = strtok(NULL, ",")));
 
 				/* The block IDs are stored now in id_buffer, with the correct winding order. */
 

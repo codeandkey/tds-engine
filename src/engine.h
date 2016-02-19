@@ -24,7 +24,7 @@
 
 #define TDS_LOAD_BUFFER_SIZE 2048
 #define TDS_LOAD_ATTR_SIZE 64
-#define TDS_LOAD_WORLD_SIZE 32768
+#define TDS_LOAD_WORLD_SIZE 4
 
 /* TDS engine map spec :
  *
