@@ -4,6 +4,7 @@
 #include "engine.h"
 
 #include <GLXW/glxw.h>
+#include <string.h>
 
 static void _tds_world_generate_hblocks(struct tds_world* ptr);
 static void _tds_world_generate_segments(struct tds_world* ptr);
@@ -45,6 +46,14 @@ void tds_world_free(struct tds_world* ptr) {
 		tds_vertex_buffer_free(head->vb);
 		tds_free(head);
 		head = cur;
+	}
+
+	struct tds_world_block_info* cur_info = ptr->block_info, *tmp = NULL;
+
+	while (cur_info) {
+		tmp = cur_info->next;
+		tds_free(cur_info);
+		cur_info = tmp;
 	}
 
 	tds_free(ptr);
@@ -118,6 +127,14 @@ void tds_world_set_block(struct tds_world* ptr, int x, int y, uint8_t block) {
 
 	/* If worlds end up not being small for some reason, we can regenerate only the block which the target resided in along with it's neighbors. */
 	/* This shouldn't be called often anyway, so.. not a big deal. */
+}
+
+void tds_world_push_info(struct tds_world* ptr, struct tds_world_block_info info) {
+	struct tds_world_block_info* new = tds_malloc(sizeof *new);
+	memcpy(new, &info, sizeof *new);
+
+	new->next = ptr->block_info;
+	ptr->block_info = new;
 }
 
 uint8_t tds_world_get_block(struct tds_world* ptr, int x, int y) {
@@ -313,12 +330,28 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				continue;
 			}
 
+			struct tds_world_block_info* cur_info = ptr->block_info;
+			int flags = 0;
+
+			while (cur_info) {
+				if (cur_info->id == ptr->buffer[y][x]) {
+					flags = cur_info->flags;
+					break;
+				}
+
+				cur_info = cur_info->next;
+			}
+
+			if (flags & TDS_WORLD_NOLIGHT) {
+				continue;
+			}
+
 			float block_left = (x - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 			float block_right = (x + 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 			float block_top = (y + 0.5f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 			float block_bottom = (y - ptr->height / 2.0f - 0.5f) * TDS_WORLD_BLOCK_SIZE;
 
-			if (x < ptr->width - 1 && !ptr->buffer[y][x + 1]) {
+			if (x < ptr->width - 1 && !ptr->buffer[y][x + 1] && !(flags & TDS_WORLD_RTSLOPE) && !(flags & TDS_WORLD_RBSLOPE)) {
 				/* Out-facing right segment. */
 				cur = tds_malloc(sizeof *cur);
 				cur->x1 = block_right;
@@ -334,7 +367,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				ptr->segment_list = cur;
 			}
 
-			if (x > 0 && !ptr->buffer[y][x - 1]) {
+			if (x > 0 && !ptr->buffer[y][x - 1] && !(flags & TDS_WORLD_LTSLOPE) && !(flags & TDS_WORLD_LBSLOPE)) {
 				/* Out-facing left segment. */
 				cur = tds_malloc(sizeof *cur);
 				cur->x1 = block_left;
@@ -350,7 +383,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				ptr->segment_list = cur;
 			}
 
-			if (y < ptr->height - 1 && !ptr->buffer[y + 1][x]) {
+			if (y < ptr->height - 1 && !ptr->buffer[y + 1][x] && !(flags & TDS_WORLD_RTSLOPE) && !(flags & TDS_WORLD_LTSLOPE)) {
 				/* Out-facing up segment. */
 				cur = tds_malloc(sizeof *cur);
 				cur->x1 = block_right;
@@ -366,11 +399,71 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				ptr->segment_list = cur;
 			}
 
-			if (y > 0 && !ptr->buffer[y - 1][x]) {
+			if (y > 0 && !ptr->buffer[y - 1][x] && !(flags & TDS_WORLD_RBSLOPE) && !(flags & TDS_WORLD_LBSLOPE)) {
 				/* Out-facing down segment. */
 				cur = tds_malloc(sizeof *cur);
 				cur->x1 = block_left;
 				cur->y1 = block_bottom;
+				cur->x2 = block_right;
+				cur->y2 = block_bottom;
+				cur->nx = 0.0f;
+				cur->ny = -1.0f;
+				cur->next = ptr->segment_list;
+				if (ptr->segment_list) {
+					ptr->segment_list->prev = cur;
+				}
+				ptr->segment_list = cur;
+			}
+
+			if (flags & TDS_WORLD_LTSLOPE) {
+				cur = tds_malloc(sizeof *cur);
+				cur->x1 = block_left;
+				cur->y1 = block_bottom;
+				cur->x2 = block_right;
+				cur->y2 = block_top;
+				cur->nx = 0.0f;
+				cur->ny = -1.0f;
+				cur->next = ptr->segment_list;
+				if (ptr->segment_list) {
+					ptr->segment_list->prev = cur;
+				}
+				ptr->segment_list = cur;
+			}
+
+			if (flags & TDS_WORLD_RTSLOPE) {
+				cur = tds_malloc(sizeof *cur);
+				cur->x1 = block_right;
+				cur->y1 = block_bottom;
+				cur->x2 = block_left;
+				cur->y2 = block_top;
+				cur->nx = 0.0f;
+				cur->ny = -1.0f;
+				cur->next = ptr->segment_list;
+				if (ptr->segment_list) {
+					ptr->segment_list->prev = cur;
+				}
+				ptr->segment_list = cur;
+			}
+
+			if (flags & TDS_WORLD_RBSLOPE) {
+				cur = tds_malloc(sizeof *cur);
+				cur->x1 = block_left;
+				cur->y1 = block_bottom;
+				cur->x2 = block_right;
+				cur->y2 = block_top;
+				cur->nx = 0.0f;
+				cur->ny = -1.0f;
+				cur->next = ptr->segment_list;
+				if (ptr->segment_list) {
+					ptr->segment_list->prev = cur;
+				}
+				ptr->segment_list = cur;
+			}
+
+			if (flags & TDS_WORLD_LBSLOPE) {
+				cur = tds_malloc(sizeof *cur);
+				cur->x1 = block_left;
+				cur->y1 = block_top;
 				cur->x2 = block_right;
 				cur->y2 = block_bottom;
 				cur->nx = 0.0f;
