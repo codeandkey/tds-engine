@@ -3,9 +3,17 @@
 #include "texture.h"
 #include <stdint.h>
 
+#define TDS_BLOCK_TYPE_RTSLOPE   1
+#define TDS_BLOCK_TYPE_LTSLOPE  (1 << 1)
+#define TDS_BLOCK_TYPE_RBSLOPE  (1 << 2)
+#define TDS_BLOCK_TYPE_LBSLOPE  (1 << 3)
+#define TDS_BLOCK_TYPE_SOLID  (1 << 4)
+#define TDS_BLOCK_TYPE_NOLIGHT  (1 << 5)
+
+
 struct tds_block_type {
 	struct tds_texture* texture;
-	int solid;
+	int flags;
 };
 
 struct tds_block_map {

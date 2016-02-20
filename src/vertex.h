@@ -1,20 +1,9 @@
 #pragma once
 
 struct tds_vertex {
-	float x, y;
+	float x, y, z, tx, ty;
+};
 
-	union {
-		float z;
-		float a;
-	};
-
-	union {
-		float tx;
-		float dx;
-	};
-
-	union {
-		float ty;
-		float dy;
-	};
+struct tds_particle_vertex {
+	float x, y, a, dx, dy;
 };
