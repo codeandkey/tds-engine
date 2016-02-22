@@ -240,11 +240,6 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, fl
 	struct tds_world_hblock* cblock = ptr->block_list_head;
 
 	while (cblock) {
-		if (!(tds_block_map_get(tds_engine_global->block_map_handle, cblock->id).flags & TDS_BLOCK_TYPE_SOLID)) {
-			cblock = cblock->next;
-			continue;
-		}
-
 		float cblock_left = (cblock->x - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 		float cblock_right = (cblock->x + cblock->w - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 		float cblock_top = (cblock->y + 0.5f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
@@ -270,6 +265,13 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, fl
 			continue;
 		}
 
+		int flags = tds_block_map_get(tds_engine_global->block_map_handle, cblock->id).flags;
+
+		if (!(flags & TDS_BLOCK_TYPE_SOLID)) {
+			cblock = cblock->next;
+			continue;
+		}
+
 		if (x) {
 			*x = (cblock->x - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 		}
@@ -286,7 +288,7 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, fl
 			*h = TDS_WORLD_BLOCK_SIZE;
 		}
 
-		return 1;
+		return flags;
 	}
 
 	return 0;

@@ -56,6 +56,9 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	output->post_rt1 = tds_rt_create(display_width, display_height);
 	output->post_rt2 = tds_rt_create(display_width, display_height);
 
+	output->enable_bloom = 1;
+	output->enable_dynlights = 1;
+
 	tds_rt_bind(NULL);
 
 	return output;
@@ -175,7 +178,9 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 		tds_free(object_rendered);
 	}
 
-	_tds_render_lightmap(ptr, world);
+	if (ptr->enable_dynlights) {
+		_tds_render_lightmap(ptr, world);
+	}
 
 	struct tds_vertex verts[] = {
 		{-1.0f, 1.0f, 0.0f, 0.0f, 1.0f},
@@ -191,29 +196,31 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 	mat4x4 ident;
 	mat4x4_identity(ident);
 
-	tds_rt_bind(ptr->post_rt2); // _tds_render_lightmap changes the RT, reset it here
+	if (ptr->enable_dynlights) {
+		tds_rt_bind(ptr->post_rt2); // _tds_render_lightmap changes the RT, reset it here
 
-	// The world is rendered in RT1, we will hblur the lightmap to RT2 and then vblur it back to RT1
+		// The world is rendered in RT1, we will hblur the lightmap to RT2 and then vblur it back to RT1
 
-	glUseProgram(ptr->render_program_hblur);
-	glBindVertexArray(vb_square->vao);
-	glBindTexture(GL_TEXTURE_2D, ptr->lightmap_rt->gl_tex);
-	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+		glUseProgram(ptr->render_program_hblur);
+		glBindVertexArray(vb_square->vao);
+		glBindTexture(GL_TEXTURE_2D, ptr->lightmap_rt->gl_tex);
+		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
 
-	glDrawArrays(vb_square->render_mode, 0, 6);
+		glDrawArrays(vb_square->render_mode, 0, 6);
 
-	// vblur RT2 to RT1 (lightmap composition)
+		// vblur RT2 to RT1 (lightmap composition)
 
-	tds_rt_bind(ptr->post_rt1);
+		tds_rt_bind(ptr->post_rt1);
 
-	glUseProgram(ptr->render_program_vblur);
-	glBindVertexArray(vb_square->vao);
-	glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
-	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+		glUseProgram(ptr->render_program_vblur);
+		glBindVertexArray(vb_square->vao);
+		glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
+		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
 
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	glDrawArrays(vb_square->render_mode, 0, 6);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glDrawArrays(vb_square->render_mode, 0, 6);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
 
 	/* The world and lightmaps are done rendering.. we perform post-processing before the OSD */
 	/* First, a gaussian hblur */
@@ -230,46 +237,48 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 	glDrawArrays(vb_square->render_mode, 0, 6);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	tds_rt_bind(ptr->post_rt2);
-	glClear(GL_COLOR_BUFFER_BIT);
+	if (ptr->enable_bloom) {
+		tds_rt_bind(ptr->post_rt2);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-	glUseProgram(ptr->render_program_bloom);
-	glBindVertexArray(vb_square->vao);
-	glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
-	glUniformMatrix4fv(ptr->bl_uniform_transform, 1, GL_FALSE, (float*) *ident);
+		glUseProgram(ptr->render_program_bloom);
+		glBindVertexArray(vb_square->vao);
+		glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
+		glUniformMatrix4fv(ptr->bl_uniform_transform, 1, GL_FALSE, (float*) *ident);
 
-	glBlendFunc(GL_ONE, GL_ZERO); /* Copy the textures to preserve alpha. */
-	glDrawArrays(vb_square->render_mode, 0, 6);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendFunc(GL_ONE, GL_ZERO); /* Copy the textures to preserve alpha. */
+		glDrawArrays(vb_square->render_mode, 0, 6);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	tds_rt_bind(ptr->post_rt1);
-	glClear(GL_COLOR_BUFFER_BIT);
+		tds_rt_bind(ptr->post_rt1);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-	glUseProgram(ptr->render_program_hblur);
-	glBindVertexArray(vb_square->vao);
-	glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
-	glUniformMatrix4fv(ptr->hb_uniform_transform, 1, GL_FALSE, (float*) *ident);
-	glDrawArrays(vb_square->render_mode, 0, 6);
+		glUseProgram(ptr->render_program_hblur);
+		glBindVertexArray(vb_square->vao);
+		glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
+		glUniformMatrix4fv(ptr->hb_uniform_transform, 1, GL_FALSE, (float*) *ident);
+		glDrawArrays(vb_square->render_mode, 0, 6);
 
-	tds_rt_bind(ptr->post_rt2);
-	glClear(GL_COLOR_BUFFER_BIT);
+		tds_rt_bind(ptr->post_rt2);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-	glUseProgram(ptr->render_program_vblur);
-	glBindVertexArray(vb_square->vao);
-	glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
-	glUniformMatrix4fv(ptr->vb_uniform_transform, 1, GL_FALSE, (float*) *ident);
-	glDrawArrays(vb_square->render_mode, 0, 6);
+		glUseProgram(ptr->render_program_vblur);
+		glBindVertexArray(vb_square->vao);
+		glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
+		glUniformMatrix4fv(ptr->vb_uniform_transform, 1, GL_FALSE, (float*) *ident);
+		glDrawArrays(vb_square->render_mode, 0, 6);
 
-	tds_rt_bind(NULL); /* We don't clear the NULL rt, it already has world data */
+		tds_rt_bind(NULL); /* We don't clear the NULL rt, it already has world data */
 
-	glUseProgram(ptr->render_program);
-	glBindVertexArray(vb_square->vao);
-	glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
-	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+		glUseProgram(ptr->render_program);
+		glBindVertexArray(vb_square->vao);
+		glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
+		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
 
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	glDrawArrays(vb_square->render_mode, 0, 6);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glDrawArrays(vb_square->render_mode, 0, 6);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
 
 	/* Overlay is drawn over everything else (including the lightmap) */
 	/* We get the image data and dump it into a texture here. We can also reuse the square VB from the lightmap blending. */

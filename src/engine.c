@@ -86,6 +86,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized render system.\n");
 
+	output->render_handle->enable_bloom = tds_config_get_int(conf, "enable_bloom");
+	output->render_handle->enable_dynlights = tds_config_get_int(conf, "enable_dynlights");
+
 	output->overlay_handle = tds_overlay_create(output->display_handle->desc.width, output->display_handle->desc.height);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized overlay system.\n");
 

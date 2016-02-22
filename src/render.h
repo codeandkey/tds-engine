@@ -59,6 +59,8 @@ struct tds_render {
 	int vb_uniform_texture, vb_uniform_color, vb_uniform_transform;
 
 	int bl_uniform_texture, bl_uniform_color, bl_uniform_transform;
+
+	unsigned int enable_bloom, enable_dynlights;
 };
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr);
