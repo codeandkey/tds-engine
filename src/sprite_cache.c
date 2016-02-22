@@ -8,7 +8,7 @@
 struct tds_sprite_cache* tds_sprite_cache_create(void) {
 	struct tds_sprite_cache* output = tds_malloc(sizeof(struct tds_sprite_cache));
 
-	output->head = output->tail = NULL;
+	output->head = NULL;
 
 	return output;
 }
@@ -30,20 +30,11 @@ void tds_sprite_cache_add(struct tds_sprite_cache* ptr, const char* sprite_name,
 	struct tds_sprite_cache_link* current = NULL;
 	current = tds_malloc(sizeof(struct tds_sprite_cache_link));
 
-	current->prev = ptr->tail;
-	current->next = NULL;
+	current->next = ptr->head;
 	current->name = sprite_name;
 	current->data = sprite;
 
-	if (!ptr->head) {
-		ptr->head = current;
-	}
-
-	if (ptr->tail) {
-		ptr->tail->next = current;
-	}
-
-	ptr->tail = current;
+	ptr->head = current;
 }
 
 struct tds_sprite* tds_sprite_cache_get(struct tds_sprite_cache* ptr, const char* sprite_name) {

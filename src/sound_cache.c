@@ -8,7 +8,7 @@
 struct tds_sound_cache* tds_sound_cache_create(void) {
 	struct tds_sound_cache* output = tds_malloc(sizeof(struct tds_sound_cache));
 
-	output->head = output->tail = NULL;
+	output->head = NULL;
 
 	return output;
 }
@@ -30,20 +30,11 @@ void tds_sound_cache_add(struct tds_sound_cache* ptr, const char* sound_name, st
 	struct tds_sound_cache_link* current = NULL;
 	current = tds_malloc(sizeof(struct tds_sound_cache_link));
 
-	current->prev = ptr->tail;
-	current->next = NULL;
+	current->next = ptr->head;
 	current->name = sound_name;
 	current->data = sound;
 
-	if (!ptr->head) {
-		ptr->head = current;
-	}
-
-	if (ptr->tail) {
-		ptr->tail->next = current;
-	}
-
-	ptr->tail = current;
+	ptr->head = current;
 }
 
 struct tds_sound_buffer* tds_sound_cache_get(struct tds_sound_cache* ptr, const char* sound_name) {

@@ -4,13 +4,13 @@
 
 struct tds_sprite_cache_link {
 	struct tds_sprite* data;
-	struct tds_sprite_cache_link* next, *prev;
+	struct tds_sprite_cache_link* next;
 
 	const char* name;
 };
 
 struct tds_sprite_cache {
-	struct tds_sprite_cache_link* head, *tail;
+	struct tds_sprite_cache_link* head;
 };
 
 struct tds_sprite_cache* tds_sprite_cache_create(void);

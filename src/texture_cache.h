@@ -4,11 +4,11 @@
 
 struct tds_texture_cache_link {
 	struct tds_texture* data;
-	struct tds_texture_cache_link* next, *prev;
+	struct tds_texture_cache_link* next;
 };
 
 struct tds_texture_cache {
-	struct tds_texture_cache_link* head, *tail;
+	struct tds_texture_cache_link* head;
 };
 
 struct tds_texture_cache* tds_texture_cache_create(void);

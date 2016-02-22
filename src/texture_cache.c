@@ -8,7 +8,7 @@
 struct tds_texture_cache* tds_texture_cache_create(void) {
 	struct tds_texture_cache* output = tds_malloc(sizeof(struct tds_texture_cache));
 
-	output->head = output->tail = NULL;
+	output->head = NULL;
 
 	return output;
 }
@@ -39,18 +39,8 @@ struct tds_texture* tds_texture_cache_get(struct tds_texture_cache* ptr, const c
 
 	current = tds_malloc(sizeof(struct tds_texture_cache_link));
 
-	current->prev = ptr->tail;
-	current->next = NULL;
-
-	if (!ptr->head) {
-		ptr->head = current;
-	}
-
-	if (ptr->tail) {
-		ptr->tail->next = current;
-	}
-
-	ptr->tail = current;
+	current->next = ptr->head;
+	ptr->head = current;
 
 	current->data = tds_texture_create(texture_name, tile_x, tile_y);
 
