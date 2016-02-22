@@ -191,11 +191,24 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 	mat4x4 ident;
 	mat4x4_identity(ident);
 
-	tds_rt_bind(ptr->post_rt1); // _tds_render_lightmap changes the RT, reset it here
+	tds_rt_bind(ptr->post_rt2); // _tds_render_lightmap changes the RT, reset it here
 
-	glUseProgram(ptr->render_program);
+	// The world is rendered in RT1, we will hblur the lightmap to RT2 and then vblur it back to RT1
+
+	glUseProgram(ptr->render_program_hblur);
 	glBindVertexArray(vb_square->vao);
 	glBindTexture(GL_TEXTURE_2D, ptr->lightmap_rt->gl_tex);
+	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+
+	glDrawArrays(vb_square->render_mode, 0, 6);
+
+	// vblur RT2 to RT1 (lightmap composition)
+
+	tds_rt_bind(ptr->post_rt1);
+
+	glUseProgram(ptr->render_program_vblur);
+	glBindVertexArray(vb_square->vao);
+	glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
 	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
