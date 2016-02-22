@@ -199,6 +199,8 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 	if (ptr->enable_dynlights) {
 		tds_rt_bind(ptr->post_rt2); // _tds_render_lightmap changes the RT, reset it here
 
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		// The world is rendered in RT1, we will hblur the lightmap to RT2 and then vblur it back to RT1
 
 		glUseProgram(ptr->render_program_hblur);
