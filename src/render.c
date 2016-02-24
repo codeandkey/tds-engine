@@ -1110,7 +1110,7 @@ void _tds_render_background(struct tds_render* ptr, struct tds_bg* bg) {
 
 	for (int i = 0; i < TDS_BG_LAYERS; ++i) {
 		struct tds_bg_entry* cur = bg->layers[i];
-		float factor = (float) i / (float) (TDS_BG_LAYERS - 1);
+		float factor = 1.0f - (float) i / (float) (TDS_BG_LAYERS - 1);
 
 		while (cur) {
 			/* We alter the placement of the background by changing the texcoords of the VBO. */
