@@ -955,39 +955,9 @@ void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
 }
 
 void _tds_render_segments(struct tds_render* ptr, struct tds_world* world, struct tds_camera* cam, int occlude, unsigned int u_transform) {
-	struct tds_world_segment* cur = world->segment_list;
-
-	while (cur) {
-		/* Since the segments are absolutely positioned, we are saved a ton of time. The final transformation matrix really is just the camera. */
-
-		if (occlude) {
-			if (cur->x1 < cam->x - cam->width / 2.0f && cur->x2 < cam->x - cam->width / 2.0f) {
-				cur = cur->next;
-				continue;
-			}
-
-			if (cur->x1 > cam->x + cam->width / 2.0f && cur->x2 > cam->x + cam->width / 2.0f) {
-				cur = cur->next;
-				continue;
-			}
-
-			if (cur->y1 < cam->y - cam->height / 2.0f && cur->y2 < cam->y - cam->height / 2.0f) {
-				cur = cur->next;
-				continue;
-			}
-
-			if (cur->y1 > cam->y + cam->height / 2.0f && cur->y2 < cam->y + cam->height / 2.0f) {
-				cur = cur->next;
-				continue;
-			}
-		}
-
-		glUniformMatrix4fv(u_transform, 1, GL_FALSE, (float*) *(cam->mat_transform));
-		glBindVertexArray(cur->vb->vao);
-		glDrawArrays(cur->vb->render_mode, 0, 2);
-
-		cur = cur->next;
-	}
+	glUniformMatrix4fv(u_transform, 1, GL_FALSE, (float*) *(cam->mat_transform));
+	glBindVertexArray(world->segment_vb->vao);
+	glDrawArrays(world->segment_vb->render_mode, 0, world->segment_vb->vertex_count);
 }
 
 void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {

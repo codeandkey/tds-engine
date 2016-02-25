@@ -47,6 +47,11 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_signal_init();
 	tds_logf(TDS_LOG_MESSAGE, "Registered signal handlers.\n");
 
+	output->profile_handle = tds_profile_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized engine profiler.\n");
+
+	tds_profile_push(output->profile_handle, "Engine initialization sequence");
+
 	/* Config loading */
 	conf = tds_config_create(desc.config_filename);
 
@@ -148,6 +153,8 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_logf(TDS_LOG_MESSAGE, "Done initializing everything.\n");
 	tds_logf(TDS_LOG_MESSAGE, "Engine is ready to roll!\n");
 
+	tds_profile_pop(output->profile_handle);
+
 	if (desc.map_filename) {
 		if (strcmp(desc.map_filename, "none")) {
 			tds_logf(TDS_LOG_MESSAGE, "Loading initial map [%s].\n", desc.map_filename);
@@ -169,6 +176,9 @@ void tds_engine_free(struct tds_engine* ptr) {
 
 	tds_engine_flush_objects(ptr);
 
+	tds_profile_output(ptr->profile_handle);
+	tds_profile_flush(ptr->profile_handle);
+
 	tds_block_map_free(ptr->block_map_handle);
 	tds_world_free(ptr->world_handle);
 	tds_input_free(ptr->input_handle);
@@ -187,6 +197,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_handle_manager_free(ptr->object_buffer);
 	tds_console_free(ptr->console_handle);
 	tds_savestate_free(ptr->savestate_handle);
+	tds_profile_free(ptr->profile_handle);
 	tds_free(ptr);
 }
 
@@ -222,6 +233,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		tds_display_update(ptr->display_handle);
 
+		tds_profile_push(ptr->profile_handle, "Game update cycle / accumulator run");
+
 		while (accumulator >= timestep_ms) {
 			accumulator -= timestep_ms;
 
@@ -243,6 +256,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 			}
 		}
 
+		tds_profile_pop(ptr->profile_handle);
+
 		/* Run game draw logic. */
 		tds_overlay_set_color(ptr->overlay_handle, 0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -254,6 +269,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		tds_overlay_set_color(ptr->overlay_handle, 1.0f, 1.0f, 1.0f, 1.0f);
 		tds_overlay_render_text(ptr->overlay_handle, -0.95f, 1.0f, 1.0f, -0.95f, 10.0f, fps_string, strlen(fps_string), TDS_OVERLAY_REL_SCREENSPACE | TDS_OVERLAY_HLEFT | TDS_OVERLAY_VBOTTOM);
+
+		tds_profile_push(ptr->profile_handle, "Game draw cycle");
 
 		if (ptr->enable_draw) {
 			for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
@@ -267,9 +284,13 @@ void tds_engine_run(struct tds_engine* ptr) {
 			}
 		}
 
+		tds_profile_pop(ptr->profile_handle);
+
 		tds_console_draw(ptr->console_handle);
 
+		tds_profile_push(ptr->profile_handle, "Render process");
 		tds_render_draw(ptr->render_handle, ptr->world_handle, ptr->overlay_handle);
+		tds_profile_pop(ptr->profile_handle);
 		tds_display_swap(ptr->display_handle);
 
 		tds_render_clear_lights(ptr->render_handle);

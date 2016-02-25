@@ -43,11 +43,11 @@ void tds_world_free(struct tds_world* ptr) {
 
 	while (head) {
 		cur = head->next;
-		tds_vertex_buffer_free(head->vb);
 		tds_free(head);
 		head = cur;
 	}
 
+	tds_vertex_buffer_free(ptr->segment_vb);
 	tds_free(ptr);
 }
 
@@ -299,12 +299,16 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 
 	while (head) {
 		cur = head->next;
-		tds_vertex_buffer_free(head->vb);
 		tds_free(head);
 		head = cur;
 	}
 
+	if (ptr->segment_vb) {
+		tds_vertex_buffer_free(ptr->segment_vb);
+	}
+
 	ptr->segment_list = NULL;
+	ptr->segment_vb = NULL;
 
 	tds_logf(TDS_LOG_DEBUG, "Starting redundant segment generation phase.\n");
 
@@ -695,13 +699,38 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 
 	cur = ptr->segment_list;
 
+	/* We iterate through the segment list twice. Once to grab the size of the list, and another to copy the segment data to the temporary buffer. */
+
+	int segment_count = 0;
+
+	while (cur) {
+		segment_count++;
+		cur = cur->next;
+	}
+
+	struct tds_vertex* segment_verts = tds_malloc(segment_count * sizeof(struct tds_vertex) * 2);
+	cur = ptr->segment_list;
+
+	int i = 0;
+
 	while (cur) {
 		struct tds_vertex verts[] = {
 			{cur->x1, cur->y1, 0.0f, cur->nx, cur->ny}, /* We hide the normal in the texcoords, saving some time. */
 			{cur->x2, cur->y2, 0.0f, cur->nx, cur->ny},
 		};
 
-		cur->vb = tds_vertex_buffer_create(verts, sizeof verts / sizeof verts[0], GL_LINES);
+		if (i >= segment_count) {
+			break;
+		}
+
+		segment_verts[2 * i] = verts[0];
+		segment_verts[2 * i + 1] = verts[1];
+
 		cur = cur->next;
+
+		++i;
 	}
+
+	ptr->segment_vb = tds_vertex_buffer_create(segment_verts, sizeof(struct tds_vertex) * segment_count * 2, GL_LINES);
+	tds_free(segment_verts);
 }
