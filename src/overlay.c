@@ -20,7 +20,16 @@ struct tds_overlay* tds_overlay_create(int width, int height) {
 	output->ctx = cairo_create(output->surf);
 
 	glGenTextures(1, &output->gl_texture);
+	glGenTextures(1, &output->gl_texture_backbuffer);
+
 	glBindTexture(GL_TEXTURE_2D, output->gl_texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, output->width, output->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+	glBindTexture(GL_TEXTURE_2D, output->gl_texture_backbuffer);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -32,6 +41,7 @@ struct tds_overlay* tds_overlay_create(int width, int height) {
 
 void tds_overlay_free(struct tds_overlay* ptr) {
 	glDeleteTextures(1, &ptr->gl_texture);
+	glDeleteTextures(1, &ptr->gl_texture_backbuffer);
 
 	cairo_surface_destroy(ptr->surf);
 	cairo_destroy(ptr->ctx);
@@ -46,6 +56,10 @@ unsigned int tds_overlay_update_texture(struct tds_overlay* ptr) {
 
 	glBindTexture(GL_TEXTURE_2D, ptr->gl_texture);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ptr->width, ptr->height, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+
+	unsigned int tmp_texture = ptr->gl_texture_backbuffer; /* Perform a texture swap. The overlay will be a frame behind but the texture upload won't be stalling the render process. */
+	ptr->gl_texture_backbuffer = ptr->gl_texture;
+	ptr->gl_texture = tmp_texture;
 
 	return ptr->gl_texture;
 }

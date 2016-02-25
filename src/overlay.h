@@ -21,7 +21,7 @@ struct tds_overlay {
 	cairo_surface_t* surf;
 
 	int width, height;
-	unsigned int gl_texture;
+	unsigned int gl_texture, gl_texture_backbuffer;
 };
 
 struct tds_overlay* tds_overlay_create(int width, int height);
