@@ -50,7 +50,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->profile_handle = tds_profile_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized engine profiler.\n");
 
-	tds_profile_push(output->profile_handle, "Engine initialization sequence");
+	tds_profile_push(output->profile_handle, "Init sequence");
 
 	/* Config loading */
 	conf = tds_config_create(desc.config_filename);
@@ -202,7 +202,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 }
 
 void tds_engine_run(struct tds_engine* ptr) {
-	int running = ptr->run_flag = 1;
+	int running = ptr->run_flag = 1, accum_frames = 0;
 
 	tds_logf(TDS_LOG_MESSAGE, "Starting engine mainloop.\n");
 	tds_sound_manager_set_pos(ptr->sound_manager_handle, ptr->camera_handle->x, ptr->camera_handle->y);
@@ -233,10 +233,11 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		tds_display_update(ptr->display_handle);
 
-		tds_profile_push(ptr->profile_handle, "Game update cycle / accumulator run");
+		tds_profile_push(ptr->profile_handle, "Update cycle");
 
 		while (accumulator >= timestep_ms) {
 			accumulator -= timestep_ms;
+			accum_frames++;
 
 			/* Run game update logic. */
 			/* Even if updating is disabled, we still want to run down the accumulator. */
@@ -264,13 +265,21 @@ void tds_engine_run(struct tds_engine* ptr) {
 		tds_render_clear(ptr->render_handle); /* We clear before executing the draw functions, otherwise the text buffer would be destroyed */
 		tds_overlay_clear(ptr->overlay_handle);
 
+		tds_profile_push(ptr->profile_handle, "Status overlay");
+
 		char fps_string[16] = {0};
 		snprintf(fps_string, 16, "FPS: %.2f", ptr->state.fps);
 
+		char accum_string[32] = {0};
+		snprintf(accum_string, 32, "Accumulator cycles: %d", accum_frames);
+		accum_frames = 0;
+
 		tds_overlay_set_color(ptr->overlay_handle, 1.0f, 1.0f, 1.0f, 1.0f);
 		tds_overlay_render_text(ptr->overlay_handle, -0.95f, 1.0f, 1.0f, -0.95f, 10.0f, fps_string, strlen(fps_string), TDS_OVERLAY_REL_SCREENSPACE | TDS_OVERLAY_HLEFT | TDS_OVERLAY_VBOTTOM);
+		tds_overlay_render_text(ptr->overlay_handle, -0.95f, 1.0f, 1.0f, -0.90f, 10.0f, accum_string, strlen(accum_string), TDS_OVERLAY_REL_SCREENSPACE | TDS_OVERLAY_HLEFT | TDS_OVERLAY_VBOTTOM);
 
-		tds_profile_push(ptr->profile_handle, "Game draw cycle");
+		tds_profile_pop(ptr->profile_handle);
+		tds_profile_push(ptr->profile_handle, "Draw event cycle");
 
 		if (ptr->enable_draw) {
 			for (int i = 0; i < ptr->object_buffer->max_index; ++i) {

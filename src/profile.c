@@ -27,6 +27,7 @@ void tds_profile_push(struct tds_profile* ptr, const char* name) {
 
 	new_cycle->name = name;
 	new_cycle->mark_count = 0;
+	new_cycle->call_count = 1;
 	new_cycle->time_start = tds_clock_get_point();
 	new_cycle->time = 0.0f;
 	new_cycle->next = ptr->stack;
@@ -47,6 +48,7 @@ void tds_profile_pop(struct tds_profile* ptr) {
 		if (!strcmp(cur->name, ptr->stack->name)) {
 			cur->time += ptr->stack->time;
 			cur->mark_count += ptr->stack->mark_count;
+			cur->call_count += ptr->stack->call_count;
 			tmp = ptr->stack->next;
 			tds_free(ptr->stack);
 			ptr->stack = tmp;
@@ -89,7 +91,7 @@ void tds_profile_output(struct tds_profile* ptr) {
 	tds_logf(TDS_LOG_MESSAGE, "-- Profile output statistics --\n");
 
 	while (cur) {
-		tds_logf(TDS_LOG_MESSAGE, "%-20s | %-10f ms | %-20d\n", cur->name, cur->time, cur->mark_count);
+		tds_logf(TDS_LOG_MESSAGE, "%-20s | %-10f ms | %-10f avg | %-10d calls | %-10d marks\n", cur->name, cur->time, cur->time / (float) cur->call_count, cur->call_count, cur->mark_count);
 
 		cur = cur->next;
 	}

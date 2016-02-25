@@ -4,7 +4,7 @@
 
 struct tds_profile_cycle {
 	const char* name;
-	int mark_count;
+	int mark_count, call_count;
 	float time;
 	tds_clock_point time_start;
 	struct tds_profile_cycle* next;

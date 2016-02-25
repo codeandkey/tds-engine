@@ -42,16 +42,10 @@ void tds_overlay_free(struct tds_overlay* ptr) {
 unsigned int tds_overlay_update_texture(struct tds_overlay* ptr) {
 	cairo_surface_flush(ptr->surf);
 
-	unsigned char* img_data = cairo_image_surface_get_data(ptr->surf), *new_img_data = tds_malloc(ptr->width * ptr->height * sizeof(unsigned char) * 4);
-
-	for (int i = 0; i < ptr->height; ++i) {
-		memcpy(new_img_data + i * (ptr->width * 4), img_data + (ptr->height - 1) * (ptr->width * 4) - (i * ptr->width * 4), ptr->width * 4);
-	}
+	unsigned char* img_data = cairo_image_surface_get_data(ptr->surf);
 
 	glBindTexture(GL_TEXTURE_2D, ptr->gl_texture);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ptr->width, ptr->height, GL_RGBA, GL_UNSIGNED_BYTE, new_img_data);
-
-	tds_free(new_img_data);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ptr->width, ptr->height, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 
 	return ptr->gl_texture;
 }

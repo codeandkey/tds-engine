@@ -152,6 +152,8 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 	tds_rt_bind(ptr->post_rt1); /* Bind the post RT, we will be doing some post-processing */
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	tds_profile_push(tds_engine_global->profile_handle, "BG/Object render");
+
 	_tds_render_background(ptr, tds_engine_global->bg_handle);
 
 	for (int i = min_layer; i <= max_layer; ++i) {
@@ -174,6 +176,8 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 		}
 	}
 
+	tds_profile_pop(tds_engine_global->profile_handle);
+
 	if (object_rendered) {
 		tds_free(object_rendered);
 	}
@@ -195,6 +199,8 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 
 	mat4x4 ident;
 	mat4x4_identity(ident);
+
+	tds_profile_push(tds_engine_global->profile_handle, "Post-processing");
 
 	if (ptr->enable_dynlights) {
 		tds_rt_bind(ptr->post_rt2); // _tds_render_lightmap changes the RT, reset it here
@@ -282,13 +288,31 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
+	tds_profile_pop(tds_engine_global->profile_handle);
+
 	/* Overlay is drawn over everything else (including the lightmap) */
 	/* We get the image data and dump it into a texture here. We can also reuse the square VB from the lightmap blending. */
 
+	tds_profile_push(tds_engine_global->profile_handle, "Overlay composition");
+
+	struct tds_vertex verts_invert[] = {
+		{-1.0f, 1.0f, 0.0f, 0.0f, 0.0f},
+		{1.0f, -1.0f, 0.0f, 1.0f, 1.0f},
+		{1.0f, 1.0f, 0.0f, 1.0f, 0.0f},
+		{-1.0f, 1.0f, 0.0f, 0.0f, 0.0f},
+		{1.0f, -1.0f, 0.0f, 1.0f, 1.0f},
+		{-1.0f, -1.0f, 0.0f, 0.0f, 1.0f}
+	};
+
+	struct tds_vertex_buffer* vb_square_invert = tds_vertex_buffer_create(verts_invert, sizeof verts_invert / sizeof *verts_invert, GL_TRIANGLES);
+
 	glBindTexture(GL_TEXTURE_2D, tds_overlay_update_texture(overlay));
-	glDrawArrays(vb_square->render_mode, 0, 6);
+	glDrawArrays(vb_square_invert->render_mode, 0, 6);
+
+	tds_profile_pop(tds_engine_global->profile_handle);
 
 	tds_vertex_buffer_free(vb_square);
+	tds_vertex_buffer_free(vb_square_invert);
 }
 
 void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int layer) {
