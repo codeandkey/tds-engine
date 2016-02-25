@@ -322,7 +322,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 
 			int flags = tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y][x]).flags;
 
-			if (flags & TDS_BLOCK_TYPE_NOLIGHT) {
+			if (flags & TDS_BLOCK_TYPE_NOLIGHT || !(flags & TDS_BLOCK_TYPE_SOLID)) {
 				continue;
 			}
 
@@ -331,7 +331,12 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 			float block_top = (y + 0.5f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 			float block_bottom = (y - ptr->height / 2.0f - 0.5f) * TDS_WORLD_BLOCK_SIZE;
 
-			if (x < ptr->width - 1 && !ptr->buffer[y][x + 1] && !(flags & TDS_BLOCK_TYPE_RTSLOPE) && !(flags & TDS_BLOCK_TYPE_RBSLOPE)) {
+			int flags_right = (x < ptr->width - 1) ? tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y][x + 1]).flags : 0;
+			int flags_left = (x > 0) ? tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y][x - 1]).flags : 0;
+			int flags_top = (y < ptr->height - 1) ? tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y + 1][x]).flags : 0;
+			int flags_bottom = (y > 0) ? tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y - 1][x]).flags : 0;
+
+			if ((flags_right & TDS_BLOCK_TYPE_NOLIGHT || !(flags_right & TDS_BLOCK_TYPE_SOLID)) && !(flags & (TDS_BLOCK_TYPE_RTSLOPE | TDS_BLOCK_TYPE_RBSLOPE))) {
 				/* Out-facing right segment. */
 				cur = tds_malloc(sizeof *cur);
 				cur->x1 = block_right;
@@ -347,7 +352,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				ptr->segment_list = cur;
 			}
 
-			if (x > 0 && !ptr->buffer[y][x - 1] && !(flags & TDS_BLOCK_TYPE_LTSLOPE) && !(flags & TDS_BLOCK_TYPE_LBSLOPE)) {
+			if ((flags_left & TDS_BLOCK_TYPE_NOLIGHT || !(flags_left & TDS_BLOCK_TYPE_SOLID)) && !(flags & (TDS_BLOCK_TYPE_LTSLOPE | TDS_BLOCK_TYPE_LBSLOPE))) {
 				/* Out-facing left segment. */
 				cur = tds_malloc(sizeof *cur);
 				cur->x1 = block_left;
@@ -363,7 +368,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				ptr->segment_list = cur;
 			}
 
-			if (y < ptr->height - 1 && !ptr->buffer[y + 1][x] && !(flags & TDS_BLOCK_TYPE_RTSLOPE) && !(flags & TDS_BLOCK_TYPE_LTSLOPE)) {
+			if (((flags_top & TDS_BLOCK_TYPE_NOLIGHT) || !(flags_top & TDS_BLOCK_TYPE_SOLID)) && !(flags & (TDS_BLOCK_TYPE_LTSLOPE | TDS_BLOCK_TYPE_RTSLOPE))) {
 				/* Out-facing up segment. */
 				cur = tds_malloc(sizeof *cur);
 				cur->x1 = block_right;
@@ -379,7 +384,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				ptr->segment_list = cur;
 			}
 
-			if (y > 0 && !ptr->buffer[y - 1][x] && !(flags & TDS_BLOCK_TYPE_RBSLOPE) && !(flags & TDS_BLOCK_TYPE_LBSLOPE)) {
+			if ((flags_bottom & TDS_BLOCK_TYPE_NOLIGHT || !(flags_bottom & TDS_BLOCK_TYPE_SOLID)) && !(flags & (TDS_BLOCK_TYPE_LBSLOPE | TDS_BLOCK_TYPE_RBSLOPE))) {
 				/* Out-facing down segment. */
 				cur = tds_malloc(sizeof *cur);
 				cur->x1 = block_left;
