@@ -217,7 +217,7 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 	}
 }
 
-int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, float* x, float* y, float* w, float* h) {
+int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, float* x, float* y, float* w, float* h, int flag_req, int flag_or, int flag_not) {
 	/* Another important function. Intersection testing with axis-aligned objects. */
 
 	float obj_left = obj->x - obj->cbox_width / 2.0f;
@@ -267,7 +267,17 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, fl
 
 		int flags = tds_block_map_get(tds_engine_global->block_map_handle, cblock->id).flags;
 
-		if (!(flags & TDS_BLOCK_TYPE_SOLID)) {
+		if ((flags & flag_req) != flag_req) {
+			cblock = cblock->next;
+			continue;
+		}
+
+		if (!(flags & flag_or)) {
+			cblock = cblock->next;
+			continue;
+		}
+
+		if (flags & flag_not) {
 			cblock = cblock->next;
 			continue;
 		}

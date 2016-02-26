@@ -52,11 +52,11 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 		output->cbox_height = output->sprite_handle->height;
 	}
 
+	tds_logf(TDS_LOG_MESSAGE, "created object with handle %d, sprite %X\n", output->object_handle, (unsigned long) output->sprite_handle);
+
 	if (output->func_init) {
 		tds_object_init(output);
 	}
-
-	tds_logf(TDS_LOG_MESSAGE, "created object with handle %d, sprite %X\n", output->object_handle, (unsigned long) output->sprite_handle);
 
 	return output;
 }
