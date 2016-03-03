@@ -143,6 +143,16 @@ void _tds_overlay_get_coords(struct tds_overlay* ptr, float x, float y, float* _
 	}
 }
 
+void tds_overlay_render_line(struct tds_overlay* ptr, float x1, float y1, float x2, float y2, float width, int flags) {
+	float rx1, ry1, rx2, ry2;
+	_tds_overlay_get_coords(ptr, x1, y1, &rx1, &ry1, flags);
+	_tds_overlay_get_coords(ptr, x2, y2, &rx2, &ry2, flags);
+
+	cairo_move_to(ptr->ctx, rx1, ry1);
+	cairo_line_to(ptr->ctx, rx2, ry2);
+	cairo_stroke(ptr->ctx);
+}
+
 void _tds_overlay_get_text_size(PangoLayout* layout, int* width, int* height) {
 	pango_layout_get_size(layout, width, height);
 
