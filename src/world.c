@@ -283,19 +283,19 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, fl
 		}
 
 		if (x) {
-			*x = (cblock->x - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+			*x = (cblock_left + cblock_right) / 2.0f;
 		}
 
 		if (y) {
-			*y = (cblock->y + 0.5f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+			*y = (cblock_top + cblock_bottom) / 2.0f;
 		}
 
 		if (w) {
-			*w = cblock->w * TDS_WORLD_BLOCK_SIZE;
+			*w = cblock_right - cblock_left;
 		}
 
 		if (h) {
-			*h = TDS_WORLD_BLOCK_SIZE;
+			*h = cblock_top - cblock_bottom;
 		}
 
 		return flags;
