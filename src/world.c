@@ -772,6 +772,6 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 		++i;
 	}
 
-	ptr->segment_vb = tds_vertex_buffer_create(segment_verts, sizeof(struct tds_vertex) * segment_count * 2, GL_LINES);
+	ptr->segment_vb = tds_vertex_buffer_create(segment_verts, segment_count * 2, GL_LINES);
 	tds_free(segment_verts);
 }

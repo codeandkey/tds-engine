@@ -270,6 +270,12 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "-cdraw")) {
 		tds_console_print(ptr, "disabling camera draw\n");
 		tds_engine_global->enable_camera_draw = 0;
+	} else if (!strcmp(cur_cmd, "+overlaydb")) {
+		tds_console_print(ptr, "enabling overlay doublebuffering\n");
+		tds_engine_global->overlay_handle->enable_doublebuffer = 1;
+	} else if (!strcmp(cur_cmd, "-overlaydb")) {
+		tds_console_print(ptr, "disabling overlay doublebuffering\n");
+		tds_engine_global->overlay_handle->enable_doublebuffer = 0;
 	} else if (!strcmp(cur_cmd, "+wire")) {
 		tds_console_print(ptr, "enabling wireframe\n");
 		tds_engine_global->render_handle->enable_wireframe = 1;
