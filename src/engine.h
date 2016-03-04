@@ -27,6 +27,8 @@
 #define TDS_LOAD_ATTR_SIZE 64
 #define TDS_LOAD_WORLD_SIZE 4
 
+#define TDS_MAX_WORLD_LAYERS 4
+
 /* TDS engine map spec :
  *
  * Maps in TDS are saved in JSON format to allow for easy structuring and editing.
@@ -87,11 +89,13 @@ struct tds_engine {
 	struct tds_sound_manager* sound_manager_handle;
 	struct tds_console* console_handle;
 	struct tds_block_map* block_map_handle;
-	struct tds_world* world_handle;
 	struct tds_savestate* savestate_handle;
 	struct tds_overlay* overlay_handle;
 	struct tds_bg* bg_handle;
 	struct tds_profile* profile_handle;
+
+	int world_buffer_count;
+	struct tds_world* world_buffer[4];
 
 	int run_flag;
 	struct tds_object** object_list;
@@ -114,5 +118,7 @@ void tds_engine_save(struct tds_engine* ptr, const char* mapname);
 
 void tds_engine_destroy_objects(struct tds_engine* ptr, const char* type_name);
 void tds_engine_broadcast(struct tds_engine* ptr, int msg, void* param);
+
+struct tds_world* tds_engine_get_foreground_world(struct tds_engine* ptr);
 
 extern struct tds_engine* tds_engine_global;

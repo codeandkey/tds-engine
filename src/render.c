@@ -111,7 +111,7 @@ void tds_render_clear(struct tds_render* ptr) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
-void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds_overlay* overlay) {
+void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int world_count, struct tds_overlay* overlay) {
 	/* Drawing will be done linearly on a per-layer basis, using a list of occluded objects. */
 	int render_objects = 1;
 
@@ -126,7 +126,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 	}
 
 	int min_layer = 0;
-	int max_layer = 0;
+	int max_layer = world_count; /* Make sure to at least render all of the world layers. */
 
 	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
 		struct tds_object* target = (struct tds_object*) ptr->object_buffer->buffer[i].data;
@@ -157,9 +157,9 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 	_tds_render_background(ptr, tds_engine_global->bg_handle);
 
 	for (int i = min_layer; i <= max_layer; ++i) {
-		if (!i) {
+		if (i < world_count) {
 			/* We render the world at depth 0. */
-			_tds_render_world(ptr, world);
+			_tds_render_world(ptr, world_list[i]);
 		}
 
 		for (int j = 0; j < ptr->object_buffer->max_index; ++j) {
@@ -182,8 +182,8 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds
 		tds_free(object_rendered);
 	}
 
-	if (ptr->enable_dynlights) {
-		_tds_render_lightmap(ptr, world);
+	if (ptr->enable_dynlights && world_count) {
+		_tds_render_lightmap(ptr, tds_engine_get_foreground_world(tds_engine_global));
 	}
 
 	struct tds_vertex verts[] = {

@@ -67,7 +67,7 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 void tds_render_free(struct tds_render* ptr);
 
 void tds_render_clear(struct tds_render* ptr);
-void tds_render_draw(struct tds_render* ptr, struct tds_world* world, struct tds_overlay* overlay);
+void tds_render_draw(struct tds_render* ptr, struct tds_world** world_buffer, int world_count, struct tds_overlay* overlay);
 
 void tds_render_submit_light(struct tds_render* ptr, struct tds_render_light lt);
 void tds_render_clear_lights(struct tds_render* ptr);

@@ -249,10 +249,7 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "+edit")) {
 		tds_console_print(ptr, "creating editor objects\n");
 		tds_create_editor_objects();
-	} else if (!strcmp(cur_cmd, "+wedit")) {
-		tds_console_print(ptr, "creating world editor objects\n");
-		tds_create_world_editor_objects();
-	} else if (!strcmp(cur_cmd, "-edit") || !strcmp(cur_cmd, "-wedit")) {
+	} else if (!strcmp(cur_cmd, "-edit")) {
 		tds_console_print(ptr, "destroying editor objects\n");
 		tds_destroy_editor_objects();
 	} else if (!strcmp(cur_cmd, "+draw")) {
@@ -267,10 +264,6 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "-update")) {
 		tds_console_print(ptr, "disabling update\n");
 		tds_engine_global->enable_update = 0;
-	} else if (!strcmp(cur_cmd, "wgen")) {
-		int w = strtol(strtok(NULL, " "), 0, 0), h = strtol(strtok(NULL, " "), 0, 0);
-		tds_console_print(ptr, "generating world\n");
-		tds_world_init(tds_engine_global->world_handle, w, h);
 	} else if (!strcmp(cur_cmd, "ipart")) {
 		int key = strtol(strtok(NULL, " "), 0, 0), val = strtol(strtok(NULL, " "), 0, 0);
 

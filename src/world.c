@@ -47,7 +47,10 @@ void tds_world_free(struct tds_world* ptr) {
 		head = cur;
 	}
 
-	tds_vertex_buffer_free(ptr->segment_vb);
+	if (ptr->segment_vb) {
+		tds_vertex_buffer_free(ptr->segment_vb);
+	}
+
 	tds_free(ptr);
 }
 

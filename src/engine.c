@@ -115,8 +115,12 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->bg_handle = tds_bg_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized background subsystem.\n");
 
-	output->world_handle = tds_world_create();
-	tds_logf(TDS_LOG_MESSAGE, "Initialized world subsystem.\n");
+	output->world_buffer_count = 0;
+
+	for (int i = 0; i < TDS_MAX_WORLD_LAYERS; ++i) {
+		output->world_buffer[i] = tds_world_create();
+		tds_logf(TDS_LOG_MESSAGE, "Initialized world subsystem for layer %d.\n", i);
+	}
 
 	output->savestate_handle = tds_savestate_create();
 	tds_savestate_set_index(output->savestate_handle, desc.save_index);
@@ -180,7 +184,11 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_profile_flush(ptr->profile_handle);
 
 	tds_block_map_free(ptr->block_map_handle);
-	tds_world_free(ptr->world_handle);
+
+	for (int i = 0; i < TDS_MAX_WORLD_LAYERS; ++i) {
+		tds_world_free(ptr->world_buffer[i]);
+	}
+
 	tds_input_free(ptr->input_handle);
 	tds_input_map_free(ptr->input_map_handle);
 	tds_key_map_free(ptr->key_map_handle);
@@ -298,7 +306,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 		tds_console_draw(ptr->console_handle);
 
 		tds_profile_push(ptr->profile_handle, "Render process");
-		tds_render_draw(ptr->render_handle, ptr->world_handle, ptr->overlay_handle);
+		tds_render_draw(ptr->render_handle, ptr->world_buffer, ptr->world_buffer_count, ptr->overlay_handle);
 		tds_profile_pop(ptr->profile_handle);
 		tds_display_swap(ptr->display_handle);
 
@@ -538,7 +546,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 					break;
 				}
 
-
 				if (*(ctx->data) == ',') {
 					/* Push the current readbuf to the id buffer and reset the readbuf. */
 					int tx = world_read_pos % world_width, ty = (world_height - 1) - (world_read_pos / world_width);
@@ -645,6 +652,9 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 			} else if (in_layer && in_data) {
 				in_data = 0;
 			} else if (in_layer && !in_data) {
+				memset(world_read_buf, 0, sizeof world_read_buf / sizeof *world_read_buf);
+				world_read_len = world_read_pos = 0;
+
 				if (dont_load_world) {
 					break;
 				}
@@ -653,8 +663,16 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 				/* The block IDs are stored now in id_buffer, with the correct winding order. */
 
-				tds_world_init(ptr->world_handle, world_width, world_height);
-				tds_world_load(ptr->world_handle, id_buffer, world_width, world_height);
+				if (ptr->world_buffer_count >= TDS_MAX_WORLD_LAYERS) {
+					tds_logf(TDS_LOG_WARNING, "There were more world layers in the map than allowed (max: %d) -- discarding extra layers\n", TDS_MAX_WORLD_LAYERS);
+					break;
+				}
+
+				tds_world_init(ptr->world_buffer[ptr->world_buffer_count], world_width, world_height);
+				tds_world_load(ptr->world_buffer[ptr->world_buffer_count++], id_buffer, world_width, world_height);
+
+				memset(id_buffer, 0, sizeof(id_buffer[0]) * world_width * world_height);
+				memset(data_encoding_buf, 0, sizeof data_encoding_buf / sizeof *data_encoding_buf);
 			}
 			break;
 		default:
@@ -701,4 +719,13 @@ void tds_engine_broadcast(struct tds_engine* ptr, int msg, void* param) {
 
 		tds_object_msg(cur, NULL, msg, param);
 	}
+}
+
+struct tds_world* tds_engine_get_foreground_world(struct tds_engine* ptr) {
+	if (!ptr->world_buffer_count) {
+		tds_logf(TDS_LOG_WARNING, "No world defined, cannot give a foreground to the caller.\n");
+		return NULL;
+	}
+
+	return ptr->world_buffer[ptr->world_buffer_count - 1];
 }
