@@ -59,6 +59,8 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 
 	output->enable_bloom = 1;
 	output->enable_dynlights = 1;
+	output->enable_aabb = 1;
+	output->enable_wireframe = 0;
 
 	tds_rt_bind(NULL);
 
@@ -936,16 +938,32 @@ void _tds_render_hblock_callback(void* usr, void* data) {
 	struct tds_world* world = (struct tds_world*) usr;
 	struct tds_world_hblock* cur = data;
 
+	/* The translation must take into account that the block size may not be aligned. */
+	float render_x = TDS_WORLD_BLOCK_SIZE * (cur->x - world->width / 2.0f + (cur->w - 1) / 2.0f);
+	float render_y = TDS_WORLD_BLOCK_SIZE * (cur->y - world->height / 2.0f);
+
+	if (ptr->enable_aabb) {
+		float camera_left = tds_engine_global->camera_handle->x - tds_engine_global->camera_handle->width / 2.0f;
+		float camera_right = tds_engine_global->camera_handle->x + tds_engine_global->camera_handle->width / 2.0f;
+		float camera_top = tds_engine_global->camera_handle->y + tds_engine_global->camera_handle->height / 2.0f;
+		float camera_bottom = tds_engine_global->camera_handle->y - tds_engine_global->camera_handle->height / 2.0f;
+
+		float block_left = render_x - cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
+		float block_right = render_x + cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
+		float block_top = render_y + TDS_WORLD_BLOCK_SIZE / 2.0f;
+		float block_bottom = render_y - TDS_WORLD_BLOCK_SIZE / 2.0f;
+
+		if (block_left > camera_right || block_right < camera_left || block_bottom > camera_top || block_top < camera_bottom) {
+			return;
+		}
+	}
+
 	struct tds_block_type render_type = tds_block_map_get(tds_engine_global->block_map_handle, cur->id);
 
 	if (!render_type.texture) {
 		tds_logf(TDS_LOG_WARNING, "Block type %d does not have an associated texture.\n", cur->id);
 		return;
 	}
-
-	/* The translation must take into account that the block size may not be aligned. */
-	float render_x = TDS_WORLD_BLOCK_SIZE * (cur->x - world->width / 2.0f + (cur->w - 1) / 2.0f);
-	float render_y = TDS_WORLD_BLOCK_SIZE * (cur->y - world->height / 2.0f);
 
 	mat4x4 transform, transform_full;
 	mat4x4_identity(transform); // This may be unnecessary.

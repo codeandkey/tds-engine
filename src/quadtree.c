@@ -43,8 +43,6 @@ int tds_quadtree_insert(struct tds_quadtree* ptr, float l, float r, float t, flo
 		/* Object is at LEAST fully contained in this node. We generate children and see if we can insert into any of them. */
 
 		if (ptr->leaf) {
-			ptr->leaf = 0;
-
 			ptr->lt = tds_quadtree_create(ptr->l, (ptr->l + ptr->r) / 2.0f, ptr->t, (ptr->t + ptr->b) / 2.0f);
 			ptr->lb = tds_quadtree_create(ptr->l, (ptr->l + ptr->r) / 2.0f, (ptr->t + ptr->b) / 2.0f, ptr->b);
 			ptr->rt = tds_quadtree_create((ptr->l + ptr->r) / 2.0f, ptr->r, ptr->t, (ptr->t + ptr->b) / 2.0f);
@@ -52,18 +50,22 @@ int tds_quadtree_insert(struct tds_quadtree* ptr, float l, float r, float t, flo
 		}
 
 		if (tds_quadtree_insert(ptr->lt, l, r, t, b, data)) {
+			ptr->leaf = 0;
 			return 1;
 		}
 
 		if (tds_quadtree_insert(ptr->lb, l, r, t, b, data)) {
+			ptr->leaf = 0;
 			return 1;
 		}
 
 		if (tds_quadtree_insert(ptr->rb, l, r, t, b, data)) {
+			ptr->leaf = 0;
 			return 1;
 		}
 
 		if (tds_quadtree_insert(ptr->rt, l, r, t, b, data)) {
+			ptr->leaf = 0;
 			return 1;
 		}
 
@@ -72,6 +74,16 @@ int tds_quadtree_insert(struct tds_quadtree* ptr, float l, float r, float t, flo
 		next->data = data;
 		next->next = ptr->entry_list;
 		ptr->entry_list = next;
+
+		/* We can also get rid of our children. Kill the children! */
+		if (ptr->leaf) {
+			tds_quadtree_free(ptr->lt);
+			tds_quadtree_free(ptr->rt);
+			tds_quadtree_free(ptr->lb);
+			tds_quadtree_free(ptr->rb);
+
+			ptr->lt = ptr->lb = ptr->rt = ptr->rb = NULL;
+		}
 
 		return 1;
 	} else {

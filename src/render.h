@@ -61,7 +61,7 @@ struct tds_render {
 	int bl_uniform_texture, bl_uniform_color, bl_uniform_transform;
 
 	unsigned int enable_bloom, enable_dynlights;
-	int enable_wireframe;
+	int enable_wireframe, enable_aabb;
 };
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr);

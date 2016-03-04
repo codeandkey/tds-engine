@@ -282,6 +282,12 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "-wire")) {
 		tds_console_print(ptr, "disabling wireframe\n");
 		tds_engine_global->render_handle->enable_wireframe = 0;
+	} else if (!strcmp(cur_cmd, "+aabb")) {
+		tds_console_print(ptr, "enabling AABB occlusion\n");
+		tds_engine_global->render_handle->enable_aabb = 1;
+	} else if (!strcmp(cur_cmd, "-aabb")) {
+		tds_console_print(ptr, "disabling AABB occlusion\n");
+		tds_engine_global->render_handle->enable_aabb = 0;
 	} else if (!strcmp(cur_cmd, "+update")) {
 		tds_console_print(ptr, "enabling update\n");
 		tds_engine_global->enable_update = 1;
