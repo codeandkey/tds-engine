@@ -7,6 +7,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 static void _tds_console_execute(struct tds_console* ptr);
 
@@ -111,6 +112,10 @@ int tds_console_char_pressed(struct tds_console* ptr, unsigned int chr) {
 	}
 
 	if (chr == '`' || chr == '~') {
+		return 0;
+	}
+
+	if (!isprint(chr)) {
 		return 0;
 	}
 

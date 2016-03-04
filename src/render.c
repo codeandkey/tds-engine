@@ -213,9 +213,10 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 
 	tds_profile_push(tds_engine_global->profile_handle, "Post-processing");
 
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
 	if (ptr->enable_dynlights) {
 		tds_rt_bind(ptr->post_rt2); // _tds_render_lightmap changes the RT, reset it here
-
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// The world is rendered in RT1, we will hblur the lightmap to RT2 and then vblur it back to RT1
@@ -994,8 +995,6 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	tds_rt_bind(NULL);
-
 	/* We will use a basic [-1:1] square VBO to do most of the light rendering.
 	 * It will come in handy later. */
 
@@ -1029,6 +1028,13 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 			tds_rt_bind(ptr->dir_rt);
 			cam_use = cam_dir;
 			break;
+		}
+
+		if (cur->type == TDS_RENDER_LIGHT_POINT) {
+			if (cur->x - cur->dist > cam_dir->x + cam_dir->width / 2.0f || cur->x + cur->dist < cam_dir->x - cam_dir->width / 2.0f || cur->y - cur->dist > cam_dir->y + cam_dir->height / 2.0f || cur->y + cur->dist < cam_dir->y - cam_dir->height / 2.0f) {
+				cur = cur->next;
+				continue;
+			}
 		}
 
 		glClearColor(cur->r, cur->g, cur->b, 1.0f);
