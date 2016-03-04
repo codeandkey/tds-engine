@@ -17,6 +17,7 @@ struct _tds_file {
 
 static void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int layer);
 static void _tds_render_world(struct tds_render* ptr, struct tds_world* world);
+static void _tds_render_hblock_callback(void* render_ptr, void* hblock_ptr);
 static void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world);
 static void _tds_render_segments(struct tds_render* ptr, struct tds_world* world, struct tds_camera* cam, int occlude, unsigned int u_transform);
 static void _tds_render_background(struct tds_render* ptr, struct tds_bg* bg);
@@ -914,68 +915,41 @@ struct _tds_file _tds_load_file(const char* filename) {
 }
 
 void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
-	/* We want to render each h-block and wrap the texcoord accordingly.
-	 * To effectively wrap world blocks, the textures will have to be in their own files.
-	 * The block map has O(1) access complexity, so we can query textures all the time without worry.
-	 * World hblocks must have their own VBOs and generating them on a per-frame basis would seriously hit performance.
-	 * The hblock VBOs are accessible as a part of the hblock structure. */
+	float camera_left = tds_engine_global->camera_handle->x - tds_engine_global->camera_handle->width / 2.0f;
+	float camera_right = tds_engine_global->camera_handle->x + tds_engine_global->camera_handle->width / 2.0f;
+	float camera_top = tds_engine_global->camera_handle->y + tds_engine_global->camera_handle->height / 2.0f;
+	float camera_bottom = tds_engine_global->camera_handle->y - tds_engine_global->camera_handle->height / 2.0f;
 
-	struct tds_world_hblock* cur = world->block_list_head;
+	tds_quadtree_walk(world->quadtree, camera_left, camera_right, camera_top, camera_bottom, ptr, _tds_render_hblock_callback);
+}
 
-	while (cur) {
-		struct tds_block_type render_type = tds_block_map_get(tds_engine_global->block_map_handle, cur->id);
+void _tds_render_hblock_callback(void* usr, void* data) {
+	struct tds_render* ptr = (struct tds_render*) usr;
+	struct tds_world_hblock* cur = data;
 
-		if (!render_type.texture) {
-			tds_logf(TDS_LOG_WARNING, "Block type %d does not have an associated texture.\n", cur->id);
-			cur = cur->next;
-			continue;
-		}
+	struct tds_block_type render_type = tds_block_map_get(tds_engine_global->block_map_handle, cur->id);
 
-		/* The translation must take into account that the block size may not be aligned. */
-		float render_x = TDS_WORLD_BLOCK_SIZE * (cur->x - world->width / 2.0f + (cur->w - 1) / 2.0f);
-		float render_y = TDS_WORLD_BLOCK_SIZE * (cur->y - world->height / 2.0f);
-
-		/* We implement a quick AABB test with the world block. */
-		float block_left = render_x - cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
-		float block_right = render_x + cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
-		float block_top = render_y + TDS_WORLD_BLOCK_SIZE / 2.0f;
-		float block_bottom = render_y - TDS_WORLD_BLOCK_SIZE / 2.0f;
-
-		if (block_right < ptr->camera_handle->x - ptr->camera_handle->width / 2.0f) {
-			cur = cur->next;
-			continue;
-		}
-
-		if (block_left > ptr->camera_handle->x + ptr->camera_handle->width / 2.0f) {
-			cur = cur->next;
-			continue;
-		}
-
-		if (block_top < ptr->camera_handle->y - ptr->camera_handle->height / 2.0f) {
-			cur = cur->next;
-			continue;
-		}
-
-		if (block_bottom > ptr->camera_handle->y + ptr->camera_handle->height / 2.0f) {
-			cur = cur->next;
-			continue;
-		}
-
-		mat4x4 transform, transform_full;
-		mat4x4_identity(transform); // This may be unnecessary.
-		mat4x4_translate(transform, render_x, render_y, 0.0f);
-		mat4x4_mul(transform_full, ptr->camera_handle->mat_transform, transform);
-
-		glUniform4f(ptr->uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
-		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *transform_full);
-
-		glBindTexture(GL_TEXTURE_2D, render_type.texture->gl_id);
-
-		glBindVertexArray(cur->vb->vao);
-		glDrawArrays(cur->vb->render_mode, 0, 6);
-
-		cur = cur->next;
+	if (!render_type.texture) {
+		tds_logf(TDS_LOG_WARNING, "Block type %d does not have an associated texture.\n", cur->id);
+		return;
 	}
+
+	/* The translation must take into account that the block size may not be aligned. */
+	float render_x = TDS_WORLD_BLOCK_SIZE * (cur->x - world->width / 2.0f + (cur->w - 1) / 2.0f);
+	float render_y = TDS_WORLD_BLOCK_SIZE * (cur->y - world->height / 2.0f);
+
+	mat4x4 transform, transform_full;
+	mat4x4_identity(transform); // This may be unnecessary.
+	mat4x4_translate(transform, render_x, render_y, 0.0f);
+	mat4x4_mul(transform_full, ptr->camera_handle->mat_transform, transform);
+
+	glUniform4f(ptr->uniform_color, 1.0f, 1.0f, 1.0f, 1.0f);
+	glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *transform_full);
+
+	glBindTexture(GL_TEXTURE_2D, render_type.texture->gl_id);
+
+	glBindVertexArray(cur->vb->vao);
+	glDrawArrays(cur->vb->render_mode, 0, 6);
 }
 
 void _tds_render_segments(struct tds_render* ptr, struct tds_world* world, struct tds_camera* cam, int occlude, unsigned int u_transform) {

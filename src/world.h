@@ -3,6 +3,7 @@
 
 #include "object.h"
 #include "vertex_buffer.h"
+#include "quadtree.h"
 
 #define TDS_WORLD_BLOCK_SIZE 0.5f
 
@@ -22,6 +23,7 @@ struct tds_world {
 	struct tds_world_hblock* block_list_head, *block_list_tail;
 	struct tds_world_segment* segment_list;
 	struct tds_vertex_buffer* segment_vb;
+	struct tds_quadtree* quadtree;
 };
 
 struct tds_world* tds_world_create(void);

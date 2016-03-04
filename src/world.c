@@ -16,6 +16,8 @@ struct tds_world* tds_world_create(void) {
 	output->block_list_head = output->block_list_tail = 0;
 	output->buffer = 0;
 
+	output->quadtree = NULL;
+
 	return output;
 }
 
@@ -202,7 +204,12 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 		ptr->block_list_tail = tmp_block;
 	}
 
-	/* At this time we will also generate VBOs for each hblock, so that tds_render doesn't have to. */
+	/* At this time we will also generate VBOs for each hblock, so that tds_render doesn't have to. (and insert the quadtree) */
+
+	if (ptr->quadtree) {
+		tds_quadtree_free(ptr->quadtree);
+		ptr->quadtree = tds_quadtree_create(-ptr->width * TDS_WORLD_BLOCK_SIZE / 2.0f, ptr->width * TDS_WORLD_BLOCK_SIZE / 2.0f, ptr->height * TDS_WORLD_BLOCK_SIZE / 2.0f, -ptr->height * TDS_WORLD_BLOCK_SIZE / 2.0f); 
+	}
 
 	struct tds_world_hblock* hb_cur = ptr->block_list_head;
 	while (hb_cur) {
@@ -215,7 +222,18 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, 0.0f, 0.0f },
 		};
 
+		float render_x = TDS_WORLD_BLOCK_SIZE * (hb_cur->x - ptr->width / 2.0f + (hb_cur->w - 1) / 2.0f);
+		float render_y = TDS_WORLD_BLOCK_SIZE * (hb_cur->y - ptr->height / 2.0f);
+
+		float block_left = render_x - hb_cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
+		float block_right = render_x + hb_cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
+		float block_top = render_y + TDS_WORLD_BLOCK_SIZE / 2.0f;
+		float block_bottom = render_y - TDS_WORLD_BLOCK_SIZE / 2.0f;
+
+		tds_quadtree_insert(ptr->quadtree, block_left, block_right, block_top, block_bottom, hb_cur);
+
 		hb_cur->vb = tds_vertex_buffer_create(vert_list, 6, GL_TRIANGLES);
+
 		hb_cur = hb_cur->next;
 	}
 }
