@@ -13,14 +13,16 @@
 #define TDS_OVERLAY_WORLDSPACE (1 << 8)
 #define TDS_OVERLAY_SCREENSPACE (1 << 9)
 #define TDS_OVERLAY_REL_SCREENSPACE (1 << 10)
+#define TDS_OVERLAY_USE_HIDDENSCALE (1 << 11) /* If the user sets the hidden camera scale, normalize world coords to compensate */
 
 #define TDS_OVERLAY_DEFAULT_FONT "DeJa Vu Sans Mono"
+#define TDS_OVERLAY_DEFAULT_DOUBLEBUFFER 0
 
 struct tds_overlay {
 	cairo_t* ctx;
 	cairo_surface_t* surf;
 
-	int width, height;
+	int width, height, enable_doublebuffer;
 	unsigned int gl_texture, gl_texture_backbuffer;
 };
 

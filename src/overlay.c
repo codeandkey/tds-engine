@@ -18,6 +18,7 @@ struct tds_overlay* tds_overlay_create(int width, int height) {
 
 	output->surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
 	output->ctx = cairo_create(output->surf);
+	output->enable_doublebuffer = TDS_OVERLAY_DEFAULT_DOUBLEBUFFER;
 
 	glGenTextures(1, &output->gl_texture);
 	glGenTextures(1, &output->gl_texture_backbuffer);
@@ -57,9 +58,11 @@ unsigned int tds_overlay_update_texture(struct tds_overlay* ptr) {
 	glBindTexture(GL_TEXTURE_2D, ptr->gl_texture);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ptr->width, ptr->height, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
 
-	unsigned int tmp_texture = ptr->gl_texture_backbuffer; /* Perform a texture swap. The overlay will be a frame behind but the texture upload won't be stalling the render process. */
-	ptr->gl_texture_backbuffer = ptr->gl_texture;
-	ptr->gl_texture = tmp_texture;
+	if (ptr->enable_doublebuffer) {
+		unsigned int tmp_texture = ptr->gl_texture_backbuffer; /* Perform a texture swap. The overlay will be a frame behind but the texture upload won't be stalling the render process. */
+		ptr->gl_texture_backbuffer = ptr->gl_texture;
+		ptr->gl_texture = tmp_texture;
+	}
 
 	return ptr->gl_texture;
 }
@@ -126,10 +129,12 @@ void tds_overlay_render_text(struct tds_overlay* ptr, float l, float r, float t,
 void _tds_overlay_get_coords(struct tds_overlay* ptr, float x, float y, float* _x, float* _y, int flags) {
 	struct tds_camera* g_camera = tds_engine_global->camera_handle;
 
-	float camera_left = g_camera->x  - g_camera->width / 2.0f;
-	float camera_right = camera_left + g_camera->width;
-	float camera_bottom = g_camera->y - g_camera->height / 2.0f;
-	float camera_top = camera_bottom + g_camera->height;
+	float scale = (flags & TDS_OVERLAY_USE_HIDDENSCALE) ? g_camera->hidden_scale : 1.0f;
+
+	float camera_left = g_camera->x  - g_camera->width * scale / 2.0f;
+	float camera_right = camera_left + g_camera->width * scale;
+	float camera_bottom = g_camera->y - g_camera->height * scale / 2.0f;
+	float camera_top = camera_bottom + g_camera->height * scale;
 
 	if (flags & TDS_OVERLAY_WORLDSPACE) {
 		if (_x) *_x = ((x - camera_left) / (camera_right - camera_left)) * ptr->width;
@@ -150,6 +155,7 @@ void tds_overlay_render_line(struct tds_overlay* ptr, float x1, float y1, float 
 
 	cairo_move_to(ptr->ctx, rx1, ry1);
 	cairo_line_to(ptr->ctx, rx2, ry2);
+	cairo_set_line_width(ptr->ctx, width);
 	cairo_stroke(ptr->ctx);
 }
 

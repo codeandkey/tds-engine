@@ -17,7 +17,7 @@ struct _tds_file {
 
 static void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int layer);
 static void _tds_render_world(struct tds_render* ptr, struct tds_world* world);
-static void _tds_render_hblock_callback(void* render_ptr, void* hblock_ptr);
+static void _tds_render_hblock_callback(void* world_ptr, void* hblock_ptr);
 static void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world);
 static void _tds_render_segments(struct tds_render* ptr, struct tds_world* world, struct tds_camera* cam, int occlude, unsigned int u_transform);
 static void _tds_render_background(struct tds_render* ptr, struct tds_bg* bg);
@@ -116,6 +116,12 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 	/* Drawing will be done linearly on a per-layer basis, using a list of occluded objects. */
 	int render_objects = 1;
 
+	if (ptr->enable_wireframe) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	} else {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+
 	if (ptr->object_buffer->max_index <= 0) {
 		render_objects = 0;
 	}
@@ -176,6 +182,8 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 			}
 		}
 	}
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); /* Even if the user wants wireframe, don't do post-processing on wireframe. */
 
 	tds_profile_pop(tds_engine_global->profile_handle);
 
@@ -920,11 +928,12 @@ void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
 	float camera_top = tds_engine_global->camera_handle->y + tds_engine_global->camera_handle->height / 2.0f;
 	float camera_bottom = tds_engine_global->camera_handle->y - tds_engine_global->camera_handle->height / 2.0f;
 
-	tds_quadtree_walk(world->quadtree, camera_left, camera_right, camera_top, camera_bottom, ptr, _tds_render_hblock_callback);
+	tds_quadtree_walk(world->quadtree, camera_left, camera_right, camera_top, camera_bottom, world, _tds_render_hblock_callback);
 }
 
 void _tds_render_hblock_callback(void* usr, void* data) {
-	struct tds_render* ptr = (struct tds_render*) usr;
+	struct tds_render* ptr = tds_engine_global->render_handle;
+	struct tds_world* world = (struct tds_world*) usr;
 	struct tds_world_hblock* cur = data;
 
 	struct tds_block_type render_type = tds_block_map_get(tds_engine_global->block_map_handle, cur->id);

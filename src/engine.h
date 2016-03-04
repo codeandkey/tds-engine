@@ -100,7 +100,7 @@ struct tds_engine {
 	int run_flag;
 	struct tds_object** object_list;
 
-	int enable_update, enable_draw;
+	int enable_update, enable_draw, enable_quadtree_draw, enable_camera_draw;
 };
 
 struct tds_engine* tds_engine_create(struct tds_engine_desc desc);

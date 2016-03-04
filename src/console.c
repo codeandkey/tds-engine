@@ -258,12 +258,35 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "-draw")) {
 		tds_console_print(ptr, "disabling draw\n");
 		tds_engine_global->enable_draw = 0;
+	} else if (!strcmp(cur_cmd, "+qdraw")) {
+		tds_console_print(ptr, "enabling quadtree draw\n");
+		tds_engine_global->enable_quadtree_draw = 1;
+	} else if (!strcmp(cur_cmd, "-qdraw")) {
+		tds_console_print(ptr, "disabling quadtree draw\n");
+		tds_engine_global->enable_quadtree_draw = 0;
+	} else if (!strcmp(cur_cmd, "+cdraw")) {
+		tds_console_print(ptr, "enabling camera draw\n");
+		tds_engine_global->enable_camera_draw = 1;
+	} else if (!strcmp(cur_cmd, "-cdraw")) {
+		tds_console_print(ptr, "disabling camera draw\n");
+		tds_engine_global->enable_camera_draw = 0;
+	} else if (!strcmp(cur_cmd, "+wire")) {
+		tds_console_print(ptr, "enabling wireframe\n");
+		tds_engine_global->render_handle->enable_wireframe = 1;
+	} else if (!strcmp(cur_cmd, "-wire")) {
+		tds_console_print(ptr, "disabling wireframe\n");
+		tds_engine_global->render_handle->enable_wireframe = 0;
 	} else if (!strcmp(cur_cmd, "+update")) {
 		tds_console_print(ptr, "enabling update\n");
 		tds_engine_global->enable_update = 1;
 	} else if (!strcmp(cur_cmd, "-update")) {
 		tds_console_print(ptr, "disabling update\n");
 		tds_engine_global->enable_update = 0;
+	} else if (!strcmp(cur_cmd, "sethiddenscale")) {
+		tds_engine_global->camera_handle->hidden_scale = strtof(strtok(NULL, " "), 0);
+		/* Reload the camera matrix. */
+		tds_camera_set_raw(tds_engine_global->camera_handle, tds_engine_global->camera_handle->width, tds_engine_global->camera_handle->height, tds_engine_global->camera_handle->x, tds_engine_global->camera_handle->y);
+		tds_console_print(ptr, "set hidden camera scale\n");
 	} else if (!strcmp(cur_cmd, "ipart")) {
 		int key = strtol(strtok(NULL, " "), 0, 0), val = strtol(strtok(NULL, " "), 0, 0);
 

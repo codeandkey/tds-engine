@@ -38,6 +38,8 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->object_list = NULL;
 
 	output->enable_update = output->enable_draw = 1;
+	output->enable_quadtree_draw = 0;
+	output->enable_camera_draw = 0;
 
 	output->state.fps = 0.0f;
 	output->state.entity_maxindex = 0;
@@ -302,6 +304,14 @@ void tds_engine_run(struct tds_engine* ptr) {
 		}
 
 		tds_profile_pop(ptr->profile_handle);
+
+		if (ptr->enable_quadtree_draw) {
+			tds_quadtree_render(tds_engine_get_foreground_world(ptr)->quadtree, ptr->overlay_handle);
+		}
+
+		if (ptr->enable_camera_draw) {
+			tds_camera_render_outline(ptr->camera_handle, ptr->overlay_handle);
+		}
 
 		tds_console_draw(ptr->console_handle);
 

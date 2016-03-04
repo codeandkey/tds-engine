@@ -98,3 +98,21 @@ void tds_quadtree_walk(struct tds_quadtree* ptr, float l, float r, float t, floa
 		cur = cur->next;
 	}
 }
+
+void tds_quadtree_render(struct tds_quadtree* ptr, struct tds_overlay* overlay) {
+	if (!ptr) {
+		return;
+	}
+
+	tds_overlay_set_color(overlay, 1.0f, 1.0f, 1.0f, 1.0f);
+
+	tds_overlay_render_line(overlay, ptr->l, ptr->t, ptr->r, ptr->t, 0.6f, TDS_OVERLAY_WORLDSPACE | TDS_OVERLAY_USE_HIDDENSCALE);
+	tds_overlay_render_line(overlay, ptr->l, ptr->t, ptr->l, ptr->b, 0.6f, TDS_OVERLAY_WORLDSPACE | TDS_OVERLAY_USE_HIDDENSCALE);
+	tds_overlay_render_line(overlay, ptr->r, ptr->t, ptr->r, ptr->b, 0.6f, TDS_OVERLAY_WORLDSPACE | TDS_OVERLAY_USE_HIDDENSCALE);
+	tds_overlay_render_line(overlay, ptr->l, ptr->b, ptr->r, ptr->b, 0.6f, TDS_OVERLAY_WORLDSPACE | TDS_OVERLAY_USE_HIDDENSCALE);
+
+	tds_quadtree_render(ptr->lt, overlay);
+	tds_quadtree_render(ptr->rt, overlay);
+	tds_quadtree_render(ptr->rb, overlay);
+	tds_quadtree_render(ptr->lb, overlay);
+}

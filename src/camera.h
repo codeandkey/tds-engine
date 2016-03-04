@@ -2,10 +2,12 @@
 
 #include "display.h"
 #include "linmath.h"
+#include "overlay.h"
 
 struct tds_camera {
 	float x, y, z, angle;
 	float width, height;
+	float hidden_scale; /* Changes the camera size without altering the width and height values. */
 
 	struct tds_display* disp;
 	mat4x4 mat_transform;
@@ -16,3 +18,4 @@ void tds_camera_free(struct tds_camera* ptr);
 
 void tds_camera_set(struct tds_camera* ptr, float camera_size, float x, float y);
 void tds_camera_set_raw(struct tds_camera* ptr, float width, float height, float x, float y);
+void tds_camera_render_outline(struct tds_camera* ptr, struct tds_overlay* overlay);
