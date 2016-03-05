@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef TDS_PROFILE_ENABLED
+
 struct tds_profile* tds_profile_create(void) {
 	struct tds_profile* output = tds_malloc(sizeof *output);
 
@@ -98,3 +100,15 @@ void tds_profile_output(struct tds_profile* ptr) {
 
 	tds_logf(TDS_LOG_MESSAGE, "-- End profile output statistics --\n");
 }
+
+#else
+
+struct tds_profile* tds_profile_create(void) { return NULL; }
+void tds_profile_free(struct tds_profile* ptr) {}
+void tds_profile_push(struct tds_profile* ptr, const char* name) {}
+void tds_profile_pop(struct tds_profile* ptr) {}
+void tds_profile_mark(struct tds_profile* ptr) {}
+void tds_profile_flush(struct tds_profile* ptr) {}
+void tds_profile_output(struct tds_profile* ptr) {}
+
+#endif

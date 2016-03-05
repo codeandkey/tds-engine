@@ -31,7 +31,6 @@
 #include "sprite_cache.h"
 #include "sprite.h"
 #include "tds.h"
-#include "text.h"
 #include "texture_cache.h"
 #include "texture.h"
 #include "util.h"
