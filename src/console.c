@@ -287,6 +287,18 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "-wire")) {
 		tds_console_print(ptr, "disabling wireframe\n");
 		tds_engine_global->render_handle->enable_wireframe = 0;
+	} else if (!strcmp(cur_cmd, "+dynlights")) {
+		tds_console_print(ptr, "enabling dynamic lights\n");
+		tds_engine_global->render_handle->enable_dynlights = 1;
+	} else if (!strcmp(cur_cmd, "-dynlights")) {
+		tds_console_print(ptr, "disabling dynamic lights\n");
+		tds_engine_global->render_handle->enable_dynlights = 0;
+	} else if (!strcmp(cur_cmd, "+bloom")) {
+		tds_console_print(ptr, "enabling bloom\n");
+		tds_engine_global->render_handle->enable_bloom = 1;
+	} else if (!strcmp(cur_cmd, "-bloom")) {
+		tds_console_print(ptr, "disabling bloom\n");
+		tds_engine_global->render_handle->enable_bloom = 0;
 	} else if (!strcmp(cur_cmd, "+aabb")) {
 		tds_console_print(ptr, "enabling AABB occlusion\n");
 		tds_engine_global->render_handle->enable_aabb = 1;
@@ -304,6 +316,10 @@ void _tds_console_execute(struct tds_console* ptr) {
 		/* Reload the camera matrix. */
 		tds_camera_set_raw(tds_engine_global->camera_handle, tds_engine_global->camera_handle->width, tds_engine_global->camera_handle->height, tds_engine_global->camera_handle->x, tds_engine_global->camera_handle->y);
 		tds_console_print(ptr, "set hidden camera scale\n");
+	} else if (!strcmp(cur_cmd, "setambient")) {
+		/* Reload the camera matrix. */
+		tds_render_set_ambient_brightness(tds_engine_global->render_handle, strtof(strtok(NULL, " "), 0));
+		tds_console_print(ptr, "set ambient brightness\n");
 	} else if (!strcmp(cur_cmd, "ipart")) {
 		int key = strtol(strtok(NULL, " "), 0, 0), val = strtol(strtok(NULL, " "), 0, 0);
 

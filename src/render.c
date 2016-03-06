@@ -41,7 +41,6 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	_tds_load_bloom_shaders(output, TDS_RENDER_SHADER_BLOOM_FS);
 
 	glDisable(GL_DEPTH_TEST);
-
 	glEnable(GL_BLEND);
 	glDisable(GL_CULL_FACE);
 	glBlendEquation(GL_FUNC_ADD);
@@ -56,11 +55,14 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 
 	output->post_rt1 = tds_rt_create(display_width, display_height);
 	output->post_rt2 = tds_rt_create(display_width, display_height);
+	output->post_rt3 = tds_rt_create(display_width, display_height);
 
 	output->enable_bloom = 1;
 	output->enable_dynlights = 1;
 	output->enable_aabb = 1;
 	output->enable_wireframe = 0;
+
+	tds_render_set_ambient_brightness(output, 0.5f);
 
 	tds_rt_bind(NULL);
 
@@ -105,6 +107,7 @@ void tds_render_free(struct tds_render* ptr) {
 	tds_rt_free(ptr->point_rt);
 	tds_rt_free(ptr->post_rt1);
 	tds_rt_free(ptr->post_rt2);
+	tds_rt_free(ptr->post_rt3);
 	tds_render_clear_lights(ptr);
 	tds_free(ptr);
 }
@@ -112,6 +115,20 @@ void tds_render_free(struct tds_render* ptr) {
 void tds_render_clear(struct tds_render* ptr) {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+}
+
+void tds_render_set_ambient_brightness(struct tds_render* ptr, float brightness) {
+	ptr->ambient_brightness = brightness;
+
+	/* We will load post_rt3 with ambient lighting data. */
+	tds_rt_bind(ptr->post_rt3);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glClearColor(1.0f - ptr->ambient_brightness, 1.0f - ptr->ambient_brightness, 1.0f - ptr->ambient_brightness, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+	tds_rt_bind(NULL);
 }
 
 void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int world_count, struct tds_overlay* overlay) {
@@ -224,7 +241,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 		glUseProgram(ptr->render_program_hblur);
 		glBindVertexArray(vb_square->vao);
 		glBindTexture(GL_TEXTURE_2D, ptr->lightmap_rt->gl_tex);
-		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+		glUniformMatrix4fv(ptr->hb_uniform_transform, 1, GL_FALSE, (float*) *ident);
 
 		glDrawArrays(vb_square->render_mode, 0, 6);
 
@@ -235,15 +252,12 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 		glUseProgram(ptr->render_program_vblur);
 		glBindVertexArray(vb_square->vao);
 		glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
-		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+		glUniformMatrix4fv(ptr->vb_uniform_transform, 1, GL_FALSE, (float*) *ident);
 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		glDrawArrays(vb_square->render_mode, 0, 6);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
-
-	/* The world and lightmaps are done rendering.. we perform post-processing before the OSD */
-	/* First, a gaussian hblur */
 
 	tds_rt_bind(NULL); /* First, we render to the screen with the normal world info. */
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -256,6 +270,21 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 	glBlendFunc(GL_ONE, GL_ZERO); /* Copy the textures to preserve alpha. */
 	glDrawArrays(vb_square->render_mode, 0, 6);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	/* Next, subtract from the screen with the ambient brightness. */
+
+	if (ptr->enable_dynlights) {
+		glUseProgram(ptr->render_program);
+		glBindVertexArray(vb_square->vao);
+		glBindTexture(GL_TEXTURE_2D, ptr->post_rt3->gl_tex);
+		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
+
+		glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ZERO, GL_ONE);
+		glBlendEquationSeparate(GL_FUNC_REVERSE_SUBTRACT, GL_FUNC_ADD);
+		glDrawArrays(vb_square->render_mode, 0, 6);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
 
 	if (ptr->enable_bloom) {
 		tds_rt_bind(ptr->post_rt2);

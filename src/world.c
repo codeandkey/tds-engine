@@ -214,7 +214,7 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 		tds_quadtree_free(ptr->quadtree);
 	}
 
-	ptr->quadtree = tds_quadtree_create(-ptr->width * TDS_WORLD_BLOCK_SIZE / 2.0f, ptr->width * TDS_WORLD_BLOCK_SIZE / 2.0f, ptr->height * TDS_WORLD_BLOCK_SIZE / 2.0f, -ptr->height * TDS_WORLD_BLOCK_SIZE / 2.0f); 
+	ptr->quadtree = tds_quadtree_create(-(ptr->width + 1.0f) * TDS_WORLD_BLOCK_SIZE / 2.0f, (ptr->width + 1.0f) * TDS_WORLD_BLOCK_SIZE / 2.0f, (ptr->height + 0.5f) * TDS_WORLD_BLOCK_SIZE / 2.0f, -(ptr->height + 1.0f) * TDS_WORLD_BLOCK_SIZE / 2.0f); 
 
 	struct tds_world_hblock* hb_cur = ptr->block_list_head;
 	while (hb_cur) {

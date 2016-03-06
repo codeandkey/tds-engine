@@ -36,7 +36,7 @@ struct tds_render_light {
 struct tds_render {
 	struct tds_camera* camera_handle;
 	struct tds_handle_manager* object_buffer;
-	struct tds_rt* lightmap_rt, *point_rt, *dir_rt, *post_rt1, *post_rt2;
+	struct tds_rt* lightmap_rt, *point_rt, *dir_rt, *post_rt1, *post_rt2, *post_rt3;
 
 	struct tds_render_light* light_list;
 
@@ -62,6 +62,8 @@ struct tds_render {
 
 	unsigned int enable_bloom, enable_dynlights;
 	int enable_wireframe, enable_aabb;
+
+	float ambient_brightness;
 };
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr);
@@ -72,3 +74,5 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_buffer, in
 
 void tds_render_submit_light(struct tds_render* ptr, struct tds_render_light lt);
 void tds_render_clear_lights(struct tds_render* ptr);
+
+void tds_render_set_ambient_brightness(struct tds_render* ptr, float brightness);
