@@ -20,6 +20,7 @@
 #include "overlay.h"
 #include "bg.h"
 #include "profile.h"
+#include "script.h"
 
 #define TDS_MAP_PREFIX "res/maps/"
 

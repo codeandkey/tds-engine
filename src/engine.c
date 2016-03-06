@@ -32,7 +32,6 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_engine_global = output;
 
 	struct tds_display_desc display_desc;
-	struct tds_config* conf;
 
 	output->desc = desc;
 	output->object_list = NULL;
@@ -46,6 +45,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	tds_logf(TDS_LOG_MESSAGE, "Initializing TDS engine..\n");
 
+	struct tds_script* engine_conf = tds_script_create("tds.lua");
+	tds_logf(TDS_LOG_MESSAGE, "Executed engine configuration.\n");
+
 	tds_signal_init();
 	tds_logf(TDS_LOG_MESSAGE, "Registered signal handlers.\n");
 
@@ -54,17 +56,12 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	tds_profile_push(output->profile_handle, "Init sequence");
 
-	/* Config loading */
-	conf = tds_config_create(desc.config_filename);
-
-	tds_logf(TDS_LOG_MESSAGE, "Loaded engine configuration.\n");
-
 	/* Display subsystem */
-	display_desc.width = tds_config_get_int(conf, "width");
-	display_desc.height = tds_config_get_int(conf, "height");
-	display_desc.fs = tds_config_get_int(conf, "fullscreen");
-	display_desc.vsync = tds_config_get_int(conf, "vsync");
-	display_desc.msaa = tds_config_get_int(conf, "msaa");
+	display_desc.width = tds_script_get_var_int(engine_conf, "width", 640);
+	display_desc.height = tds_script_get_var_int(engine_conf, "height", 480);
+	display_desc.fs = tds_script_get_var_int(engine_conf, "fullscreen", 0);
+	display_desc.vsync = tds_script_get_var_int(engine_conf, "verticalsync", 0);
+	display_desc.msaa = tds_script_get_var_int(engine_conf, "msaa", 0);
 
 	tds_logf(TDS_LOG_MESSAGE, "Loaded display description. Video mode : %d by %d, FS %s, VSYNC %s, MSAA %d\n", display_desc.width, display_desc.height, display_desc.fs ? "on" : "off", display_desc.vsync ? "on" : "off", display_desc.msaa);
 	output->display_handle = tds_display_create(display_desc);
@@ -93,8 +90,8 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized render system.\n");
 
-	output->render_handle->enable_bloom = tds_config_get_int(conf, "enable_bloom");
-	output->render_handle->enable_dynlights = tds_config_get_int(conf, "enable_dynlights");
+	output->render_handle->enable_bloom = tds_script_get_var_int(engine_conf, "enable_bloom", 1);
+	output->render_handle->enable_dynlights = tds_script_get_var_int(engine_conf, "enable_dynlights", 1);
 
 	output->overlay_handle = tds_overlay_create(output->display_handle->desc.width, output->display_handle->desc.height);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized overlay system.\n");
@@ -155,7 +152,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_logf(TDS_LOG_MESSAGE, "Initialized console.\n");
 
 	/* Free configs */
-	tds_config_free(conf);
+	tds_script_free(engine_conf);
 	tds_logf(TDS_LOG_MESSAGE, "Done initializing everything.\n");
 	tds_logf(TDS_LOG_MESSAGE, "Engine is ready to roll!\n");
 
