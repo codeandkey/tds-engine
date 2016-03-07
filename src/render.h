@@ -63,7 +63,7 @@ struct tds_render {
 	unsigned int enable_bloom, enable_dynlights;
 	int enable_wireframe, enable_aabb;
 
-	float ambient_brightness;
+	float ambient_r, ambient_b, ambient_g;
 };
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr);

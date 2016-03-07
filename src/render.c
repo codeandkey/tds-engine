@@ -118,17 +118,13 @@ void tds_render_clear(struct tds_render* ptr) {
 }
 
 void tds_render_set_ambient_brightness(struct tds_render* ptr, float brightness) {
-	ptr->ambient_brightness = brightness;
+	ptr->ambient_r = ptr->ambient_g = ptr->ambient_b = brightness;
+}
 
-	/* We will load post_rt3 with ambient lighting data. */
-	tds_rt_bind(ptr->post_rt3);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	glClearColor(1.0f - ptr->ambient_brightness, 1.0f - ptr->ambient_brightness, 1.0f - ptr->ambient_brightness, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
-	tds_rt_bind(NULL);
+void tds_render_set_ambient_color(struct tds_render* ptr, float r, float g, float b) {
+	ptr->ambient_r = r;
+	ptr->ambient_g = g;
+	ptr->ambient_b = b;
 }
 
 void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int world_count, struct tds_overlay* overlay) {
@@ -246,7 +242,6 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 		glDrawArrays(vb_square->render_mode, 0, 6);
 
 		// vblur RT2 to RT1 (lightmap composition)
-
 		tds_rt_bind(ptr->post_rt1);
 
 		glUseProgram(ptr->render_program_vblur);
@@ -255,6 +250,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 		glUniformMatrix4fv(ptr->vb_uniform_transform, 1, GL_FALSE, (float*) *ident);
 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glBlendFuncSeparate(GL_DST_COLOR, GL_ZERO, GL_ZERO, GL_ONE);
 		glDrawArrays(vb_square->render_mode, 0, 6);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
@@ -270,21 +266,6 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 	glBlendFunc(GL_ONE, GL_ZERO); /* Copy the textures to preserve alpha. */
 	glDrawArrays(vb_square->render_mode, 0, 6);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	/* Next, subtract from the screen with the ambient brightness. */
-
-	if (ptr->enable_dynlights) {
-		glUseProgram(ptr->render_program);
-		glBindVertexArray(vb_square->vao);
-		glBindTexture(GL_TEXTURE_2D, ptr->post_rt3->gl_tex);
-		glUniformMatrix4fv(ptr->uniform_transform, 1, GL_FALSE, (float*) *ident);
-
-		glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ZERO, GL_ONE);
-		glBlendEquationSeparate(GL_FUNC_REVERSE_SUBTRACT, GL_FUNC_ADD);
-		glDrawArrays(vb_square->render_mode, 0, 6);
-		glBlendEquation(GL_FUNC_ADD);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	}
 
 	if (ptr->enable_bloom) {
 		tds_rt_bind(ptr->post_rt2);
@@ -1021,7 +1002,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 
 	tds_rt_bind(ptr->lightmap_rt);
 
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClearColor(ptr->ambient_r, ptr->ambient_g, ptr->ambient_b, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	/* We will use a basic [-1:1] square VBO to do most of the light rendering.
@@ -1089,7 +1070,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 
 		tds_rt_bind(ptr->lightmap_rt);
 
-		glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
+		glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ZERO, GL_ONE);
 
 		mat4x4 pt_final, ident;
 		mat4x4_identity(ident);
