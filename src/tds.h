@@ -9,6 +9,7 @@
 #include "collision.h"
 #include "config.h"
 #include "display.h"
+#include "effect.h"
 #include "engine.h"
 #include "handle.h"
 #include "input.h"

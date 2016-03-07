@@ -21,6 +21,7 @@
 #include "bg.h"
 #include "profile.h"
 #include "script.h"
+#include "effect.h"
 
 #define TDS_MAP_PREFIX "res/maps/"
 
@@ -94,6 +95,7 @@ struct tds_engine {
 	struct tds_overlay* overlay_handle;
 	struct tds_bg* bg_handle;
 	struct tds_profile* profile_handle;
+	struct tds_effect* effect_handle;
 
 	int world_buffer_count;
 	struct tds_world* world_buffer[4];

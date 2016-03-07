@@ -111,6 +111,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->block_map_handle = tds_block_map_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized block mapping subsystem.\n");
 
+	output->effect_handle = tds_effect_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized effect subsystem.\n");
+
 	output->bg_handle = tds_bg_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized background subsystem.\n");
 
@@ -201,6 +204,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_sound_cache_free(ptr->sndc_handle);
 	tds_object_type_cache_free(ptr->otc_handle);
 	tds_sound_manager_free(ptr->sound_manager_handle);
+	tds_effect_free(ptr->effect_handle);
 	tds_handle_manager_free(ptr->object_buffer);
 	tds_console_free(ptr->console_handle);
 	tds_savestate_free(ptr->savestate_handle);
@@ -261,6 +265,8 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 					tds_object_update(target);
 				}
+
+				tds_effect_update(ptr->effect_handle);
 			}
 		}
 
@@ -376,6 +382,8 @@ void tds_engine_terminate(struct tds_engine* ptr) {
 
 void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 	tds_engine_flush_objects(ptr);
+	tds_effect_flush(ptr->effect_handle);
+	tds_bg_flush(ptr->bg_handle);
 
 	char* str_filename = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
 

@@ -174,9 +174,10 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 	tds_rt_bind(ptr->post_rt1); /* Bind the post RT, we will be doing some post-processing */
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	tds_profile_push(tds_engine_global->profile_handle, "BG/Object render");
+	tds_profile_push(tds_engine_global->profile_handle, "BG/Object/FX render");
 
 	_tds_render_background(ptr, tds_engine_global->bg_handle);
+	tds_effect_render(tds_engine_global->effect_handle, ptr->uniform_transform, ptr->uniform_color);
 
 	for (int i = min_layer; i <= max_layer; ++i) {
 		if (i < world_count) {
