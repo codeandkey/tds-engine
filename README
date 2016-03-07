@@ -4,3 +4,9 @@ This projects is called TDS because there is no name for it yet.
 All we know is that it will be top down.
 
 The game engine is written for the C99 standard (with some uses of pragma preprocessor directives), so it should build on most compilers.
+
+To compile the engine, you must have premake4 installed.
+Execute `premake4 gmake` to generate a makefile.
+Execute `make` to compile in debug mode.
+Execute `make config=release` to compile in release mode.
+Execute `premake4 install` as root to install the engine.
