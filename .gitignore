@@ -1,1 +1,5 @@
-*.cfg
+libtds.so
+libtds_debug.so
+Makefile
+tds.make
+todo
