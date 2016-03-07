@@ -59,11 +59,11 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	/* Display subsystem */
 	display_desc.width = tds_script_get_var_int(engine_conf, "width", 640);
 	display_desc.height = tds_script_get_var_int(engine_conf, "height", 480);
-	display_desc.fs = tds_script_get_var_int(engine_conf, "fullscreen", 0);
+	display_desc.fs = tds_script_get_var_bool(engine_conf, "fullscreen", 0);
 	display_desc.vsync = tds_script_get_var_int(engine_conf, "verticalsync", 0);
 	display_desc.msaa = tds_script_get_var_int(engine_conf, "msaa", 0);
 
-	tds_logf(TDS_LOG_MESSAGE, "Loaded display description. Video mode : %d by %d, FS %s, VSYNC %s, MSAA %d\n", display_desc.width, display_desc.height, display_desc.fs ? "on" : "off", display_desc.vsync ? "on" : "off", display_desc.msaa);
+	tds_logf(TDS_LOG_MESSAGE, "Loaded display description. Video mode : %d by %d, FS %s, VSYNC %d intervals, MSAA %d\n", display_desc.width, display_desc.height, display_desc.fs ? "on" : "off", display_desc.vsync, display_desc.msaa);
 	output->display_handle = tds_display_create(display_desc);
 	tds_logf(TDS_LOG_MESSAGE, "Created display.\n");
 	/* End display subsystem */
@@ -90,8 +90,8 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized render system.\n");
 
-	output->render_handle->enable_bloom = tds_script_get_var_int(engine_conf, "enable_bloom", 1);
-	output->render_handle->enable_dynlights = tds_script_get_var_int(engine_conf, "enable_dynlights", 1);
+	output->render_handle->enable_bloom = tds_script_get_var_bool(engine_conf, "enable_bloom", 1);
+	output->render_handle->enable_dynlights = tds_script_get_var_bool(engine_conf, "enable_dynlights", 1);
 
 	output->overlay_handle = tds_overlay_create(output->display_handle->desc.width, output->display_handle->desc.height);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized overlay system.\n");
