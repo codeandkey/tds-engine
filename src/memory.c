@@ -160,7 +160,6 @@ void* tds_realloc_dbg(const char* func, void* ptr, int size) {
 		blk = blk->next;
 	}
 
-	tds_logf(TDS_LOG_WARNING, "Pointer %p not found in list! (called from %s)\n", ptr, func);
 	return tds_malloc_dbg(func, size);
 }
 
