@@ -3,3 +3,4 @@ libtds_debug.so
 Makefile
 tds.make
 todo
+obj

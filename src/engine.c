@@ -590,6 +590,16 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 				if (!type_ptr) {
 					tds_logf(TDS_LOG_WARNING, "Unknown typename in map file [%s]!\n", type_ptr);
+
+					memset(obj_type_buf, 0, sizeof obj_type_buf / sizeof *obj_type_buf);
+					memset(obj_visible_buf, 0, sizeof obj_visible_buf / sizeof *obj_visible_buf);
+					memset(obj_angle_buf, 0, sizeof obj_angle_buf / sizeof *obj_angle_buf);
+					memset(obj_x_buf, 0, sizeof obj_x_buf / sizeof *obj_x_buf);
+					memset(obj_y_buf, 0, sizeof obj_y_buf / sizeof *obj_y_buf);
+					memset(obj_width_buf, 0, sizeof obj_width_buf / sizeof *obj_width_buf);
+					memset(obj_height_buf, 0, sizeof obj_height_buf / sizeof *obj_height_buf);
+
+					cur_object_param = NULL;
 					break;
 				}
 
