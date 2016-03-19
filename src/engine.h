@@ -24,6 +24,7 @@
 #include "render_flat.h"
 #include "font.h"
 #include "ft.h"
+#include "font_cache.h"
 
 #define TDS_MAP_PREFIX "res/maps/"
 
@@ -65,6 +66,7 @@ struct tds_engine_desc {
 	void (*func_load_sprites)(struct tds_sprite_cache* sc_handle, struct tds_texture_cache* tc_handle);
 	void (*func_load_object_types)(struct tds_object_type_cache* otc_handle);
 	void (*func_load_block_map)(struct tds_block_map* block_map_handle, struct tds_texture_cache* tc_handle);
+	void (*func_load_fonts)(struct tds_font_cache* fc_handle, struct tds_ft* ft_handle);
 };
 
 struct tds_engine_state {
@@ -86,6 +88,7 @@ struct tds_engine {
 	struct tds_render_flat* render_flat_world_handle, *render_flat_overlay_handle;
 	struct tds_camera* camera_handle;
 	struct tds_texture_cache* tc_handle;
+	struct tds_font_cache* fc_handle;
 	struct tds_sprite_cache* sc_handle;
 	struct tds_sound_cache* sndc_handle;
 	struct tds_object_type_cache* otc_handle;

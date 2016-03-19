@@ -52,6 +52,7 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	output->enable_dynlights = 1;
 	output->enable_aabb = 1;
 	output->enable_wireframe = 0;
+	output->fade_factor = 1.0f;
 
 	tds_render_set_ambient_brightness(output, 0.5f);
 
@@ -253,13 +254,13 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 	glBindVertexArray(vb_square->vao);
 	glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
 	tds_shader_set_transform(ptr->shader_passthrough, (float*) *ident);
-	tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, 1.0f);
+	tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, ptr->fade_factor);
 
-	glBlendFunc(GL_ONE, GL_ZERO); /* Copy the textures to preserve alpha. */
-	glDrawArrays(vb_square->render_mode, 0, 6);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDrawArrays(vb_square->render_mode, 0, 6);
 
 	/* flat overlay rendering */
+	tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	glBindTexture(GL_TEXTURE_2D, flat_overlay->rt_backbuf->gl_tex);
 	glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count);
@@ -596,4 +597,8 @@ void tds_render_clear_lights(struct tds_render* ptr) {
 	}
 
 	ptr->light_list = NULL;
+}
+
+void tds_render_set_fade_factor(struct tds_render* ptr, float fade_factor) {
+	ptr->fade_factor = fade_factor;
 }

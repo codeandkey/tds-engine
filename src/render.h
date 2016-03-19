@@ -53,6 +53,7 @@ struct tds_render {
 	int enable_wireframe, enable_aabb;
 
 	float ambient_r, ambient_b, ambient_g;
+	float fade_factor;
 };
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr);
@@ -65,3 +66,4 @@ void tds_render_submit_light(struct tds_render* ptr, struct tds_render_light lt)
 void tds_render_clear_lights(struct tds_render* ptr);
 
 void tds_render_set_ambient_brightness(struct tds_render* ptr, float brightness);
+void tds_render_set_fade_factor(struct tds_render* ptr, float fade_factor);

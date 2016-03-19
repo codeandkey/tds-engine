@@ -84,6 +84,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->ft_handle = tds_ft_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized FreeType2 context.\n");
 
+	output->fc_handle = tds_font_cache_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized font cache.\n");
+
 	output->camera_handle = tds_camera_create(output->display_handle);
 	tds_camera_set(output->camera_handle, 10.0f, 0.0f, 0.0f);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized camera system.\n");
@@ -121,9 +124,6 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->bg_handle = tds_bg_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized background subsystem.\n");
 
-	output->font_debug = tds_font_create(output->ft_handle, TDS_FONT_DEBUG, 30);
-	tds_logf(TDS_LOG_MESSAGE, "Loaded debug font.\n");
-
 	output->world_buffer_count = 0;
 
 	for (int i = 0; i < TDS_MAX_WORLD_LAYERS; ++i) {
@@ -148,6 +148,19 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	if (desc.func_load_sounds) {
 		desc.func_load_sounds(output->sndc_handle);
 		tds_logf(TDS_LOG_MESSAGE, "Loaded sounds.\n");
+	}
+
+	if (desc.func_load_fonts) {
+		desc.func_load_fonts(output->fc_handle, output->ft_handle);
+		tds_logf(TDS_LOG_MESSAGE, "Loaded fonts.\n");
+	}
+
+	output->font_debug = tds_font_cache_get(output->fc_handle, "debug");
+
+	if (output->font_debug) {
+		tds_logf(TDS_LOG_MESSAGE, "Loaded debug font.\n");
+	} else {
+		tds_logf(TDS_LOG_WARNING, "No debug font in cache! Some text might be missing.\n");
 	}
 
 	/* Here, we add the editor objects. */
@@ -202,13 +215,13 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_input_map_free(ptr->input_map_handle);
 	tds_key_map_free(ptr->key_map_handle);
 	tds_render_free(ptr->render_handle);
-	tds_font_free(ptr->font_debug);
 	tds_render_flat_free(ptr->render_flat_world_handle);
 	tds_render_flat_free(ptr->render_flat_overlay_handle);
 	tds_bg_free(ptr->bg_handle);
 	tds_camera_free(ptr->camera_handle);
 	tds_display_free(ptr->display_handle);
 	tds_texture_cache_free(ptr->tc_handle);
+	tds_font_cache_free(ptr->fc_handle);
 	tds_sprite_cache_free(ptr->sc_handle);
 	tds_sound_cache_free(ptr->sndc_handle);
 	tds_object_type_cache_free(ptr->otc_handle);
