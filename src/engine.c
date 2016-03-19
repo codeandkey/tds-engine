@@ -319,10 +319,6 @@ void tds_engine_run(struct tds_engine* ptr) {
 			}
 		}
 
-		tds_render_flat_set_color(ptr->render_flat_world_handle, 0.0f, 1.0f, 0.0f, 1.0f);
-		tds_render_flat_set_mode(ptr->render_flat_world_handle, TDS_RENDER_COORD_WORLDSPACE);
-		tds_render_flat_text(ptr->render_flat_world_handle, ptr->font_debug, "nice meme", 9, 0.0f, 0.0f);
-
 		tds_profile_pop(ptr->profile_handle);
 		tds_console_draw(ptr->console_handle);
 
