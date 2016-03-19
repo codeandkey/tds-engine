@@ -37,8 +37,6 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->object_list = NULL;
 
 	output->enable_update = output->enable_draw = 1;
-	output->enable_quadtree_draw = 0;
-	output->enable_camera_draw = 0;
 
 	output->state.fps = 0.0f;
 	output->state.entity_maxindex = 0;
@@ -83,6 +81,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->object_buffer = tds_handle_manager_create(1024);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized object buffer.\n");
 
+	output->ft_handle = tds_ft_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized FreeType2 context.\n");
+
 	output->camera_handle = tds_camera_create(output->display_handle);
 	tds_camera_set(output->camera_handle, 10.0f, 0.0f, 0.0f);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized camera system.\n");
@@ -93,8 +94,11 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->render_handle->enable_bloom = tds_script_get_var_bool(engine_conf, "enable_bloom", 1);
 	output->render_handle->enable_dynlights = tds_script_get_var_bool(engine_conf, "enable_dynlights", 1);
 
-	output->overlay_handle = tds_overlay_create(output->display_handle->desc.width, output->display_handle->desc.height);
-	tds_logf(TDS_LOG_MESSAGE, "Initialized overlay system.\n");
+	output->render_flat_world_handle = tds_render_flat_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized flat rendering (world) system.\n");
+
+	output->render_flat_overlay_handle = tds_render_flat_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized flat rendering (overlay) system.\n");
 
 	output->input_handle = tds_input_create(output->display_handle);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized input system.\n");
@@ -116,6 +120,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	output->bg_handle = tds_bg_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized background subsystem.\n");
+
+	output->font_debug = tds_font_create(output->ft_handle, TDS_FONT_DEBUG, 30);
+	tds_logf(TDS_LOG_MESSAGE, "Loaded debug font.\n");
 
 	output->world_buffer_count = 0;
 
@@ -195,7 +202,9 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_input_map_free(ptr->input_map_handle);
 	tds_key_map_free(ptr->key_map_handle);
 	tds_render_free(ptr->render_handle);
-	tds_overlay_free(ptr->overlay_handle);
+	tds_font_free(ptr->font_debug);
+	tds_render_flat_free(ptr->render_flat_world_handle);
+	tds_render_flat_free(ptr->render_flat_overlay_handle);
 	tds_bg_free(ptr->bg_handle);
 	tds_camera_free(ptr->camera_handle);
 	tds_display_free(ptr->display_handle);
@@ -208,6 +217,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_handle_manager_free(ptr->object_buffer);
 	tds_console_free(ptr->console_handle);
 	tds_savestate_free(ptr->savestate_handle);
+	tds_ft_free(ptr->ft_handle);
 	tds_profile_free(ptr->profile_handle);
 	tds_free(ptr);
 }
@@ -227,12 +237,17 @@ void tds_engine_run(struct tds_engine* ptr) {
 	double accumulator = 0.0f;
 	double timestep_ms = 1000.0f / (double) TDS_ENGINE_TIMESTEP;
 
+	unsigned long frame_count = 0;
+	tds_clock_point init_point = tds_clock_get_point();
+
 	while (running && ptr->run_flag) {
 		running &= !tds_display_get_close(ptr->display_handle);
 
 		double delta_ms = tds_clock_get_ms(dt_point);
 		dt_point = tds_clock_get_point();
 		accumulator += delta_ms;
+
+		frame_count++;
 
 		/* We approximate the fps using the delta frame time. */
 		ptr->state.fps = 1000.0f / delta_ms;
@@ -273,25 +288,10 @@ void tds_engine_run(struct tds_engine* ptr) {
 		tds_profile_pop(ptr->profile_handle);
 
 		/* Run game draw logic. */
-		tds_overlay_set_color(ptr->overlay_handle, 0.0f, 0.0f, 0.0f, 0.0f);
+		tds_render_flat_clear(ptr->render_flat_world_handle);
+		tds_render_flat_clear(ptr->render_flat_overlay_handle);
 
 		tds_render_clear(ptr->render_handle); /* We clear before executing the draw functions, otherwise the text buffer would be destroyed */
-		tds_overlay_clear(ptr->overlay_handle);
-
-		tds_profile_push(ptr->profile_handle, "Status overlay");
-
-		char fps_string[16] = {0};
-		snprintf(fps_string, 16, "FPS: %.2f", ptr->state.fps);
-
-		char accum_string[32] = {0};
-		snprintf(accum_string, 32, "Accumulator cycles: %d", accum_frames);
-		accum_frames = 0;
-
-		tds_overlay_set_color(ptr->overlay_handle, 1.0f, 1.0f, 1.0f, 1.0f);
-		tds_overlay_render_text(ptr->overlay_handle, -0.95f, 1.0f, 1.0f, -0.95f, 10.0f, fps_string, strlen(fps_string), TDS_OVERLAY_REL_SCREENSPACE | TDS_OVERLAY_HLEFT | TDS_OVERLAY_VBOTTOM);
-		tds_overlay_render_text(ptr->overlay_handle, -0.95f, 1.0f, 1.0f, -0.90f, 10.0f, accum_string, strlen(accum_string), TDS_OVERLAY_REL_SCREENSPACE | TDS_OVERLAY_HLEFT | TDS_OVERLAY_VBOTTOM);
-
-		tds_profile_pop(ptr->profile_handle);
 		tds_profile_push(ptr->profile_handle, "Draw event cycle");
 
 		if (ptr->enable_draw) {
@@ -306,27 +306,22 @@ void tds_engine_run(struct tds_engine* ptr) {
 			}
 		}
 
+		tds_render_flat_set_color(ptr->render_flat_world_handle, 0.0f, 1.0f, 0.0f, 1.0f);
+		tds_render_flat_set_mode(ptr->render_flat_world_handle, TDS_RENDER_COORD_WORLDSPACE);
+		tds_render_flat_text(ptr->render_flat_world_handle, ptr->font_debug, "nice meme", 9, 0.0f, 0.0f);
+
 		tds_profile_pop(ptr->profile_handle);
-
-		if (ptr->enable_quadtree_draw) {
-			tds_quadtree_render(tds_engine_get_foreground_world(ptr)->quadtree, ptr->overlay_handle);
-		}
-
-		if (ptr->enable_camera_draw) {
-			tds_camera_render_outline(ptr->camera_handle, ptr->overlay_handle);
-		}
-
 		tds_console_draw(ptr->console_handle);
 
 		tds_profile_push(ptr->profile_handle, "Render process");
-		tds_render_draw(ptr->render_handle, ptr->world_buffer, ptr->world_buffer_count, ptr->overlay_handle);
+		tds_render_draw(ptr->render_handle, ptr->world_buffer, ptr->world_buffer_count, ptr->render_flat_world_handle, ptr->render_flat_overlay_handle);
 		tds_profile_pop(ptr->profile_handle);
 		tds_display_swap(ptr->display_handle);
 
 		tds_render_clear_lights(ptr->render_handle);
 	}
 
-	tds_logf(TDS_LOG_MESSAGE, "Finished engine mainloop.\n");
+	tds_logf(TDS_LOG_MESSAGE, "Finished engine mainloop. Average framerate: %f FPS [%d frames in %f s]\n", (float) frame_count / ((float) tds_clock_get_ms(init_point) / 1000.0f), frame_count, tds_clock_get_ms(init_point) / 1000.0f);
 }
 
 void tds_engine_flush_objects(struct tds_engine* ptr) {

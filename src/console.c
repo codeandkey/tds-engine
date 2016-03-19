@@ -11,15 +11,13 @@
 
 static void _tds_console_execute(struct tds_console* ptr);
 
-#define TDS_CONSOLE_FONT_SIZE 10.0f
-
 struct tds_console* tds_console_create(void) {
 	struct tds_console* output = tds_malloc(sizeof(struct tds_console));
 
 	/* We can't control anything but rows and cols, so 1:1 may be hard */
 
-	output->rows = tds_engine_global->display_handle->desc.height / (int) TDS_CONSOLE_FONT_SIZE;
-	output->cols = tds_engine_global->display_handle->desc.width / (int) TDS_CONSOLE_FONT_SIZE;
+	output->rows = TDS_CONSOLE_ROWS;
+	output->cols = TDS_CONSOLE_COLS;
 
 	tds_logf(TDS_LOG_MESSAGE, "Creating console with %d rows and %d cols\n", output->rows, output->cols);
 
@@ -46,32 +44,6 @@ void tds_console_free(struct tds_console* ptr) {
 
 	tds_free(ptr->buffers);
 	tds_free(ptr);
-}
-
-void tds_console_resize(struct tds_console* ptr) {
-	if (!ptr->buffers) {
-		return;
-	}
-
-	for (int i = 0; i < ptr->rows; ++i) {
-		tds_free(ptr->buffers[i]);
-	}
-
-	tds_free(ptr->buffers);
-
-	ptr->rows = tds_engine_global->display_handle->desc.height / (int) TDS_CONSOLE_FONT_SIZE;
-	ptr->cols = tds_engine_global->display_handle->desc.width / (int) TDS_CONSOLE_FONT_SIZE;
-
-	tds_logf(TDS_LOG_MESSAGE, "Resizing console to %d rows and %d cols\n", ptr->rows, ptr->cols);
-
-	ptr->buffers = tds_malloc(sizeof(char*) * ptr->rows);
-
-	for (int i = 0; i < ptr->rows; ++i) {
-		ptr->buffers[i] = tds_malloc(ptr->cols);
-	}
-
-	ptr->curs_row = ptr->curs_col = 0;
-	tds_console_print(ptr, "$ ");
 }
 
 void tds_console_key_pressed(struct tds_console* ptr, int key) {
@@ -137,23 +109,12 @@ void tds_console_draw(struct tds_console* ptr) {
 		return;
 	}
 
-	tds_overlay_set_color(tds_engine_global->overlay_handle, 1.0f, 1.0f, 1.0f, 1.0f);
+	tds_render_flat_set_mode(tds_engine_global->render_flat_overlay_handle, TDS_RENDER_COORD_SCREENSPACE);
+	tds_render_flat_set_color(tds_engine_global->render_flat_overlay_handle, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	for (int i = 0; i < ptr->rows; ++i) {
-		if (!*(ptr->buffers[i])) {
-			continue;
-		}
-
-		int len = strlen(ptr->buffers[i]);
-
-		if (len > ptr->cols) {
-			len = ptr->cols;
-		}
-
-		float w = tds_engine_global->display_handle->desc.width, h = tds_engine_global->display_handle->desc.height;
-
-		float offset = h / (float) ptr->rows;
-		tds_overlay_render_text(tds_engine_global->overlay_handle, 0.0f, w, offset * i, h, TDS_CONSOLE_FONT_SIZE, ptr->buffers[i], len, TDS_OVERLAY_SCREENSPACE);
+		int len = strlen(ptr->buffers[i]) > ptr->cols ? ptr->cols : strlen(ptr->buffers[i]);
+		tds_render_flat_text(tds_engine_global->render_flat_overlay_handle, tds_engine_global->font_debug, ptr->buffers[i], len, 0.0f, tds_engine_global->font_debug->size_px * (i + 1));
 	}
 }
 
@@ -263,24 +224,6 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "-draw")) {
 		tds_console_print(ptr, "disabling draw\n");
 		tds_engine_global->enable_draw = 0;
-	} else if (!strcmp(cur_cmd, "+qdraw")) {
-		tds_console_print(ptr, "enabling quadtree draw\n");
-		tds_engine_global->enable_quadtree_draw = 1;
-	} else if (!strcmp(cur_cmd, "-qdraw")) {
-		tds_console_print(ptr, "disabling quadtree draw\n");
-		tds_engine_global->enable_quadtree_draw = 0;
-	} else if (!strcmp(cur_cmd, "+cdraw")) {
-		tds_console_print(ptr, "enabling camera draw\n");
-		tds_engine_global->enable_camera_draw = 1;
-	} else if (!strcmp(cur_cmd, "-cdraw")) {
-		tds_console_print(ptr, "disabling camera draw\n");
-		tds_engine_global->enable_camera_draw = 0;
-	} else if (!strcmp(cur_cmd, "+overlaydb")) {
-		tds_console_print(ptr, "enabling overlay doublebuffering\n");
-		tds_engine_global->overlay_handle->enable_doublebuffer = 1;
-	} else if (!strcmp(cur_cmd, "-overlaydb")) {
-		tds_console_print(ptr, "disabling overlay doublebuffering\n");
-		tds_engine_global->overlay_handle->enable_doublebuffer = 0;
 	} else if (!strcmp(cur_cmd, "+wire")) {
 		tds_console_print(ptr, "enabling wireframe\n");
 		tds_engine_global->render_handle->enable_wireframe = 1;

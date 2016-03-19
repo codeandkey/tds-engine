@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef TDS_PROFILE_ENABLED
+#ifdef TDS_PROFILE_ENABLE
 
 struct tds_profile* tds_profile_create(void) {
 	struct tds_profile* output = tds_malloc(sizeof *output);

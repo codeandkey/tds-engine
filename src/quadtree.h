@@ -1,5 +1,4 @@
 #pragma once
-#include "overlay.h"
 
 struct tds_quadtree_entry {
 	void* data;
@@ -21,7 +20,5 @@ void tds_quadtree_free(struct tds_quadtree* ptr);
 
 int tds_quadtree_insert(struct tds_quadtree* ptr, float l, float r, float t, float b, void* data); /* Returns 1 if successfully inserted into node or any children */
 void tds_quadtree_walk(struct tds_quadtree* ptr, float l, float r, float t, float b, void* usr, void (*user_callback)(void*, void*));
-
-void tds_quadtree_render(struct tds_quadtree* ptr, struct tds_overlay* overlay);
 
 /* user_callback is called with (usr, <quadtree entry data>) */

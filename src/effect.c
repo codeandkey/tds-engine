@@ -53,7 +53,7 @@ void tds_effect_update(struct tds_effect* ptr) {
 	}
 }
 
-void tds_effect_render(struct tds_effect* ptr, unsigned int u_transform, unsigned int u_color) {
+void tds_effect_render(struct tds_effect* ptr, struct tds_shader* shader) {
 	struct tds_effect_instance* cur = ptr->list;
 
 	mat4x4 final, transform;
@@ -69,8 +69,8 @@ void tds_effect_render(struct tds_effect* ptr, unsigned int u_transform, unsigne
 			mat4x4_translate(transform, cur->state.part_buf[i].x, cur->state.part_buf[i].y, 0.0f);
 			mat4x4_mul(final, tds_engine_global->camera_handle->mat_transform, transform);
 
-			glUniformMatrix4fv(u_transform, 1, GL_FALSE, (float*) *final);
-			glUniform4f(u_color, cur->state.part_buf[i].r, cur->state.part_buf[i].g, cur->state.part_buf[i].b, cur->state.part_buf[i].a);
+			tds_shader_set_color(shader, cur->state.part_buf[i].r, cur->state.part_buf[i].g, cur->state.part_buf[i].b, cur->state.part_buf[i].a);
+			tds_shader_set_transform(shader, (float*) *final);
 
 			glBindVertexArray(cur->state.vb->vao);
 			glBindTexture(GL_TEXTURE_2D, cur->state.tex->gl_id);

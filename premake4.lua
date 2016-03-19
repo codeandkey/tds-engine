@@ -11,7 +11,7 @@ solution "tds"
 		files { "**.h", "**.c" }
 
 		configuration "linux"
-			includedirs { "/usr/include/glib-2.0", "/usr/lib/glib-2.0/include", "/usr/include/pango-1.0", "/usr/include/cairo" }
+			includedirs { "/usr/include/glib-2.0", "/usr/lib/glib-2.0/include", "/usr/include/pango-1.0", "/usr/include/cairo", "/usr/include/freetype2" }
 			links { "m", "GL", "dl", "glfw", "cairo", "pango-1.0", "pangocairo-1.0", "openal", "lua" }
 			newaction {
 				trigger = "install",

@@ -17,11 +17,13 @@
 #include "world.h"
 #include "signal.h"
 #include "savestate.h"
-#include "overlay.h"
 #include "bg.h"
 #include "profile.h"
 #include "script.h"
 #include "effect.h"
+#include "render_flat.h"
+#include "font.h"
+#include "ft.h"
 
 #define TDS_MAP_PREFIX "res/maps/"
 
@@ -30,6 +32,8 @@
 #define TDS_LOAD_WORLD_SIZE 4
 
 #define TDS_MAX_WORLD_LAYERS 4
+
+#define TDS_FONT_DEBUG "res/fonts/debug.ttf"
 
 /* TDS engine map spec :
  *
@@ -79,6 +83,7 @@ struct tds_engine {
 
 	struct tds_display* display_handle;
 	struct tds_render* render_handle;
+	struct tds_render_flat* render_flat_world_handle, *render_flat_overlay_handle;
 	struct tds_camera* camera_handle;
 	struct tds_texture_cache* tc_handle;
 	struct tds_sprite_cache* sc_handle;
@@ -92,10 +97,11 @@ struct tds_engine {
 	struct tds_console* console_handle;
 	struct tds_block_map* block_map_handle;
 	struct tds_savestate* savestate_handle;
-	struct tds_overlay* overlay_handle;
 	struct tds_bg* bg_handle;
 	struct tds_profile* profile_handle;
 	struct tds_effect* effect_handle;
+	struct tds_font* font_debug;
+	struct tds_ft* ft_handle;
 
 	int world_buffer_count;
 	struct tds_world* world_buffer[4];
@@ -103,7 +109,7 @@ struct tds_engine {
 	int run_flag;
 	struct tds_object** object_list;
 
-	int enable_update, enable_draw, enable_quadtree_draw, enable_camera_draw;
+	int enable_update, enable_draw;
 };
 
 struct tds_engine* tds_engine_create(struct tds_engine_desc desc);

@@ -10,6 +10,8 @@
  * Two types of userdata are given to the effect type -- per-particle and per-system userdata.
  */
 
+#include "shader.h"
+
 struct tds_effect_particle_part {
 	float x, y, r, g, b, a;
 };
@@ -52,4 +54,4 @@ void tds_effect_push(struct tds_effect* ptr, struct tds_effect_type* type);
 void tds_effect_flush(struct tds_effect* ptr);
 
 void tds_effect_update(struct tds_effect* ptr);
-void tds_effect_render(struct tds_effect* ptr, unsigned int u_transform, unsigned int u_color);
+void tds_effect_render(struct tds_effect* ptr, struct tds_shader* shader);

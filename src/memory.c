@@ -68,7 +68,7 @@ void tds_memcheck_rel(void) {
 	if (tds_mem_blocks > 0) {
 		tds_logf(TDS_LOG_WARNING, "%d blocks unfreed.\n", tds_mem_blocks);
 	} else {
-		tds_logf(TDS_LOG_MESSAGE, "All blocks freed.\n");
+		tds_logf(TDS_LOG_MESSAGE, "All blocks freed. [%d dbg blocks]\n", tds_mem_blocks_dbg);
 	}
 }
 
