@@ -113,6 +113,7 @@ struct tds_engine {
 	struct tds_object** object_list;
 
 	int enable_update, enable_draw;
+	char* request_load;
 };
 
 struct tds_engine* tds_engine_create(struct tds_engine_desc desc);
@@ -126,6 +127,7 @@ struct tds_object* tds_engine_get_object_by_type(struct tds_engine* ptr, const c
 struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engine* ptr, const char* type); /* Allocates a buffer. Freed by the engine on shutdown. */
 
 void tds_engine_load(struct tds_engine* ptr, const char* mapname);
+void tds_engine_request_load(struct tds_engine* ptr, const char* mapname); /* This doesn't immediately load the world but waits for the frame to finish. */
 void tds_engine_save(struct tds_engine* ptr, const char* mapname);
 
 void tds_engine_destroy_objects(struct tds_engine* ptr, const char* type_name);

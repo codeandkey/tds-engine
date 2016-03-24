@@ -40,6 +40,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	output->state.fps = 0.0f;
 	output->state.entity_maxindex = 0;
+	output->request_load = NULL;
 
 	tds_logf(TDS_LOG_MESSAGE, "Initializing TDS engine..\n");
 
@@ -211,6 +212,10 @@ void tds_engine_free(struct tds_engine* ptr) {
 		tds_world_free(ptr->world_buffer[i]);
 	}
 
+	if (ptr->request_load) {
+		tds_free(ptr->request_load);
+	}
+
 	tds_input_free(ptr->input_handle);
 	tds_input_map_free(ptr->input_map_handle);
 	tds_key_map_free(ptr->key_map_handle);
@@ -328,6 +333,14 @@ void tds_engine_run(struct tds_engine* ptr) {
 		tds_display_swap(ptr->display_handle);
 
 		tds_render_clear_lights(ptr->render_handle);
+
+		/* the frame is over. if any loads were requested, we do that now. */
+		if (ptr->request_load) {
+			tds_logf(TDS_LOG_DEBUG, "acknowledging request to load [%s]\n", ptr->request_load);
+			tds_engine_load(ptr, ptr->request_load);
+			tds_free(ptr->request_load);
+			ptr->request_load = NULL;
+		}
 	}
 
 	tds_logf(TDS_LOG_MESSAGE, "Finished engine mainloop. Average framerate: %f FPS [%d frames in %f s]\n", (float) frame_count / ((float) tds_clock_get_ms(init_point) / 1000.0f), frame_count, tds_clock_get_ms(init_point) / 1000.0f);
@@ -339,6 +352,9 @@ void tds_engine_flush_objects(struct tds_engine* ptr) {
 			tds_object_free(ptr->object_buffer->buffer[i].data);
 		}
 	}
+
+	tds_bg_flush(ptr->bg_handle);
+	tds_effect_flush(ptr->effect_handle);
 }
 
 struct tds_object* tds_engine_get_object_by_type(struct tds_engine* ptr, const char* typename) {
@@ -385,17 +401,13 @@ void tds_engine_terminate(struct tds_engine* ptr) {
 }
 
 void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
-	tds_engine_flush_objects(ptr);
-	tds_effect_flush(ptr->effect_handle);
-	tds_bg_flush(ptr->bg_handle);
-
 	char* str_filename = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
 
 	memcpy(str_filename, TDS_MAP_PREFIX, strlen(TDS_MAP_PREFIX));
 	memcpy(str_filename + strlen(TDS_MAP_PREFIX), mapname, strlen(mapname));
 
 	str_filename[strlen(TDS_MAP_PREFIX) + strlen(mapname)] = 0;
-	tds_logf(TDS_LOG_DEBUG, "Loading map [%s]\n", str_filename);
+	tds_logf(TDS_LOG_DEBUG, "Loading map [%s] (%s)\n", str_filename, mapname);
 
 	FILE* fd = fopen(str_filename, "r");
 
@@ -404,6 +416,12 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 		tds_free(str_filename);
 		return;
 	}
+
+	/* the map actually exists -- NOW we destroy everything. */
+
+	tds_engine_flush_objects(ptr);
+	tds_effect_flush(ptr->effect_handle);
+	tds_bg_flush(ptr->bg_handle);
 
 	yxml_t* ctx = tds_malloc(sizeof(yxml_t) + TDS_LOAD_BUFFER_SIZE); // We hide the buffer with the YXML context
 	yxml_init(ctx, ctx + 1, TDS_LOAD_BUFFER_SIZE);
@@ -722,6 +740,14 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 	tds_free(ctx);
 	tds_free(str_filename);
 	tds_engine_broadcast(ptr, TDS_MSG_MAP_READY, 0);
+}
+
+void tds_engine_request_load(struct tds_engine* ptr, const char* request_load) {
+	tds_logf(TDS_LOG_DEBUG, "requested load for [%s]\n", request_load);
+
+	ptr->request_load = tds_realloc(ptr->request_load, strlen(request_load) + 1);
+	memcpy(ptr->request_load, request_load, strlen(request_load));
+	ptr->request_load[strlen(request_load)] = 0;
 }
 
 void tds_engine_destroy_objects(struct tds_engine* ptr, const char* type_name) {
