@@ -93,13 +93,14 @@ void tds_render_flat_point(struct tds_render_flat* ptr, float x, float y) {
 	glDrawArrays(vb->render_mode, 0, vb->vertex_count);
 }
 
-void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, char* buf, int buflen, float _x, float _y) {
+void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, char* buf, int buflen, float _x, float _y, tds_render_alignment align) {
 	if (!font) {
 		return;
 	}
 
 	struct tds_display* disp = tds_engine_global->display_handle;
 
+	float total_width = 0.0f;
 	float x, y;
 	transform_coords(ptr, _x, _y, &x, &y);
 
@@ -116,6 +117,27 @@ void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, ch
 	tds_shader_set_color(ptr->shader_text, ptr->r, ptr->g, ptr->b, ptr->a);
 
 	for (int i = 0; i < buflen; ++i) {
+		if (FT_Load_Char(font->face, buf[i], FT_LOAD_DEFAULT)) {
+			tds_logf(TDS_LOG_WARNING, "Failed to load font glpyh for character [%c (%d)]\n", buf[i], buf[i]);
+			continue;
+		}
+
+		FT_GlyphSlot g = font->face->glyph;
+
+		total_width += g->bitmap_left * sx;
+		total_width += g->bitmap.width * sx;
+		total_width += (g->advance.x >> 6) * sx;
+	}
+
+	float x_offset = 0.0f;
+
+	if (align == TDS_RENDER_CALIGN) {
+		x_offset = -total_width / 2.0f;
+	} else if (align == TDS_RENDER_RALIGN) {
+		x_offset = total_width / 2.0f;
+	}
+
+	for (int i = 0; i < buflen; ++i) {
 		if (FT_Load_Char(font->face, buf[i], FT_LOAD_RENDER)) {
 			tds_logf(TDS_LOG_WARNING, "Failed to load font glpyh for character [%c (%d)]\n", buf[i], buf[i]);
 			continue;
@@ -127,10 +149,10 @@ void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, ch
 		float w = g->bitmap.width * sx, h = g->bitmap.rows * sy;
 
 		struct tds_vertex verts[4] = {
-			{xl, yt, 0.0f, 0.0f, 0.0f},
-			{xl + w, yt, 0.0f, 1.0f, 0.0f},
-			{xl, yt - h, 0.0f, 0.0f, 1.0f},
-			{xl + w, yt - h, 0.0f, 1.0f, 1.0f},
+			{xl + x_offset, yt, 0.0f, 0.0f, 0.0f},
+			{xl + x_offset + w, yt, 0.0f, 1.0f, 0.0f},
+			{xl + x_offset, yt - h, 0.0f, 0.0f, 1.0f},
+			{xl + x_offset + w, yt - h, 0.0f, 1.0f, 1.0f},
 		};
 
 		struct tds_vertex_buffer* vbo = tds_vertex_buffer_create(verts, sizeof verts / sizeof *verts, GL_TRIANGLE_STRIP);

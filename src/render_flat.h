@@ -18,6 +18,12 @@ typedef enum {
 	TDS_RENDER_COORD_REL_SCREENSPACE
 } tds_render_coord_mode;
 
+typedef enum {
+	TDS_RENDER_LALIGN,
+	TDS_RENDER_RALIGN,
+	TDS_RENDER_CALIGN
+} tds_render_alignment;
+
 struct tds_render_flat {
 	struct tds_rt* rt_backbuf;
 	struct tds_shader* shader_passthrough, *shader_text;
@@ -34,5 +40,4 @@ void tds_render_flat_set_color(struct tds_render_flat* ptr, float r, float g, fl
 
 void tds_render_flat_line(struct tds_render_flat* ptr, float x1, float y1, float x2, float y2);
 void tds_render_flat_point(struct tds_render_flat* ptr, float x, float y);
-void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, char* buf, int buflen, float l, float t);
-
+void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, char* buf, int buflen, float l, float t, tds_render_alignment align);

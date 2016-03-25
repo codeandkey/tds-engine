@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "objects/objects.h"
 
@@ -31,6 +32,8 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	tds_engine_global = output;
 
+	srand(time(NULL));
+
 	struct tds_display_desc display_desc;
 
 	output->desc = desc;
@@ -44,7 +47,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 
 	tds_logf(TDS_LOG_MESSAGE, "Initializing TDS engine..\n");
 
-	struct tds_script* engine_conf = tds_script_create("tds.lua");
+	struct tds_script* engine_conf = tds_script_create(desc.config_filename);
 	tds_logf(TDS_LOG_MESSAGE, "Executed engine configuration.\n");
 
 	tds_signal_init();
@@ -54,6 +57,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_logf(TDS_LOG_MESSAGE, "Initialized engine profiler.\n");
 
 	tds_profile_push(output->profile_handle, "Init sequence");
+
+	output->stringdb_handle = tds_stringdb_create(desc.stringdb_filename);
+	tds_logf(TDS_LOG_MESSAGE, "Initialized string database.\n");
 
 	/* Display subsystem */
 	display_desc.width = tds_script_get_var_int(engine_conf, "width", 640);
@@ -235,6 +241,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_handle_manager_free(ptr->object_buffer);
 	tds_console_free(ptr->console_handle);
 	tds_savestate_free(ptr->savestate_handle);
+	tds_stringdb_free(ptr->stringdb_handle);
 	tds_ft_free(ptr->ft_handle);
 	tds_profile_free(ptr->profile_handle);
 	tds_free(ptr);
