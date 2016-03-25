@@ -32,12 +32,12 @@ struct tds_stringdb* tds_stringdb_create(const char* filename) {
 
 	FILE* fd = fopen(filename_full, "r");
 
-	tds_free(filename_full);
-
 	if (!fd) {
 		tds_logf(TDS_LOG_CRITICAL, "Failed to open string database [%s] for reading.\n", filename_full);
 		return NULL;
 	}
+
+	tds_free(filename_full);
 
 	char readbuf[TDS_STRINGDB_BUFLEN] = {0}, *readpos = readbuf;
 
