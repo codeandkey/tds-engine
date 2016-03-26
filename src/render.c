@@ -462,6 +462,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 			break;
 		case TDS_RENDER_LIGHT_DIRECTIONAL:
 			tds_shader_bind(ptr->shader_light_dir);
+			tds_shader_set_direction(ptr->shader_light_dir, cur->x, cur->y);
 			tds_rt_bind(ptr->dir_rt);
 			cam_use = cam_dir;
 			break;
