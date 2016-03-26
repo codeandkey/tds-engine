@@ -19,6 +19,7 @@ struct tds_sound_source* tds_sound_source_create(void) {
 }
 
 void tds_sound_source_free(struct tds_sound_source* ptr) {
+	alSourceStop(ptr->source);
 	alDeleteSources(1, &ptr->source);
 	tds_free(ptr);
 }

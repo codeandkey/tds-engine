@@ -51,6 +51,9 @@ struct tds_shader* tds_shader_create(const char* vs, const char* gs, const char*
 	unsigned int u_texture = glGetUniformLocation(output->prg, "tds_texture");
 	glUniform1i(u_texture, 0);
 
+	u_texture = glGetUniformLocation(output->prg, "tds_texture2");
+	glUniform1i(u_texture, 1);
+
 	return output;
 }
 
@@ -121,4 +124,14 @@ void tds_shader_set_transform(struct tds_shader* ptr, float* transform) {
 
 void tds_shader_set_color(struct tds_shader* ptr, float r, float g, float b, float a) {
 	glUniform4f(ptr->u_color, r, g, b, a);
+}
+
+void tds_shader_bind_texture(struct tds_shader* ptr, unsigned int texture) {
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+}
+
+void tds_shader_bind_texture_alt(struct tds_shader* ptr, unsigned int texture) {
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, texture);
 }

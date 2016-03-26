@@ -22,6 +22,7 @@
 #define TDS_RENDER_SHADER_VBLUR_VS "res/shaders/vblur_vs.glsl"
 #define TDS_RENDER_SHADER_BLUR_FS "res/shaders/blur_fs.glsl"
 #define TDS_RENDER_SHADER_BLOOM_FS "res/shaders/bloom_fs.glsl"
+#define TDS_RENDER_SHADER_OVERLAY_FS "res/shaders/overlay_fs.glsl"
 
 #define TDS_RENDER_LIGHT_POINT 0
 #define TDS_RENDER_LIGHT_DIRECTIONAL 1
@@ -48,6 +49,7 @@ struct tds_render {
 	struct tds_shader* shader_bloom;
 	struct tds_shader* shader_hblur;
 	struct tds_shader* shader_vblur;
+	struct tds_shader* shader_overlay;
 
 	unsigned int enable_bloom, enable_dynlights;
 	int enable_wireframe, enable_aabb;

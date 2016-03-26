@@ -9,7 +9,7 @@
 #define TDS_BLOCK_TYPE_LBSLOPE  (1 << 3)
 #define TDS_BLOCK_TYPE_SOLID  (1 << 4)
 #define TDS_BLOCK_TYPE_NOLIGHT  (1 << 5)
-
+#define TDS_BLOCK_TYPE_NODRAW   (1 << 6)
 
 struct tds_block_type {
 	struct tds_texture* texture;

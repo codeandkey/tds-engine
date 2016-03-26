@@ -74,6 +74,7 @@ struct tds_engine_desc {
 struct tds_engine_state {
 	float fps;
 	int entity_maxindex;
+	char* mapname;
 };
 
 struct tds_engine_object_list {

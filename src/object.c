@@ -82,7 +82,7 @@ void tds_object_free(struct tds_object* ptr) {
 		head = tmp;
 	}
 
-	tds_free(ptr->snd_src);
+	tds_sound_source_free(ptr->snd_src);
 	tds_free(ptr);
 }
 

@@ -222,6 +222,10 @@ void tds_engine_free(struct tds_engine* ptr) {
 		tds_free(ptr->request_load);
 	}
 
+	if (ptr->state.mapname) {
+		tds_free(ptr->state.mapname);
+	}
+
 	tds_input_free(ptr->input_handle);
 	tds_input_map_free(ptr->input_map_handle);
 	tds_key_map_free(ptr->key_map_handle);
@@ -426,9 +430,25 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 	/* the map actually exists -- NOW we destroy everything. */
 
+	if (ptr->state.mapname) {
+		tds_free(ptr->state.mapname);
+	}
+
+	ptr->state.mapname = tds_malloc(strlen(mapname) + 1);
+	memcpy(ptr->state.mapname, mapname, strlen(mapname));
+	ptr->state.mapname[strlen(mapname)] = 0;
+
 	tds_engine_flush_objects(ptr);
 	tds_effect_flush(ptr->effect_handle);
 	tds_bg_flush(ptr->bg_handle);
+
+	for (int i = 0; i < TDS_MAX_WORLD_LAYERS; ++i) {
+		tds_world_free(ptr->world_buffer[i]);
+		ptr->world_buffer[i] = tds_world_create();
+		tds_logf(TDS_LOG_MESSAGE, "Initialized world subsystem for layer %d.\n", i);
+	}
+
+	ptr->world_buffer_count = 0;
 
 	yxml_t* ctx = tds_malloc(sizeof(yxml_t) + TDS_LOAD_BUFFER_SIZE); // We hide the buffer with the YXML context
 	yxml_init(ctx, ctx + 1, TDS_LOAD_BUFFER_SIZE);
@@ -578,6 +598,8 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 			break;
 		case YXML_CONTENT:
 			if (in_data) {
+				memset(data_encoding_buf, 0, sizeof data_encoding_buf / sizeof *data_encoding_buf);
+
 				if (!id_buffer) {
 					world_width = strtol(world_width_buf, NULL, 10);
 					world_height = strtol(world_width_buf, NULL, 10);

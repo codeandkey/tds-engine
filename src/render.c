@@ -30,6 +30,7 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	output->shader_hblur = tds_shader_create(TDS_RENDER_SHADER_HBLUR_VS, NULL, TDS_RENDER_SHADER_BLUR_FS);
 	output->shader_vblur = tds_shader_create(TDS_RENDER_SHADER_VBLUR_VS, NULL, TDS_RENDER_SHADER_BLUR_FS);
 	output->shader_bloom = tds_shader_create(TDS_RENDER_SHADER_WORLD_VS, NULL, TDS_RENDER_SHADER_BLOOM_FS);
+	output->shader_overlay = tds_shader_create(TDS_RENDER_SHADER_WORLD_VS, NULL, TDS_RENDER_SHADER_OVERLAY_FS);
 
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -70,6 +71,7 @@ void tds_render_free(struct tds_render* ptr) {
 	tds_shader_free(ptr->shader_bloom);
 	tds_shader_free(ptr->shader_hblur);
 	tds_shader_free(ptr->shader_vblur);
+	tds_shader_free(ptr->shader_overlay);
 
 	tds_rt_free(ptr->lightmap_rt);
 	tds_rt_free(ptr->dir_rt);
@@ -215,7 +217,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 	tds_shader_set_transform(ptr->shader_passthrough, (float*) *ident);
 	tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, 1.0f);
 
-	glBindTexture(GL_TEXTURE_2D, flat_world->rt_backbuf->gl_tex);
+	tds_shader_bind_texture(ptr->shader_passthrough, flat_world->rt_backbuf->gl_tex);
 	glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count);
 
 	if (ptr->enable_dynlights) {
@@ -232,8 +234,8 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 
 		glDrawArrays(vb_square->render_mode, 0, 6);
 
-		// vblur RT2 to RT1 (lightmap composition)
-		tds_rt_bind(ptr->post_rt1);
+		// vblur RT2 to RT1 (lightmap blur final)
+		tds_rt_bind(ptr->post_rt3);
 
 		tds_shader_bind(ptr->shader_vblur);
 		glBindVertexArray(vb_square->vao);
@@ -241,28 +243,46 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 		tds_shader_set_transform(ptr->shader_vblur, (float*) *ident);
 		tds_shader_set_color(ptr->shader_vblur, 1.0f, 1.0f, 1.0f, 1.0f);
 
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		glBlendFuncSeparate(GL_DST_COLOR, GL_ZERO, GL_ZERO, GL_ONE);
+		glBlendFunc(GL_ONE, GL_ZERO);
 		glDrawArrays(vb_square->render_mode, 0, 6);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		tds_rt_bind(NULL); /* Using dynlights, we render with the overlay blending shader to put world info on the NULL fb. */
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		tds_shader_bind(ptr->shader_overlay);
+		glBindVertexArray(vb_square->vao);
+		tds_shader_bind_texture(ptr->shader_overlay, ptr->post_rt3->gl_tex);
+		tds_shader_bind_texture_alt(ptr->shader_overlay, ptr->post_rt1->gl_tex);
+
+		tds_shader_set_color(ptr->shader_overlay, 1.0f, 1.0f, 1.0f, ptr->fade_factor);
+		tds_shader_set_transform(ptr->shader_overlay, (float*) *ident);
+
+		glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
+		glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	} else {
+		tds_rt_bind(NULL); /* Not using dynlights, we simply render to the NULL fb to get some world pixels out there. */
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		tds_shader_bind(ptr->shader_passthrough);
+		glBindVertexArray(vb_square->vao);
+		glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
+		tds_shader_bind_texture(ptr->shader_passthrough, ptr->post_rt1->gl_tex);
+		tds_shader_set_transform(ptr->shader_passthrough, (float*) *ident);
+		tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, ptr->fade_factor);
+
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glDrawArrays(vb_square->render_mode, 0, 6);
 	}
 
-	tds_rt_bind(NULL); /* First, we render to the screen with the normal world info. */
-	glClear(GL_COLOR_BUFFER_BIT);
-
 	tds_shader_bind(ptr->shader_passthrough);
-	glBindVertexArray(vb_square->vao);
-	glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
-	tds_shader_set_transform(ptr->shader_passthrough, (float*) *ident);
-	tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, ptr->fade_factor);
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glDrawArrays(vb_square->render_mode, 0, 6);
 
 	/* flat overlay rendering */
 	tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, 1.0f);
+	tds_shader_set_transform(ptr->shader_passthrough, (float*) *ident);
 
-	glBindTexture(GL_TEXTURE_2D, flat_overlay->rt_backbuf->gl_tex);
+	tds_shader_bind_texture(ptr->shader_passthrough, flat_overlay->rt_backbuf->gl_tex);
 	glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count);
 
 	/* post-processing */
@@ -273,7 +293,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 
 		tds_shader_bind(ptr->shader_bloom);
 		glBindVertexArray(vb_square->vao);
-		glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
+		tds_shader_bind_texture(ptr->shader_bloom, ptr->post_rt1->gl_tex);
 		tds_shader_set_transform(ptr->shader_bloom, (float*) *ident);
 		tds_shader_set_color(ptr->shader_bloom, 1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -286,7 +306,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 
 		tds_shader_bind(ptr->shader_hblur);
 		glBindVertexArray(vb_square->vao);
-		glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
+		tds_shader_bind_texture(ptr->shader_hblur, ptr->post_rt2->gl_tex);
 		tds_shader_set_transform(ptr->shader_hblur, (float*) *ident);
 		tds_shader_set_color(ptr->shader_hblur, 1.0f, 1.0f, 1.0f, 1.0f);
 		glDrawArrays(vb_square->render_mode, 0, 6);
@@ -296,7 +316,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 
 		tds_shader_bind(ptr->shader_vblur);
 		glBindVertexArray(vb_square->vao);
-		glBindTexture(GL_TEXTURE_2D, ptr->post_rt1->gl_tex);
+		tds_shader_bind_texture(ptr->shader_vblur, ptr->post_rt1->gl_tex);
 		tds_shader_set_transform(ptr->shader_vblur, (float*) *ident);
 		tds_shader_set_color(ptr->shader_vblur, 1.0f, 1.0f, 1.0f, 1.0f);
 		glDrawArrays(vb_square->render_mode, 0, 6);
@@ -305,7 +325,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 
 		tds_shader_bind(ptr->shader_passthrough);
 		glBindVertexArray(vb_square->vao);
-		glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
+		tds_shader_bind_texture(ptr->shader_passthrough, ptr->post_rt2->gl_tex);
 		tds_shader_set_transform(ptr->shader_passthrough, (float*) *ident);
 		tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -376,6 +396,10 @@ void _tds_render_hblock_callback(void* usr, void* data) {
 
 	if (!render_type.texture) {
 		tds_logf(TDS_LOG_WARNING, "Block type %d does not have an associated texture.\n", cur->id);
+		return;
+	}
+
+	if (render_type.flags & TDS_BLOCK_TYPE_NODRAW) {
 		return;
 	}
 

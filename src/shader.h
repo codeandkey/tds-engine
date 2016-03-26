@@ -18,3 +18,6 @@ void tds_shader_free(struct tds_shader* ptr);
 void tds_shader_bind(struct tds_shader* ptr);
 void tds_shader_set_transform(struct tds_shader* ptr, float* transform);
 void tds_shader_set_color(struct tds_shader* ptr, float r, float g, float b, float a);
+
+void tds_shader_bind_texture(struct tds_shader* ptr, unsigned int texture);
+void tds_shader_bind_texture_alt(struct tds_shader* ptr, unsigned int texture);
