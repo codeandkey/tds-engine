@@ -104,6 +104,8 @@ struct tds_stringdb* tds_stringdb_create(const char* filename) {
 			cur_offset->string_count++;
 
 			break;
+		case '!':
+			break;
 		default:
 			tds_logf(TDS_LOG_WARNING, "Invalid format header '%c' in string database.\n", readbuf[0]);
 			break;
