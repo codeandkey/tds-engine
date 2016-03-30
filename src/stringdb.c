@@ -114,7 +114,7 @@ struct tds_stringdb* tds_stringdb_create(const char* filename) {
 
 	fclose(fd);
 
-	tds_logf(TDS_LOG_MESSAGE, "Loaded %d string groups.\n");
+	tds_logf(TDS_LOG_MESSAGE, "Loaded %d string groups.\n", output->entry_count);
 	return output;
 }
 

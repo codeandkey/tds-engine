@@ -117,6 +117,54 @@ void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, ch
 	tds_shader_set_color(ptr->shader_text, ptr->r, ptr->g, ptr->b, ptr->a);
 
 	for (int i = 0; i < buflen; ++i) {
+		if (buf[i] == TDS_RENDER_FLAT_CONTROL_CHAR) {
+			i++;
+
+			if (i >= buflen) {
+				tds_logf(TDS_LOG_WARNING, "Malformed control sequence in string [%.*s], terminating render procedure\n", buflen, buf);
+				return;
+			}
+
+			switch(buf[i++]) {
+			case TDS_RENDER_FLAT_CONTROL_CHAR_COLOR:
+				if (i + 5 >= buflen) {
+					tds_logf(TDS_LOG_WARNING, "Malformed color control sequence in string [%.*s], terminating render procedure\n", buflen, buf);
+					return;
+				}
+
+				i += 6;
+				break;
+			case TDS_RENDER_FLAT_CONTROL_CHAR_WAVE:
+				if (i + 5 >= buflen) {
+					tds_logf(TDS_LOG_WARNING, "Malformed wave control sequence in string [%.*s], terminating render procedure\n", buflen, buf);
+					return;
+				}
+
+				i += 6;
+				break;
+			case TDS_RENDER_FLAT_CONTROL_CHAR_SHAKE:
+				if (i + 1 >= buflen) {
+					tds_logf(TDS_LOG_WARNING, "Malformed shake control sequence in string [%.*s], terminating render procedure\n", buflen, buf);
+					return;
+				}
+
+				i += 2;
+				break;
+			case TDS_RENDER_FLAT_CONTROL_CHAR_END:
+				if (i >= buflen) {
+					tds_logf(TDS_LOG_WARNING, "Malformed end control sequence in string [%.*s], terminating render procedure\n", buflen, buf);
+					return;
+				}
+
+				i += 1;
+				break;
+			}
+		}
+
+		if (i >= buflen) { /* Can happen if a control sequence appears at the end of the string. */
+			break;
+		}
+
 		if (FT_Load_Char(font->face, buf[i], FT_LOAD_DEFAULT)) {
 			tds_logf(TDS_LOG_WARNING, "Failed to load font glpyh for character [%c (%d)]\n", buf[i], buf[i]);
 			continue;
@@ -137,7 +185,67 @@ void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, ch
 		x_offset = total_width / 2.0f;
 	}
 
+	int in_wave = 0, in_shake = 0;
+
 	for (int i = 0; i < buflen; ++i) {
+		if (buf[i] == TDS_RENDER_FLAT_CONTROL_CHAR) {
+			i++;
+
+			/* The input has already been validated. We can proceed knowing that the buffer is sufficiently large. */
+			char r[3] = {0}, g[3] = {0}, b[3] = {0}, a[3] = {0};
+
+			switch(buf[i++]) {
+			case TDS_RENDER_FLAT_CONTROL_CHAR_COLOR:
+				r[0] = buf[i];
+				r[1] = buf[i + 1];
+				g[0] = buf[i + 2];
+				g[1] = buf[i + 3];
+				b[0] = buf[i + 4];
+				b[1] = buf[i + 5];
+
+				char* endptr = NULL;
+
+				long rv = strtol(r, &endptr, 16);
+
+				if (endptr == r) {
+					tds_logf(TDS_LOG_WARNING, "Invalid hex digits in red field of color control string [%.*s], stopping\n", buflen, buf);
+					return;
+				}
+
+				long gv = strtol(g, &endptr, 16);
+
+				if (endptr == g) {
+					tds_logf(TDS_LOG_WARNING, "Invalid hex digits in green field of color control string [%.*s], stopping\n", buflen, buf);
+					return;
+				}
+
+				long bv = strtol(b, &endptr, 16);
+
+				if (endptr == b) {
+					tds_logf(TDS_LOG_WARNING, "Invalid hex digits in blue field of color control string [%.*s], stopping\n", buflen, buf);
+					return;
+				}
+
+				tds_shader_set_color(ptr->shader_text, (float) rv / 255.0f, (float) gv / 255.0f, (float) bv / 255.0f, ptr->a);
+
+				i += 6;
+				break;
+			case TDS_RENDER_FLAT_CONTROL_CHAR_WAVE:
+				i += 6;
+				break;
+			case TDS_RENDER_FLAT_CONTROL_CHAR_SHAKE:
+				i += 2;
+				break;
+			case TDS_RENDER_FLAT_CONTROL_CHAR_END:
+				i += 1;
+				break;
+			}
+		}
+
+		if (i >= buflen) { /* Can happen if a control sequence appears at the end of the string. */
+			break;
+		}
+
 		if (FT_Load_Char(font->face, buf[i], FT_LOAD_RENDER)) {
 			tds_logf(TDS_LOG_WARNING, "Failed to load font glpyh for character [%c (%d)]\n", buf[i], buf[i]);
 			continue;

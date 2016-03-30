@@ -12,6 +12,32 @@
 
 #define TDS_RENDER_FLAT_TEXT_FS "res/shaders/text_fs.glsl"
 
+#define TDS_RENDER_FLAT_CONTROL_CHAR '^'
+#define TDS_RENDER_FLAT_CONTROL_CHAR_COLOR 'c'
+#define TDS_RENDER_FLAT_CONTROL_CHAR_WAVE  'w'
+#define TDS_RENDER_FLAT_CONTROL_CHAR_SHAKE 's'
+#define TDS_RENDER_FLAT_CONTROL_CHAR_END   'e'
+
+#define TDS_RENDER_FLAT_SHAKE_MAX 0.5f /* Scale of font_height to apply when shaking */
+#define TDS_RENDER_FLAT_PERIOD_MAX 2500 /* Millseconds to use as a period when PP = 0xFF. Apply a linear scale from this value to 0. */
+#define TDS_RENDER_FLAT_SPEED_MAX  0.001f /* Factor to scale with the SS value and then multiply with the ms time. */
+
+/* Control sequences in tds_render_flat text:
+ *
+ * Inserting special sequences into rendered text can allow for some interesting text behavior.
+ * The control prefix is '^'.
+ * The color control string is "cRRGGBB"
+ * 	This sets the color for all future characters. The digits should be in hexadecimal, from 00 to FF.
+ * The wave control string is "wIIPPSS"
+ * To end a wave sequence, the control string is "ew"
+ * 	The PP should be a byte indicating the sin period offset. More will increase the wave frequency.
+ *	The II should be a byte indicating the amplitude of the wave.
+ *	The SS should indicate the speed of oscillation. This is applied as a factor to the ms time.
+ * The shake control string is "sII"
+ * The shake termination string is "es"
+ * 	The II indicates the intensity of the shake.
+ */
+
 typedef enum {
 	TDS_RENDER_COORD_WORLDSPACE,
 	TDS_RENDER_COORD_SCREENSPACE,
