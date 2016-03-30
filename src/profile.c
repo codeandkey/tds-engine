@@ -93,7 +93,7 @@ void tds_profile_output(struct tds_profile* ptr) {
 	tds_logf(TDS_LOG_MESSAGE, "-- Profile output statistics --\n");
 
 	while (cur) {
-		tds_logf(TDS_LOG_MESSAGE, "%-20s | %-10f ms | %-10f avg | %-10d calls | %-10d marks\n", cur->name, cur->time, cur->time / (float) cur->call_count, cur->call_count, cur->mark_count);
+		tds_logf(TDS_LOG_MESSAGE, "%-20s | %-10.f ms | %-10.2f avg | %-10d calls | %-10d marks\n", cur->name, cur->time, cur->time / (float) cur->call_count, cur->call_count, cur->mark_count);
 
 		cur = cur->next;
 	}

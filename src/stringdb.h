@@ -9,9 +9,35 @@
 #define TDS_STRINGDB_PREFIX "res/strings/"
 #define TDS_STRINGDB_BUFLEN 512
 
+#define TDS_STRING_FORMAT_SPEC       '^'
+#define TDS_STRING_FORMAT_TYPE_COLOR 'c'
+#define TDS_STRING_FORMAT_TYPE_SHAKE 's'
+#define TDS_STRING_FORMAT_TYPE_END   'e'
+#define TDS_STRING_FORMAT_TYPE_WAVE  'w'
+
+/*
+ * ^cRRGGBB - red, green, blue
+ * ^wSSWWAA - speed, wavelength, amplitude
+ * ^sII     - intensity
+ * ^e       - end wave or shake
+ */
+
+struct tds_string_format {
+	int pos, type;
+	int fields[4];
+	struct tds_string_format* next;
+};
+
+struct tds_string_format_fields {
+	int type, fields;
+};
+
+extern struct tds_string_format_fields tds_string_format_field_counts[];
+
 struct tds_string {
 	char* data;
 	int len;
+	struct tds_string_format* formats;
 };
 
 struct tds_string_db_offset_entry_string { /* A single string entry in a db offset. */

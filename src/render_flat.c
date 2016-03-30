@@ -6,6 +6,8 @@
 #include "log.h"
 #include "vertex_buffer.h"
 
+#include <math.h>
+
 static void transform_coords(struct tds_render_flat* ptr, float x, float y, float* ox, float* oy);
 
 struct tds_render_flat* tds_render_flat_create(void) {
@@ -15,6 +17,7 @@ struct tds_render_flat* tds_render_flat_create(void) {
 
 	output->shader_passthrough = tds_shader_create(TDS_RENDER_FLAT_PASSTHROUGH_VS, NULL, TDS_RENDER_FLAT_PASSTHROUGH_FS);
 	output->shader_text = tds_shader_create(TDS_RENDER_FLAT_PASSTHROUGH_VS, NULL, TDS_RENDER_FLAT_TEXT_FS);
+	output->cp_start = tds_clock_get_point();
 
 	tds_render_flat_set_mode(output, TDS_RENDER_COORD_REL_SCREENSPACE);
 	tds_render_flat_set_color(output, 1.0f, 1.0f, 1.0f, 1.0f);
@@ -93,7 +96,7 @@ void tds_render_flat_point(struct tds_render_flat* ptr, float x, float y) {
 	glDrawArrays(vb->render_mode, 0, vb->vertex_count);
 }
 
-void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, char* buf, int buflen, float _x, float _y, tds_render_alignment align) {
+void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, char* buf, int buflen, float _x, float _y, tds_render_alignment align, struct tds_string_format* formats) {
 	if (!font) {
 		return;
 	}
@@ -117,54 +120,6 @@ void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, ch
 	tds_shader_set_color(ptr->shader_text, ptr->r, ptr->g, ptr->b, ptr->a);
 
 	for (int i = 0; i < buflen; ++i) {
-		if (buf[i] == TDS_RENDER_FLAT_CONTROL_CHAR) {
-			i++;
-
-			if (i >= buflen) {
-				tds_logf(TDS_LOG_WARNING, "Malformed control sequence in string [%.*s], terminating render procedure\n", buflen, buf);
-				return;
-			}
-
-			switch(buf[i++]) {
-			case TDS_RENDER_FLAT_CONTROL_CHAR_COLOR:
-				if (i + 5 >= buflen) {
-					tds_logf(TDS_LOG_WARNING, "Malformed color control sequence in string [%.*s], terminating render procedure\n", buflen, buf);
-					return;
-				}
-
-				i += 6;
-				break;
-			case TDS_RENDER_FLAT_CONTROL_CHAR_WAVE:
-				if (i + 5 >= buflen) {
-					tds_logf(TDS_LOG_WARNING, "Malformed wave control sequence in string [%.*s], terminating render procedure\n", buflen, buf);
-					return;
-				}
-
-				i += 6;
-				break;
-			case TDS_RENDER_FLAT_CONTROL_CHAR_SHAKE:
-				if (i + 1 >= buflen) {
-					tds_logf(TDS_LOG_WARNING, "Malformed shake control sequence in string [%.*s], terminating render procedure\n", buflen, buf);
-					return;
-				}
-
-				i += 2;
-				break;
-			case TDS_RENDER_FLAT_CONTROL_CHAR_END:
-				if (i >= buflen) {
-					tds_logf(TDS_LOG_WARNING, "Malformed end control sequence in string [%.*s], terminating render procedure\n", buflen, buf);
-					return;
-				}
-
-				i += 1;
-				break;
-			}
-		}
-
-		if (i >= buflen) { /* Can happen if a control sequence appears at the end of the string. */
-			break;
-		}
-
 		if (FT_Load_Char(font->face, buf[i], FT_LOAD_DEFAULT)) {
 			tds_logf(TDS_LOG_WARNING, "Failed to load font glpyh for character [%c (%d)]\n", buf[i], buf[i]);
 			continue;
@@ -187,63 +142,35 @@ void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, ch
 
 	int in_wave = 0, in_shake = 0;
 
+	float shake_offset_max = 0.0f;
+	float wave_speed, wave_length, wave_amp;
+
 	for (int i = 0; i < buflen; ++i) {
-		if (buf[i] == TDS_RENDER_FLAT_CONTROL_CHAR) {
-			i++;
+		struct tds_string_format* cur_format = formats;
 
-			/* The input has already been validated. We can proceed knowing that the buffer is sufficiently large. */
-			char r[3] = {0}, g[3] = {0}, b[3] = {0}, a[3] = {0};
-
-			switch(buf[i++]) {
-			case TDS_RENDER_FLAT_CONTROL_CHAR_COLOR:
-				r[0] = buf[i];
-				r[1] = buf[i + 1];
-				g[0] = buf[i + 2];
-				g[1] = buf[i + 3];
-				b[0] = buf[i + 4];
-				b[1] = buf[i + 5];
-
-				char* endptr = NULL;
-
-				long rv = strtol(r, &endptr, 16);
-
-				if (endptr == r) {
-					tds_logf(TDS_LOG_WARNING, "Invalid hex digits in red field of color control string [%.*s], stopping\n", buflen, buf);
-					return;
+		while (cur_format) {
+			if (cur_format->pos == i) {
+				switch (cur_format->type) {
+				case TDS_STRING_FORMAT_TYPE_COLOR:
+					tds_shader_set_color(ptr->shader_text, (float) cur_format->fields[0] / 255, (float) cur_format->fields[1] / 255, (float) cur_format->fields[2] / 255, ptr->a);
+					break;
+				case TDS_STRING_FORMAT_TYPE_SHAKE:
+					in_shake = 1;
+					shake_offset_max = ((float) cur_format->fields[0] / 255.0f);
+					break;
+				case TDS_STRING_FORMAT_TYPE_WAVE:
+					in_wave = 1;
+					wave_speed = ((float) cur_format->fields[0] / 255.0f);
+					wave_length = ((float) cur_format->fields[1] / 255.0f);
+					wave_amp = ((float) cur_format->fields[2] / 255.0f);
+					break;
+				case TDS_STRING_FORMAT_TYPE_END:
+					in_wave = in_shake = 0;
+					break;
 				}
-
-				long gv = strtol(g, &endptr, 16);
-
-				if (endptr == g) {
-					tds_logf(TDS_LOG_WARNING, "Invalid hex digits in green field of color control string [%.*s], stopping\n", buflen, buf);
-					return;
-				}
-
-				long bv = strtol(b, &endptr, 16);
-
-				if (endptr == b) {
-					tds_logf(TDS_LOG_WARNING, "Invalid hex digits in blue field of color control string [%.*s], stopping\n", buflen, buf);
-					return;
-				}
-
-				tds_shader_set_color(ptr->shader_text, (float) rv / 255.0f, (float) gv / 255.0f, (float) bv / 255.0f, ptr->a);
-
-				i += 6;
-				break;
-			case TDS_RENDER_FLAT_CONTROL_CHAR_WAVE:
-				i += 6;
-				break;
-			case TDS_RENDER_FLAT_CONTROL_CHAR_SHAKE:
-				i += 2;
-				break;
-			case TDS_RENDER_FLAT_CONTROL_CHAR_END:
-				i += 1;
-				break;
 			}
-		}
 
-		if (i >= buflen) { /* Can happen if a control sequence appears at the end of the string. */
-			break;
+			cur_format = cur_format->next;
 		}
 
 		if (FT_Load_Char(font->face, buf[i], FT_LOAD_RENDER)) {
@@ -255,6 +182,14 @@ void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, ch
 
 		float xl = x + g->bitmap_left * sx, yt = y + g->bitmap_top * sy;
 		float w = g->bitmap.width * sx, h = g->bitmap.rows * sy;
+
+		if (in_shake) {
+			yt += shake_offset_max * h * (((rand() % TDS_RENDER_RAND_PRECISION) / (float) TDS_RENDER_RAND_PRECISION) * 2.0f - 1.0f);
+		}
+
+		if (in_wave) {
+			yt += sinf(tds_clock_get_ms(ptr->cp_start) * TDS_RENDER_FLAT_SPEED_MAX * wave_speed + TDS_RENDER_FLAT_PERIOD_MAX * wave_length * i) * h * wave_amp;
+		}
 
 		struct tds_vertex verts[4] = {
 			{xl + x_offset, yt, 0.0f, 0.0f, 0.0f},

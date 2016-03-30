@@ -6,6 +6,13 @@
 #include <stdio.h>
 #include <string.h>
 
+struct tds_string_format_fields tds_string_format_field_counts[] = {
+	{TDS_STRING_FORMAT_TYPE_COLOR, 3},
+	{TDS_STRING_FORMAT_TYPE_SHAKE, 1},
+	{TDS_STRING_FORMAT_TYPE_WAVE,  3},
+	{TDS_STRING_FORMAT_TYPE_END,   0},
+};
+
 struct tds_stringdb* tds_stringdb_create(const char* filename) {
 	struct tds_stringdb* output = tds_malloc(sizeof *output);
 
@@ -94,14 +101,74 @@ struct tds_stringdb* tds_stringdb_create(const char* filename) {
 
 			struct tds_string_db_offset_entry_string* new_string_entry = tds_malloc(sizeof *new_string_entry);
 
-			new_string_entry->str.len = strlen(readpos);
-			new_string_entry->str.data = tds_malloc(new_string_entry->str.len + 1);
-			memcpy(new_string_entry->str.data, readpos, new_string_entry->str.len);
-			new_string_entry->str.data[new_string_entry->str.len] = 0;
+			{
+				int readpos_len = strlen(readpos);
+				new_string_entry->str.data = tds_malloc(readpos_len + 1); /* We will allocate more memory than necessary if there are any format strings, but this saves us reallocation overhead. */
+				new_string_entry->str.len = 0;
 
-			new_string_entry->next = cur_offset->strings;
-			cur_offset->strings = new_string_entry;
-			cur_offset->string_count++;
+				for (int i = 0; i < readpos_len; ++i) {
+					if (readpos[i] == TDS_STRING_FORMAT_SPEC) {
+						if (++i >= readpos_len) {
+							break;
+						}
+
+						tds_logf(TDS_LOG_DEBUG, "started format i %d -> readpos (type) %c\n", i, readpos[i]);
+
+						struct tds_string_format* new_format = tds_malloc(sizeof *new_format);
+						new_format->type = readpos[i];
+						new_format->pos = new_string_entry->str.len;
+
+						int fields = -1;
+						for (int j = 0; j < sizeof tds_string_format_field_counts / sizeof *tds_string_format_field_counts; ++j) {
+							if (tds_string_format_field_counts[j].type == new_format->type) {
+								fields = tds_string_format_field_counts[j].fields;
+								break;
+							}
+						}
+
+						if (fields < 0) {
+							tds_free(new_format);
+							tds_logf(TDS_LOG_WARNING, "Unknown format specifier '%c' in string.\n", new_format->type);
+							break;
+						}
+
+						++i;
+
+						if (i + fields * 2 > readpos_len) {
+							tds_free(new_format);
+							tds_logf(TDS_LOG_WARNING, "Insufficient length for reading arguments to format string.\n");
+							break;
+						}
+
+						for (int j = 0; j < fields; ++j) {
+							char cur_field[3] = {0};
+
+							cur_field[0] = readpos[i++];
+							cur_field[1] = readpos[i++];
+
+							new_format->fields[j] = strtol(cur_field, NULL, 16);
+						}
+
+						new_format->next = new_string_entry->str.formats;
+						new_string_entry->str.formats = new_format;
+
+						i--; /* Correct for last field having incremented the character. */
+						continue;
+					}
+
+					if (i >= readpos_len) {
+						break;
+					}
+
+					new_string_entry->str.data[new_string_entry->str.len++] = readpos[i];
+				}
+
+				new_string_entry->str.data[new_string_entry->str.len] = 0;
+
+				new_string_entry->next = cur_offset->strings;
+				cur_offset->strings = new_string_entry;
+				cur_offset->string_count++;
+			}
 
 			break;
 		case '!':
@@ -128,6 +195,14 @@ void tds_stringdb_free(struct tds_stringdb* ptr) {
 			struct tds_string_db_offset_entry_string* cur_string = cur_offset->strings, *tmp_string = NULL;
 
 			while (cur_string) {
+				struct tds_string_format* cur_format = cur_string->str.formats, *tmp_format = NULL;
+
+				while (cur_format) {
+					tmp_format = cur_format->next;
+					tds_free(cur_format);
+					cur_format = tmp_format;
+				}
+
 				tmp_string = cur_string->next;
 				tds_free(cur_string->str.data);
 				tds_free(cur_string);

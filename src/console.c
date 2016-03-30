@@ -114,7 +114,7 @@ void tds_console_draw(struct tds_console* ptr) {
 
 	for (int i = 0; i < ptr->rows; ++i) {
 		int len = strlen(ptr->buffers[i]) > ptr->cols ? ptr->cols : strlen(ptr->buffers[i]);
-		tds_render_flat_text(tds_engine_global->render_flat_overlay_handle, tds_engine_global->font_debug, ptr->buffers[i], len, 0.0f, tds_engine_global->font_debug->size_px * (i + 1), TDS_RENDER_LALIGN);
+		tds_render_flat_text(tds_engine_global->render_flat_overlay_handle, tds_engine_global->font_debug, ptr->buffers[i], len, 0.0f, tds_engine_global->font_debug->size_px * (i + 1), TDS_RENDER_LALIGN, NULL);
 	}
 }
 
