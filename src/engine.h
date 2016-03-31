@@ -26,6 +26,7 @@
 #include "ft.h"
 #include "font_cache.h"
 #include "stringdb.h"
+#include "dialog.h"
 
 #define TDS_MAP_PREFIX "res/maps/"
 
@@ -60,6 +61,9 @@ struct tds_engine_desc {
 	const char* config_filename;
 	const char* map_filename;
 	const char* stringdb_filename;
+	const char* dialog_filename;
+	const char* dialog_portrait_name;
+	const char* portrait_font_name;
 	struct tds_key_map_template* game_input;
 	int game_input_size;
 	unsigned int save_index;
@@ -109,6 +113,7 @@ struct tds_engine {
 	struct tds_font* font_debug;
 	struct tds_ft* ft_handle;
 	struct tds_stringdb* stringdb_handle;
+	struct tds_dialog* dialog_handle;
 
 	int world_buffer_count;
 	struct tds_world* world_buffer[4];

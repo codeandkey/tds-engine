@@ -236,6 +236,9 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "-dynlights")) {
 		tds_console_print(ptr, "disabling dynamic lights\n");
 		tds_engine_global->render_handle->enable_dynlights = 0;
+	} else if (!strcmp(cur_cmd, "seq")) {
+		tds_console_print(ptr, "starting dialog sequence\n");
+		tds_dialog_start_sequence(tds_engine_global->dialog_handle, strtok(NULL, " "));
 	} else if (!strcmp(cur_cmd, "+bloom")) {
 		tds_console_print(ptr, "enabling bloom\n");
 		tds_engine_global->render_handle->enable_bloom = 1;

@@ -8,6 +8,7 @@
 #include "clock.h"
 #include "collision.h"
 #include "config.h"
+#include "dialog.h"
 #include "display.h"
 #include "effect.h"
 #include "engine.h"

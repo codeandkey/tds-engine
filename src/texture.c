@@ -13,6 +13,11 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 
 	unsigned char* stb_data = stbi_load(filename, &w, &h, NULL, 4);
 
+	if (!stb_data) {
+		tds_logf(TDS_LOG_CRITICAL, "Failed to load texture [%s]\n", filename);
+		return NULL;
+	}
+
 	/*
 	 * stb_image doesn't seem to be cooperative towards LD when it comes to linking stbi_set_flip_vertically_on_load; we will manually cycle the rows
 	 */
@@ -32,6 +37,14 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 	tds_free(img_data);
 
 	tds_logf(TDS_LOG_DEBUG, "Loaded texture %s : width %d, height %d\n", filename, w, h);
+
+	if (tile_x < 0) {
+		tile_x = w;
+	}
+
+	if (tile_y < 0) {
+		tile_y = h;
+	}
 
 	if (w % tile_x || h % tile_y) {
 		tds_logf(TDS_LOG_WARNING, "Tile size does not divide evenly into image! (tile %dx%d, image %dx%d)\n", tile_x, tile_y, w, h);

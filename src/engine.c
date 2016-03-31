@@ -162,6 +162,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 		tds_logf(TDS_LOG_MESSAGE, "Loaded fonts.\n");
 	}
 
+	output->dialog_handle = tds_dialog_create(desc.dialog_filename, tds_texture_cache_get(output->tc_handle, desc.dialog_portrait_name, -1, -1, 0, 0), tds_font_cache_get(output->fc_handle, desc.portrait_font_name));
+	tds_logf(TDS_LOG_MESSAGE, "Initialized dialog subsystem.\n");
+
 	output->font_debug = tds_font_cache_get(output->fc_handle, "debug");
 
 	if (output->font_debug) {
@@ -246,6 +249,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_console_free(ptr->console_handle);
 	tds_savestate_free(ptr->savestate_handle);
 	tds_stringdb_free(ptr->stringdb_handle);
+	tds_dialog_free(ptr->dialog_handle);
 	tds_ft_free(ptr->ft_handle);
 	tds_profile_free(ptr->profile_handle);
 	tds_free(ptr);
@@ -337,6 +341,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		tds_profile_pop(ptr->profile_handle);
 		tds_console_draw(ptr->console_handle);
+		tds_dialog_render(ptr->dialog_handle);
 
 		tds_profile_push(ptr->profile_handle, "Render process");
 		tds_render_draw(ptr->render_handle, ptr->world_buffer, ptr->world_buffer_count, ptr->render_flat_world_handle, ptr->render_flat_overlay_handle);
