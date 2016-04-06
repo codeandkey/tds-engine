@@ -162,8 +162,8 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 		tds_logf(TDS_LOG_MESSAGE, "Loaded fonts.\n");
 	}
 
-	output->dialog_handle = tds_dialog_create(desc.dialog_filename, tds_texture_cache_get(output->tc_handle, desc.dialog_portrait_name, -1, -1, 0, 0), tds_font_cache_get(output->fc_handle, desc.portrait_font_name));
-	tds_logf(TDS_LOG_MESSAGE, "Initialized dialog subsystem.\n");
+	output->module_container_handle = tds_module_container_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized module subsystem.\n");
 
 	output->font_debug = tds_font_cache_get(output->fc_handle, "debug");
 
@@ -179,6 +179,11 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	if (desc.func_load_object_types) {
 		desc.func_load_object_types(output->otc_handle);
 		tds_logf(TDS_LOG_MESSAGE, "Loaded object types.\n");
+	}
+
+	if (desc.func_load_modules) {
+		desc.func_load_modules(output->module_container_handle);
+		tds_logf(TDS_LOG_MESSAGE, "Loaded gamespace modules.\n");
 	}
 
 	output->console_handle = tds_console_create();
@@ -249,7 +254,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_console_free(ptr->console_handle);
 	tds_savestate_free(ptr->savestate_handle);
 	tds_stringdb_free(ptr->stringdb_handle);
-	tds_dialog_free(ptr->dialog_handle);
+	tds_module_container_free(ptr->module_container_handle);
 	tds_ft_free(ptr->ft_handle);
 	tds_profile_free(ptr->profile_handle);
 	tds_free(ptr);
@@ -315,6 +320,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 				}
 
 				tds_effect_update(ptr->effect_handle);
+				tds_module_container_update(ptr->module_container_handle);
 			}
 		}
 
@@ -341,7 +347,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		tds_profile_pop(ptr->profile_handle);
 		tds_console_draw(ptr->console_handle);
-		tds_dialog_render(ptr->dialog_handle);
+		tds_module_container_draw(ptr->module_container_handle);
 
 		tds_profile_push(ptr->profile_handle, "Render process");
 		tds_render_draw(ptr->render_handle, ptr->world_buffer, ptr->world_buffer_count, ptr->render_flat_world_handle, ptr->render_flat_overlay_handle);
@@ -437,6 +443,7 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 	if (ptr->state.mapname) {
 		tds_free(ptr->state.mapname);
+		ptr->state.mapname = NULL;
 	}
 
 	ptr->state.mapname = tds_malloc(strlen(mapname) + 1);
@@ -799,6 +806,8 @@ void tds_engine_destroy_objects(struct tds_engine* ptr, const char* type_name) {
 }
 
 void tds_engine_broadcast(struct tds_engine* ptr, int msg, void* param) {
+	tds_module_container_broadcast(ptr->module_container_handle, msg, param);
+
 	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
 		struct tds_object* cur = ptr->object_buffer->buffer[i].data;
 
