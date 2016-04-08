@@ -227,8 +227,8 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, 0.0f, 0.0f },
 		};
 
-		float render_x = TDS_WORLD_BLOCK_SIZE * (hb_cur->x - ptr->width / 2.0f + (hb_cur->w - 1) / 2.0f);
-		float render_y = TDS_WORLD_BLOCK_SIZE * (hb_cur->y - ptr->height / 2.0f);
+		float render_x = TDS_WORLD_BLOCK_SIZE * (hb_cur->x - ptr->width / 2.0f + (hb_cur->w) / 2.0f);
+		float render_y = TDS_WORLD_BLOCK_SIZE * (hb_cur->y - ptr->height / 2.0f + 0.5f);
 
 		float block_left = render_x - hb_cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
 		float block_right = render_x + hb_cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
@@ -266,10 +266,10 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, fl
 	struct tds_world_hblock* cblock = ptr->block_list_head;
 
 	while (cblock) {
-		float cblock_left = (cblock->x - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-		float cblock_right = (cblock->x + cblock->w - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-		float cblock_top = (cblock->y + 0.5f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-		float cblock_bottom = (cblock->y - ptr->height / 2.0f - 0.5f) * TDS_WORLD_BLOCK_SIZE;
+		float cblock_left = (cblock->x - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+		float cblock_right = (cblock->x + cblock->w - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+		float cblock_top = (cblock->y + 1.0f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+		float cblock_bottom = (cblock->y - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 
 		if (obj_left > cblock_right) {
 			cblock = cblock->next;
@@ -362,10 +362,10 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				continue;
 			}
 
-			float block_left = (x - 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-			float block_right = (x + 0.5f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-			float block_top = (y + 0.5f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-			float block_bottom = (y - ptr->height / 2.0f - 0.5f) * TDS_WORLD_BLOCK_SIZE;
+			float block_left = (x  - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+			float block_right = (x + 1.0f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+			float block_top = (y + 1.0f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+			float block_bottom = (y - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 
 			int flags_right = (x < ptr->width - 1) ? tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y][x + 1]).flags : 0;
 			int flags_left = (x > 0) ? tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y][x - 1]).flags : 0;

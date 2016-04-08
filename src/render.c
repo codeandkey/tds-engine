@@ -373,8 +373,8 @@ void _tds_render_hblock_callback(void* usr, void* data) {
 	struct tds_world_hblock* cur = data;
 
 	/* The translation must take into account that the block size may not be aligned. */
-	float render_x = TDS_WORLD_BLOCK_SIZE * (cur->x - world->width / 2.0f + (cur->w - 1) / 2.0f);
-	float render_y = TDS_WORLD_BLOCK_SIZE * (cur->y - world->height / 2.0f);
+	float render_x = TDS_WORLD_BLOCK_SIZE * (cur->x - world->width / 2.0f + cur->w / 2.0f);
+	float render_y = TDS_WORLD_BLOCK_SIZE * (cur->y - world->height / 2.0f + 0.5f);
 
 	if (ptr->enable_aabb) {
 		float camera_left = tds_engine_global->camera_handle->x - tds_engine_global->camera_handle->width / 2.0f;

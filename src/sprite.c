@@ -18,6 +18,7 @@ struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, f
 	output->height = height;
 	output->texture = texture;
 	output->animation_rate = animation_rate;
+	output->offset_x = output->offset_y = output->offset_angle = 0.0f;
 
 	struct tds_vertex* verts = tds_malloc(sizeof(struct tds_vertex) * texture->frame_count * 6);
 
