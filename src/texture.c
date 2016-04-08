@@ -77,7 +77,9 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	output->filename = filename;
+	output->filename = tds_malloc(strlen(filename) + 1);
+	memcpy(output->filename, filename, strlen(filename));
+	output->filename[strlen(filename)] = 0;
 
 	return output;
 }
@@ -92,6 +94,11 @@ void tds_texture_set_wrap(struct tds_texture* ptr, int wrap_x, int wrap_y) {
 
 void tds_texture_free(struct tds_texture* ptr) {
 	glDeleteTextures(1, &ptr->gl_id);
+
+	if (ptr->filename) {
+		tds_free(ptr->filename);
+	}
+
 	tds_free(ptr->frame_list);
 	tds_free(ptr);
 }

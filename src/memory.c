@@ -9,6 +9,7 @@ struct _tds_mem_block {
 	const char* func;
 	void* ptr;
 	int size;
+	int line;
 	struct _tds_mem_block* next, *prev;
 };
 
@@ -72,7 +73,7 @@ void tds_memcheck_rel(void) {
 	}
 }
 
-void* tds_malloc_dbg(const char* func, int size) {
+void* tds_malloc_dbg(const char* func, int line, int size) {
 	/* Debug : we operate on a linked list. */
 	struct _tds_mem_block* blk = malloc(sizeof *blk);
 
@@ -97,6 +98,7 @@ void* tds_malloc_dbg(const char* func, int size) {
 	blk->next = _tds_mem_dbg_head;
 	blk->prev = NULL;
 	blk->func = func;
+	blk->line = line;
 
 	if (_tds_mem_dbg_head) {
 		_tds_mem_dbg_head->prev = blk;
@@ -139,7 +141,7 @@ void tds_free_dbg(const char* func, void* ptr) {
 	tds_logf(TDS_LOG_WARNING, "Pointer %p not found in list! [called from %s]\n", ptr, func);
 }
 
-void* tds_realloc_dbg(const char* func, void* ptr, int size) {
+void* tds_realloc_dbg(const char* func, int line, void* ptr, int size) {
 	struct _tds_mem_block* blk = _tds_mem_dbg_head;
 
 	while (blk) {
@@ -160,7 +162,7 @@ void* tds_realloc_dbg(const char* func, void* ptr, int size) {
 		blk = blk->next;
 	}
 
-	return tds_malloc_dbg(func, size);
+	return tds_malloc_dbg(func, line, size);
 }
 
 int tds_get_blocks_dbg(void) {
@@ -173,7 +175,7 @@ void tds_memcheck_dbg(void) {
 	struct _tds_mem_block* blk = _tds_mem_dbg_head, *tmp = NULL;
 
 	while (blk) {
-		tds_logf(TDS_LOG_WARNING, "Unfreed block : %p:[%d] - allocated in %s\n", blk->ptr, blk->size, blk->func);
+		tds_logf(TDS_LOG_WARNING, "Unfreed block : %p:[%d] - allocated in %s:%d\n", blk->ptr, blk->size, blk->func, blk->line);
 
 		free(blk->ptr);
 		tmp = blk->next;

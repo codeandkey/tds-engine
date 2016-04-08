@@ -666,8 +666,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 					break;
 				}
 
-				tds_logf(TDS_LOG_DEBUG, "Constructing object of type [%s]\n", obj_type_buf);
-
 				float map_x = strtof(obj_x_buf, NULL), map_y = strtof(obj_y_buf, NULL);
 				float map_block_size = TDS_WORLD_BLOCK_SIZE * 32.0f;
 				float map_width = map_block_size * world_width;
@@ -678,6 +676,14 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 				float real_height = (strtof(obj_height_buf, NULL) / map_height) * game_height;
 				float real_x = -game_width / 2.0f + (game_width * (map_x / map_width)) + (real_width / 2.0f);
 				float real_y = -game_height / 2.0f + (game_height * ((map_height - map_y) / map_height)) - (real_height / 2.0f);
+
+				float ratio_tlx = map_x / map_width;
+				float ratio_tly = map_y / map_height;
+
+				real_x = (-game_width / 2.0f) + ((game_width * ratio_tlx) + (real_width / 2.0f));
+				real_y = (game_height / 2.0f) - ((game_height * ratio_tly) + (real_height / 2.0f));
+
+				tds_logf(TDS_LOG_DEBUG, "Constructing object of type [%s] (map_x %f, map_y %f, map_block_size %f, map_width %f, map_height %f, game_width %f, game_height %f, real_width %f, real_height %f, real_x %f, real_y %f\n", obj_type_buf, map_x, map_y, map_block_size, map_width, map_height, game_width, game_height, real_width, real_height, real_x, real_y);
 
 				cur_object = tds_object_create(type_ptr, ptr->object_buffer, ptr->sc_handle, real_x, real_y, 0.0f, cur_object_param);
 

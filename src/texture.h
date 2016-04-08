@@ -5,7 +5,7 @@ struct tds_texture_frame {
 };
 
 struct tds_texture {
-	const char* filename;
+	char* filename;
 	unsigned int gl_id;
 	struct tds_texture_frame* frame_list;
 	unsigned int frame_count;

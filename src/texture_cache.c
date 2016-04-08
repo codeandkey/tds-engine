@@ -31,6 +31,7 @@ struct tds_texture* tds_texture_cache_get(struct tds_texture_cache* ptr, const c
 
 	while (current) {
 		if (!strcmp(current->data->filename, texture_name)) {
+			tds_logf(TDS_LOG_DEBUG, "Matched [%s] with stored [%s]\n", texture_name, current->data->filename);
 			return current->data;
 		}
 
