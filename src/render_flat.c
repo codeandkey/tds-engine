@@ -17,6 +17,7 @@ struct tds_render_flat* tds_render_flat_create(void) {
 
 	output->shader_passthrough = tds_shader_create(TDS_RENDER_FLAT_PASSTHROUGH_VS, NULL, TDS_RENDER_FLAT_PASSTHROUGH_FS);
 	output->shader_text = tds_shader_create(TDS_RENDER_FLAT_PASSTHROUGH_VS, NULL, TDS_RENDER_FLAT_TEXT_FS);
+	output->shader_color = tds_shader_create(TDS_RENDER_FLAT_PASSTHROUGH_VS, NULL, TDS_RENDER_FLAT_COLOR_FS);
 	output->cp_start = tds_clock_get_point();
 
 	tds_render_flat_set_mode(output, TDS_RENDER_COORD_REL_SCREENSPACE);
@@ -32,6 +33,7 @@ void tds_render_flat_free(struct tds_render_flat* ptr) {
 	tds_rt_free(ptr->rt_backbuf);
 	tds_shader_free(ptr->shader_passthrough);
 	tds_shader_free(ptr->shader_text);
+	tds_shader_free(ptr->shader_color);
 	tds_free(ptr);
 }
 
@@ -69,6 +71,49 @@ void tds_render_flat_line(struct tds_render_flat* ptr, float x1, float y1, float
 
 	tds_shader_set_transform(ptr->shader_passthrough, (float*) *ident);
 	tds_shader_set_color(ptr->shader_passthrough, ptr->r, ptr->g, ptr->b, ptr->a);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDrawArrays(vb->render_mode, 0, vb->vertex_count);
+
+	tds_vertex_buffer_free(vb);
+}
+
+void tds_render_flat_quad(struct tds_render_flat* ptr, float left, float right, float top, float bottom, struct tds_texture* tex) {
+	struct tds_vertex verts[6] = {
+		{0.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+		{0.0f, 0.0f, 0.0f, 1.0f, 0.0f},
+		{0.0f, 0.0f, 0.0f, 1.0f, 1.0f},
+		{0.0f, 0.0f, 0.0f, 0.0f, 1.0f},
+		{0.0f, 0.0f, 0.0f, 1.0f, 0.0f},
+		{0.0f, 0.0f, 0.0f, 0.0f, 0.0f}
+	};
+
+	transform_coords(ptr, left, top, &verts[0].x, &verts[0].y);
+	transform_coords(ptr, right, bottom, &verts[1].x, &verts[1].y);
+	transform_coords(ptr, right, top, &verts[2].x, &verts[2].y);
+	transform_coords(ptr, left, top, &verts[3].x, &verts[3].y);
+	transform_coords(ptr, right, bottom, &verts[4].x, &verts[4].y);
+	transform_coords(ptr, left, bottom, &verts[5].x, &verts[5].y);
+
+	struct tds_vertex_buffer* vb = tds_vertex_buffer_create(verts, sizeof verts / sizeof *verts, GL_TRIANGLES);
+
+	tds_rt_bind(ptr->rt_backbuf);
+	tds_vertex_buffer_bind(vb);
+
+	struct tds_shader* target_shader = ptr->shader_color;
+	tds_shader_bind(target_shader);
+
+	if (tex) {
+		target_shader = ptr->shader_passthrough;
+		tds_shader_bind(target_shader);
+		tds_shader_bind_texture(target_shader, tex->gl_id);
+	}
+
+	mat4x4 ident;
+	mat4x4_identity(ident);
+
+	tds_shader_set_transform(target_shader, (float*) *ident);
+	tds_shader_set_color(target_shader, ptr->r, ptr->g, ptr->b, ptr->a);
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDrawArrays(vb->render_mode, 0, vb->vertex_count);

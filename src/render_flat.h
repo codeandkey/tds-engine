@@ -8,11 +8,13 @@
 #include "font.h"
 #include "stringdb.h"
 #include "clock.h"
+#include "texture.h"
 
 #define TDS_RENDER_FLAT_PASSTHROUGH_VS "res/shaders/world_vs.glsl"
-#define TDS_RENDER_FLAT_PASSTHROUGH_FS "res/shaders/color_fs.glsl"
+#define TDS_RENDER_FLAT_PASSTHROUGH_FS "res/shaders/world_fs.glsl"
 
 #define TDS_RENDER_FLAT_TEXT_FS "res/shaders/text_fs.glsl"
+#define TDS_RENDER_FLAT_COLOR_FS "res/shaders/color_fs.glsl"
 
 #define TDS_RENDER_FLAT_PERIOD_MAX 2500 /* Millseconds to use as a period when PP = 0xFF. Apply a linear scale from this value to 0. */
 #define TDS_RENDER_FLAT_SPEED_MAX  0.01f /* Factor to scale with the SS value and then multiply with the ms time. */
@@ -49,7 +51,7 @@ typedef enum {
 
 struct tds_render_flat {
 	struct tds_rt* rt_backbuf;
-	struct tds_shader* shader_passthrough, *shader_text;
+	struct tds_shader* shader_passthrough, *shader_text, *shader_color;
 	tds_render_coord_mode mode;
 	tds_clock_point cp_start;
 	float r, g, b, a;
@@ -65,3 +67,5 @@ void tds_render_flat_set_color(struct tds_render_flat* ptr, float r, float g, fl
 void tds_render_flat_line(struct tds_render_flat* ptr, float x1, float y1, float x2, float y2);
 void tds_render_flat_point(struct tds_render_flat* ptr, float x, float y);
 void tds_render_flat_text(struct tds_render_flat* ptr, struct tds_font* font, char* buf, int buflen, float l, float t, tds_render_alignment align, struct tds_string_format* formats);
+
+void tds_render_flat_quad(struct tds_render_flat* ptr, float left, float right, float top, float bottom, struct tds_texture* tex); /* If tex is null, a solid quad is rendered with the current color. */
