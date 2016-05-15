@@ -58,6 +58,57 @@ struct tds_shader* tds_shader_create(const char* vs, const char* gs, const char*
 	return output;
 }
 
+struct tds_shader* tds_shader_create_tfb(const char* vs, const char* gs, const char* fs, const char** varyings, int count) {
+	int status = 0;
+	struct tds_shader* output = tds_malloc(sizeof *output);
+
+	output->prg = glCreateProgram();
+
+	if (vs) {
+		output->vs = _compile_shader(vs, GL_VERTEX_SHADER);
+		glAttachShader(output->prg, output->vs);
+	}
+
+	if (gs) {
+		output->gs = _compile_shader(gs, GL_GEOMETRY_SHADER);
+		glAttachShader(output->prg, output->gs);
+	}
+
+	if (fs) {
+		output->fs = _compile_shader(fs, GL_FRAGMENT_SHADER);
+		glAttachShader(output->prg, output->fs);
+	}
+
+	glTransformFeedbackVaryings(output->prg, count, varyings, GL_INTERLEAVED_ATTRIBS);
+
+	glLinkProgram(output->prg);
+	glGetProgramiv(output->prg, GL_LINK_STATUS, &status);
+
+	if (!status) {
+		char buf[1024] = {0};
+		glGetProgramInfoLog(output->prg, sizeof buf / sizeof *buf , NULL, buf);
+		tds_logf(TDS_LOG_CRITICAL, "Failed to link shader program with error: %s\n", buf);
+		return NULL;
+	}
+
+	output->f_vs = vs;
+	output->f_gs = gs;
+	output->f_fs = fs;
+
+	tds_shader_bind(output);
+	output->u_transform = glGetUniformLocation(output->prg, "tds_transform");
+	output->u_color = glGetUniformLocation(output->prg, "tds_color");
+	output->u_direction = glGetUniformLocation(output->prg, "light_dir");
+
+	unsigned int u_texture = glGetUniformLocation(output->prg, "tds_texture");
+	glUniform1i(u_texture, 0);
+
+	u_texture = glGetUniformLocation(output->prg, "tds_texture2");
+	glUniform1i(u_texture, 1);
+
+	return output;
+}
+
 void tds_shader_free(struct tds_shader* ptr) {
 	glUseProgram(0);
 

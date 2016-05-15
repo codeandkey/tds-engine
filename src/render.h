@@ -8,6 +8,7 @@
 #include "world.h"
 #include "rt.h"
 #include "shader.h"
+#include "part.h"
 #include "render_flat.h"
 
 #define TDS_RENDER_SHADER_WORLD_VS "res/shaders/world_vs.glsl"
@@ -28,6 +29,7 @@
 #define TDS_RENDER_LIGHT_DIRECTIONAL 1
 
 #define TDS_RENDER_POINT_RT_SIZE 2048
+#define TDS_RENDER_BLUR_RT_SIZE 256
 
 struct tds_render_light {
 	unsigned int type;
@@ -38,7 +40,7 @@ struct tds_render_light {
 struct tds_render {
 	struct tds_camera* camera_handle;
 	struct tds_handle_manager* object_buffer;
-	struct tds_rt* lightmap_rt, *point_rt, *dir_rt, *post_rt1, *post_rt2, *post_rt3;
+	struct tds_rt* lightmap_rt, *point_rt, *dir_rt, *post_rt1, *post_rt2, *post_rt3, *blur_rt, *blur_rt2;
 	struct tds_render_light* light_list;
 
 	struct tds_shader* shader_passthrough;
@@ -62,7 +64,7 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 void tds_render_free(struct tds_render* ptr);
 
 void tds_render_clear(struct tds_render* ptr);
-void tds_render_draw(struct tds_render* ptr, struct tds_world** world_buffer, int world_count, struct tds_render_flat* flat_world, struct tds_render_flat* flat_overlay);
+void tds_render_draw(struct tds_render* ptr, struct tds_world** world_buffer, int world_count, struct tds_render_flat* flat_world, struct tds_render_flat* flat_overlay, struct tds_part_manager* pm_handle);
 
 void tds_render_submit_light(struct tds_render* ptr, struct tds_render_light lt);
 void tds_render_clear_lights(struct tds_render* ptr);

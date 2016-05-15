@@ -131,6 +131,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->bg_handle = tds_bg_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized background subsystem.\n");
 
+	output->part_manager_handle = tds_part_manager_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized particle manager subsystem.\n");
+
 	output->world_buffer_count = 0;
 
 	for (int i = 0; i < TDS_MAX_WORLD_LAYERS; ++i) {
@@ -160,6 +163,11 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	if (desc.func_load_fonts) {
 		desc.func_load_fonts(output->fc_handle, output->ft_handle);
 		tds_logf(TDS_LOG_MESSAGE, "Loaded fonts.\n");
+	}
+
+	if (desc.func_load_particles) {
+		desc.func_load_particles(output->part_manager_handle);
+		tds_logf(TDS_LOG_MESSAGE, "Loaded particle types.\n");
 	}
 
 	output->module_container_handle = tds_module_container_create();
@@ -253,6 +261,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_handle_manager_free(ptr->object_buffer);
 	tds_console_free(ptr->console_handle);
 	tds_savestate_free(ptr->savestate_handle);
+	tds_part_manager_free(ptr->part_manager_handle);
 	tds_stringdb_free(ptr->stringdb_handle);
 	tds_module_container_free(ptr->module_container_handle);
 	tds_ft_free(ptr->ft_handle);
@@ -321,6 +330,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 				tds_effect_update(ptr->effect_handle);
 				tds_module_container_update(ptr->module_container_handle);
+				tds_part_manager_animate(ptr->part_manager_handle);
 			}
 		}
 
@@ -350,7 +360,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 		tds_console_draw(ptr->console_handle);
 
 		tds_profile_push(ptr->profile_handle, "Render process");
-		tds_render_draw(ptr->render_handle, ptr->world_buffer, ptr->world_buffer_count, ptr->render_flat_world_handle, ptr->render_flat_overlay_handle);
+		tds_render_draw(ptr->render_handle, ptr->world_buffer, ptr->world_buffer_count, ptr->render_flat_world_handle, ptr->render_flat_overlay_handle, ptr->part_manager_handle);
 		tds_profile_pop(ptr->profile_handle);
 		tds_display_swap(ptr->display_handle);
 
@@ -416,6 +426,18 @@ struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engi
 
 	output.buffer = ptr->object_list;
 	return output;
+}
+
+void tds_engine_object_foreach(struct tds_engine* ptr, void* data, void (*callback)(void* data, struct tds_object* object)) {
+	if (!callback) {
+		return;
+	}
+
+	for (int i = 0; i < ptr->object_buffer->max_index; ++i) {
+		if (ptr->object_buffer->buffer[i].data) {
+			callback(data, ptr->object_buffer->buffer[i].data);
+		}
+	}
 }
 
 void tds_engine_terminate(struct tds_engine* ptr) {

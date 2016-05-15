@@ -19,6 +19,7 @@
 #include "savestate.h"
 #include "bg.h"
 #include "profile.h"
+#include "part.h"
 #include "script.h"
 #include "effect.h"
 #include "render_flat.h"
@@ -66,6 +67,7 @@ struct tds_engine_desc {
 	unsigned int save_index;
 
 	void (*func_load_modules)(struct tds_module_container* container_handle);
+	void (*func_load_particles)(struct tds_part_manager* part_manager_handle);
 	void (*func_load_sounds)(struct tds_sound_cache* sndc_handle);
 	void (*func_load_sprites)(struct tds_sprite_cache* sc_handle, struct tds_texture_cache* tc_handle);
 	void (*func_load_object_types)(struct tds_object_type_cache* otc_handle);
@@ -112,6 +114,7 @@ struct tds_engine {
 	struct tds_ft* ft_handle;
 	struct tds_stringdb* stringdb_handle;
 	struct tds_module_container* module_container_handle;
+	struct tds_part_manager* part_manager_handle;
 
 	int world_buffer_count;
 	struct tds_world* world_buffer[4];
@@ -132,6 +135,7 @@ void tds_engine_terminate(struct tds_engine* ptr); /* flags the engine to stop s
 
 struct tds_object* tds_engine_get_object_by_type(struct tds_engine* ptr, const char* type);
 struct tds_engine_object_list tds_engine_get_object_list_by_type(struct tds_engine* ptr, const char* type); /* Allocates a buffer. Freed by the engine on shutdown. */
+void tds_engine_object_foreach(struct tds_engine* ptr, void* data, void (*callback)(void* data, struct tds_object* obj));
 
 void tds_engine_load(struct tds_engine* ptr, const char* mapname);
 void tds_engine_request_load(struct tds_engine* ptr, const char* mapname); /* This doesn't immediately load the world but waits for the frame to finish. */

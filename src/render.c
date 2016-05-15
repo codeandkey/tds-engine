@@ -15,6 +15,7 @@ static void _tds_render_hblock_callback(void* world_ptr, void* hblock_ptr);
 static void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world);
 static void _tds_render_segments(struct tds_render* ptr, struct tds_world* world, struct tds_camera* cam, int occlude, struct tds_shader* shader);
 static void _tds_render_background(struct tds_render* ptr, struct tds_bg* bg);
+static void _tds_render_blur(struct tds_render* ptr, struct tds_rt* src, struct tds_rt* dest);
 
 struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handle_manager* hmgr) {
 	struct tds_render* output = tds_malloc(sizeof(struct tds_render));
@@ -49,6 +50,9 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	output->post_rt2 = tds_rt_create(display_width, display_height);
 	output->post_rt3 = tds_rt_create(display_width, display_height);
 
+	output->blur_rt = tds_rt_create(TDS_RENDER_BLUR_RT_SIZE * (display_width / display_height), TDS_RENDER_BLUR_RT_SIZE); /* We scale the blur RT to match the aspect ratio of the screen to prevent some rescaling artifacts. */
+	output->blur_rt2 = tds_rt_create(TDS_RENDER_BLUR_RT_SIZE * (display_width / display_height), TDS_RENDER_BLUR_RT_SIZE); /* We actually need 2. */
+
 	output->enable_bloom = 1;
 	output->enable_dynlights = 1;
 	output->enable_aabb = 1;
@@ -79,6 +83,8 @@ void tds_render_free(struct tds_render* ptr) {
 	tds_rt_free(ptr->post_rt1);
 	tds_rt_free(ptr->post_rt2);
 	tds_rt_free(ptr->post_rt3);
+	tds_rt_free(ptr->blur_rt);
+	tds_rt_free(ptr->blur_rt2);
 	tds_render_clear_lights(ptr);
 	tds_free(ptr);
 }
@@ -107,7 +113,7 @@ void tds_render_set_ambient_color(struct tds_render* ptr, float r, float g, floa
 	ptr->ambient_b = b;
 }
 
-void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int world_count, struct tds_render_flat* flat_world, struct tds_render_flat* flat_overlay) {
+void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int world_count, struct tds_render_flat* flat_world, struct tds_render_flat* flat_overlay, struct tds_part_manager* pm_handle) {
 	/* Drawing will be done linearly on a per-layer basis, using a list of occluded objects. */
 	int render_objects = 1;
 
@@ -211,6 +217,10 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
 	tds_rt_bind(ptr->post_rt1);
+
+	/* before rendering the world overlay, we render the game particles. */
+	tds_part_manager_render(pm_handle);
+
 	tds_shader_bind(ptr->shader_passthrough);
 
 	/* Render flat world backbuf over game fb. */
@@ -224,35 +234,14 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 		tds_rt_bind(ptr->post_rt2); // _tds_render_lightmap changes the RT, reset it here
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// The world is rendered in RT1, we will hblur the lightmap to RT2 and then vblur it back to RT1
-
-		tds_shader_bind(ptr->shader_hblur);
-		glBindVertexArray(vb_square->vao);
-		glBindTexture(GL_TEXTURE_2D, ptr->lightmap_rt->gl_tex);
-		tds_shader_set_transform(ptr->shader_hblur, (float*) *ident);
-		tds_shader_set_color(ptr->shader_hblur, 1.0f, 1.0f, 1.0f, 1.0f);
-
-		glDrawArrays(vb_square->render_mode, 0, 6);
-
-		// vblur RT2 to RT1 (lightmap blur final)
-		tds_rt_bind(ptr->post_rt3);
-
-		tds_shader_bind(ptr->shader_vblur);
-		glBindVertexArray(vb_square->vao);
-		glBindTexture(GL_TEXTURE_2D, ptr->post_rt2->gl_tex);
-		tds_shader_set_transform(ptr->shader_vblur, (float*) *ident);
-		tds_shader_set_color(ptr->shader_vblur, 1.0f, 1.0f, 1.0f, 1.0f);
-
-		glBlendFunc(GL_ONE, GL_ZERO);
-		glDrawArrays(vb_square->render_mode, 0, 6);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		_tds_render_blur(ptr, ptr->lightmap_rt, ptr->post_rt2);
 
 		tds_rt_bind(NULL); /* Using dynlights, we render with the overlay blending shader to put world info on the NULL fb. */
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		tds_shader_bind(ptr->shader_overlay);
 		glBindVertexArray(vb_square->vao);
-		tds_shader_bind_texture(ptr->shader_overlay, ptr->post_rt3->gl_tex);
+		tds_shader_bind_texture(ptr->shader_overlay, ptr->post_rt2->gl_tex);
 		tds_shader_bind_texture_alt(ptr->shader_overlay, ptr->post_rt1->gl_tex);
 
 		tds_shader_set_color(ptr->shader_overlay, 1.0f, 1.0f, 1.0f, ptr->fade_factor);
@@ -626,4 +615,69 @@ void tds_render_clear_lights(struct tds_render* ptr) {
 
 void tds_render_set_fade_factor(struct tds_render* ptr, float fade_factor) {
 	ptr->fade_factor = fade_factor;
+}
+
+void _tds_render_blur(struct tds_render* ptr, struct tds_rt* src, struct tds_rt* dest) {
+	mat4x4 identity;
+	mat4x4_identity(identity);
+
+	tds_rt_bind(ptr->blur_rt);
+	tds_shader_bind(ptr->shader_passthrough);
+	tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, 1.0f);
+	tds_shader_set_transform(ptr->shader_passthrough, (float*) *identity);
+	tds_shader_bind_texture(ptr->shader_passthrough, src->gl_tex);
+
+	struct tds_vertex verts[] = {
+		{-1.0f, 1.0f, 0.0f, 0.0f, 1.0f},
+		{1.0f, -1.0f, 0.0f, 1.0f, 0.0f},
+		{1.0f, 1.0f, 0.0f, 1.0f, 1.0f},
+		{-1.0f, 1.0f, 0.0f, 0.0f, 1.0f},
+		{1.0f, -1.0f, 0.0f, 1.0f, 0.0f},
+		{-1.0f, -1.0f, 0.0f, 0.0f, 0.0f}
+	};
+
+	glBlendFunc(GL_ONE, GL_ZERO);
+
+	struct tds_vertex_buffer* vb_square = tds_vertex_buffer_create(verts, sizeof verts / sizeof *verts, GL_TRIANGLES);
+
+	glBindVertexArray(vb_square->vao);
+	glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count); /* Render the src RT to the downscaled RT. */
+
+	/* Now, we perform a normal blur pass on the downscaled framebuffer. */
+	tds_rt_bind(ptr->blur_rt2);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	tds_shader_bind(ptr->shader_hblur);
+	glBindVertexArray(vb_square->vao);
+	tds_shader_bind_texture(ptr->shader_hblur, ptr->blur_rt->gl_tex);
+	tds_shader_set_transform(ptr->shader_hblur, (float*) *identity);
+	tds_shader_set_color(ptr->shader_hblur, 1.0f, 1.0f, 1.0f, 1.0f);
+
+	glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count); /* hblur the blur_rt to blur_rt2. */
+
+	tds_rt_bind(ptr->blur_rt);
+
+	tds_shader_bind(ptr->shader_vblur);
+	glBindVertexArray(vb_square->vao);
+	tds_shader_bind_texture(ptr->shader_vblur, ptr->blur_rt2->gl_tex);
+	tds_shader_set_transform(ptr->shader_vblur, (float*) *identity);
+	tds_shader_set_color(ptr->shader_vblur, 1.0f, 1.0f, 1.0f, 1.0f);
+
+	glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count); /* vblur the blur_rt2 back to blur_rt. */
+
+	/* The downscaled and blurred image is now stored in ptr->blur_rt -- we render it to the dest by upscaling. */
+
+	tds_rt_bind(dest);
+
+	tds_shader_bind(ptr->shader_passthrough);
+	tds_shader_bind_texture(ptr->shader_passthrough, ptr->blur_rt->gl_tex);
+	tds_shader_set_transform(ptr->shader_passthrough, (float*) *identity);
+	tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, 1.0f);
+
+	glBindVertexArray(vb_square->vao);
+	glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count); /* passthrough upscale blur_rt to dest */
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	tds_vertex_buffer_free(vb_square);
 }

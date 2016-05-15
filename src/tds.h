@@ -23,6 +23,7 @@
 #include "msg.h"
 #include "object.h"
 #include "object_type_cache.h"
+#include "part.h"
 #include "render.h"
 #include "savestate.h"
 #include "script.h"

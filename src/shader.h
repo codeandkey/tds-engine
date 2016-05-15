@@ -13,6 +13,8 @@ struct tds_shader {
 };
 
 struct tds_shader* tds_shader_create(const char* vs, const char* gs, const char* fs);
+struct tds_shader* tds_shader_create_tfb(const char* vs, const char* gs, const char* fs, const char** varyings, int count);
+
 void tds_shader_free(struct tds_shader* ptr);
 
 void tds_shader_bind(struct tds_shader* ptr);
