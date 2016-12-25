@@ -1,6 +1,14 @@
 ## tds-engine
+### About
+This is just a game engine, so it can't do much on it's own.
+See [hunter-game](http://github.com/molecuul/hunter-game) for a demonstration of the engine in an actual game.
+
 ### Instructions
-Execute `premake4 gmake` to generate a makefile.
-Execute `make` to compile in debug mode.
-Execute `make config=release` to compile in release mode.
-Execute `premake4 install` to install the binaries to /usr/lib and /usr/include.
+`premake4 gmake` generates a makefile.
+
+`make` compiles in debug mode.
+
+`make config=release` compiles in release mode.
+
+`premake4 install` installs the binaries to /usr/lib and /usr/include.
+
