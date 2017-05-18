@@ -50,8 +50,8 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	output->post_rt2 = tds_rt_create(display_width, display_height);
 	output->post_rt3 = tds_rt_create(display_width, display_height);
 
-	output->blur_rt = tds_rt_create(TDS_RENDER_BLUR_RT_SIZE * (display_width / display_height), TDS_RENDER_BLUR_RT_SIZE); /* We scale the blur RT to match the aspect ratio of the screen to prevent some rescaling artifacts. */
-	output->blur_rt2 = tds_rt_create(TDS_RENDER_BLUR_RT_SIZE * (display_width / display_height), TDS_RENDER_BLUR_RT_SIZE); /* We actually need 2. */
+	output->blur_rt = tds_rt_create((TDS_RENDER_BLUR_RT_SIZE * display_width) / display_height, TDS_RENDER_BLUR_RT_SIZE); /* We scale the blur RT to match the aspect ratio of the screen to prevent some rescaling artifacts. */
+	output->blur_rt2 = tds_rt_create((TDS_RENDER_BLUR_RT_SIZE * display_width) / display_height, TDS_RENDER_BLUR_RT_SIZE); /* We actually need 2. */
 
 	output->enable_bloom = 1;
 	output->enable_dynlights = 1;
@@ -92,15 +92,15 @@ void tds_render_free(struct tds_render* ptr) {
 void tds_render_clear(struct tds_render* ptr) {
 	tds_rt_bind(ptr->post_rt1);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	tds_rt_bind(ptr->post_rt2);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	tds_rt_bind(ptr->post_rt3);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void tds_render_set_ambient_brightness(struct tds_render* ptr, float brightness) {
@@ -113,7 +113,7 @@ void tds_render_set_ambient_color(struct tds_render* ptr, float r, float g, floa
 	ptr->ambient_b = b;
 }
 
-void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int world_count, struct tds_render_flat* flat_world, struct tds_render_flat* flat_overlay, struct tds_part_manager* pm_handle) {
+void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int world_count, struct tds_render_flat* flat_world, struct tds_render_flat* flat_overlay) {
 	/* Drawing will be done linearly on a per-layer basis, using a list of occluded objects. */
 	int render_objects = 1;
 
@@ -218,9 +218,6 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 
 	tds_rt_bind(ptr->post_rt1);
 
-	/* before rendering the world overlay, we render the game particles. */
-	tds_part_manager_render(pm_handle);
-
 	tds_shader_bind(ptr->shader_passthrough);
 
 	/* Render flat world backbuf over game fb. */
@@ -252,6 +249,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	} else {
 		tds_rt_bind(NULL); /* Not using dynlights, we simply render to the NULL fb to get some world pixels out there. */
+		glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		tds_shader_bind(ptr->shader_passthrough);

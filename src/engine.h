@@ -19,7 +19,6 @@
 #include "savestate.h"
 #include "bg.h"
 #include "profile.h"
-#include "part.h"
 #include "script.h"
 #include "effect.h"
 #include "render_flat.h"
@@ -67,7 +66,6 @@ struct tds_engine_desc {
 	unsigned int save_index;
 
 	void (*func_load_modules)(struct tds_module_container* container_handle);
-	void (*func_load_particles)(struct tds_part_manager* part_manager_handle);
 	void (*func_load_sounds)(struct tds_sound_cache* sndc_handle);
 	void (*func_load_sprites)(struct tds_sprite_cache* sc_handle, struct tds_texture_cache* tc_handle);
 	void (*func_load_object_types)(struct tds_object_type_cache* otc_handle);

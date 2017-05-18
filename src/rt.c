@@ -7,6 +7,13 @@
 
 struct tds_rt* tds_rt_create(unsigned int width, unsigned int height) {
 	struct tds_rt* output = tds_malloc(sizeof *output);
+	int er;
+
+	tds_logf(TDS_LOG_DEBUG, "Initializing framebuffers with size %dx%d\n", width, height);
+
+	if (glGetError() != GL_NO_ERROR) {
+		tds_logf(TDS_LOG_WARNING, "GL error present before RT init\n");
+	}
 
 	glGenFramebuffers(1, &output->gl_fb);
 	glBindFramebuffer(GL_FRAMEBUFFER, output->gl_fb);
@@ -14,6 +21,11 @@ struct tds_rt* tds_rt_create(unsigned int width, unsigned int height) {
 	glGenTextures(1, &output->gl_tex);
 	glBindTexture(GL_TEXTURE_2D, output->gl_tex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+	if ((er = glGetError()) != GL_NO_ERROR) {
+		tds_logf(TDS_LOG_CRITICAL, "Failed to initialize texture/framebuffer objects (%d)\n", er);
+		return NULL;
+	}
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -26,13 +38,18 @@ struct tds_rt* tds_rt_create(unsigned int width, unsigned int height) {
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, output->gl_rb);
 
+	if ((er = glGetError()) != GL_NO_ERROR) {
+		tds_logf(TDS_LOG_CRITICAL, "Failed to prepare renderbuffer objects (%d)\n", er);
+		return NULL;
+	}
+
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, output->gl_tex, 0);
 
 	GLenum buffers[] = {GL_COLOR_ATTACHMENT0};
 	glDrawBuffers(1, buffers);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		tds_logf(TDS_LOG_CRITICAL, "Failed to create OpenGL framebuffer.\n");
+		tds_logf(TDS_LOG_CRITICAL, "Failed to create OpenGL framebuffer. (err %d fbstatus %d)\n", glGetError(), glCheckFramebufferStatus(GL_FRAMEBUFFER));
 		return NULL;
 	}
 
