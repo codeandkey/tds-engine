@@ -1,7 +1,7 @@
 -- tds build script, uses premake5
 
 solution "tds"
-	configurations { "debug", "release" }
+	configurations { "release", "debug" }
 
 	project "tds"
 		kind "SharedLib"
