@@ -8,11 +8,11 @@ solution "tds"
 		language "C"
 		targetdir ""
 
-		files { "**.h", "**.c" }
+		files { "src/**.h", "src/**.c" }
 
 		configuration "linux"
 			includedirs { "/usr/include/freetype2" }
-			links { "m", "GL", "dl", "glfw", "cairo", "pango-1.0", "pangocairo-1.0", "openal", "lua" }
+			links { "m", "GL", "dl", "glfw", "openal", "lua", "freetype" }
 			newaction {
 				trigger = "install",
 				description = "Install libtds",
@@ -30,10 +30,11 @@ solution "tds"
 
 		configuration "debug"
 			defines { "TDS_MEMORY_DEBUG", "TDS_PROFILE_ENABLE" }
-			links { "m", "GL", "dl", "glfw", "cairo", "pango-1.0", "pangocairo-1.0" }
+			links { "m", "GL", "dl", "glfw", "openal", "lua", "freetype" }
 			flags { "Symbols" }
 			targetname "tds_debug"
 
 		configuration "release"
+			defines { "TDS_IGNORE_SIGFPE" }
 			flags { "Optimize", "EnableSSE", "EnableSSE2", "ExtraWarnings" }
 			targetname "tds"

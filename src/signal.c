@@ -19,10 +19,12 @@ void tds_signal_fpe(int p) {
 }
 
 void tds_signal_init(void) {
+#ifndef TDS_IGNORE_SIGFPE
 	feenableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
+	signal(SIGFPE, tds_signal_fpe);
+#endif
 
 	signal(SIGSEGV, tds_signal_segv);
 	signal(SIGKILL, tds_signal_kill);
 	signal(SIGSTOP, tds_signal_kill);
-	signal(SIGFPE, tds_signal_fpe);
 }
