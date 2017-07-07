@@ -57,7 +57,7 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	output->enable_dynlights = 1;
 	output->enable_aabb = 1;
 	output->enable_wireframe = 0;
-	output->fade_factor = 1.0f;
+	output->fade_factor = 0.0f;
 
 	tds_render_set_ambient_brightness(output, 0.5f);
 
