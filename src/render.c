@@ -55,7 +55,7 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	output->blur_rt = tds_rt_create((TDS_RENDER_BLUR_RT_SIZE * display_width) / display_height, TDS_RENDER_BLUR_RT_SIZE); /* We scale the blur RT to match the aspect ratio of the screen to prevent some rescaling artifacts. */
 	output->blur_rt2 = tds_rt_create((TDS_RENDER_BLUR_RT_SIZE * display_width) / display_height, TDS_RENDER_BLUR_RT_SIZE); /* We actually need 2. */
 
-	output->enable_bloom = 1;
+	output->enable_bloom = 0;
 	output->enable_dynlights = 1;
 	output->enable_aabb = 1;
 	output->enable_wireframe = 0;
