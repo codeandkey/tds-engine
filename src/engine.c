@@ -101,7 +101,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized render system.\n");
 
-	output->render_handle->enable_bloom = tds_script_get_var_bool(engine_conf, "enable_bloom", 1);
+	output->render_handle->enable_bloom = tds_script_get_var_bool(engine_conf, "enable_bloom", 0);
 	output->render_handle->enable_dynlights = tds_script_get_var_bool(engine_conf, "enable_dynlights", 1);
 
 	output->render_flat_world_handle = tds_render_flat_create();
