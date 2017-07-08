@@ -33,6 +33,8 @@ struct tds_render* tds_render_create(struct tds_camera* camera, struct tds_handl
 	output->shader_bloom = tds_shader_create(TDS_RENDER_SHADER_WORLD_VS, NULL, TDS_RENDER_SHADER_BLOOM_FS);
 	output->shader_overlay = tds_shader_create(TDS_RENDER_SHADER_WORLD_VS, NULL, TDS_RENDER_SHADER_OVERLAY_FS);
 
+	output->blur_passes = 0; /* no extra blur passes for now */
+
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glDisable(GL_CULL_FACE);
@@ -233,7 +235,12 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 
 		_tds_render_blur(ptr, ptr->lightmap_rt, ptr->post_rt2);
 
-		tds_rt_bind(NULL); /* Using dynlights, we render with the overlay blending shader to put world info on the NULL fb. */
+		for (int i = 0; i < ptr->blur_passes; ++i) {
+			_tds_render_blur(ptr, ptr->post_rt2, ptr->lightmap_rt);
+			_tds_render_blur(ptr, ptr->lightmap_rt, ptr->post_rt2);
+		}
+
+		tds_rt_bind(ptr->post_rt3); /* Using dynlights, we render with the overlay blending shader to put world info on the NULL fb. */
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		tds_shader_bind(ptr->shader_overlay);
@@ -248,7 +255,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 		glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	} else {
-		tds_rt_bind(NULL); /* Not using dynlights, we simply render to the NULL fb to get some world pixels out there. */
+		tds_rt_bind(ptr->post_rt3); /* Not using dynlights, we simply render to the NULL fb to get some world pixels out there. */
 		glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
@@ -265,11 +272,12 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 
 	tds_shader_bind(ptr->shader_passthrough);
 
-	/* flat overlay rendering */
+	/* copy world fb to output */
+	tds_rt_bind(NULL);
 	tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, 1.0f);
 	tds_shader_set_transform(ptr->shader_passthrough, (float*) *ident);
 
-	tds_shader_bind_texture(ptr->shader_passthrough, flat_overlay->rt_backbuf->gl_tex);
+	tds_shader_bind_texture(ptr->shader_passthrough, ptr->post_rt3->gl_tex);
 	glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count);
 
 	/* post-processing */
@@ -280,7 +288,7 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 
 		tds_shader_bind(ptr->shader_bloom);
 		glBindVertexArray(vb_square->vao);
-		tds_shader_bind_texture(ptr->shader_bloom, ptr->post_rt1->gl_tex);
+		tds_shader_bind_texture(ptr->shader_bloom, ptr->post_rt3->gl_tex); /* use rt3, has light data in it already */
 		tds_shader_set_transform(ptr->shader_bloom, (float*) *ident);
 		tds_shader_set_color(ptr->shader_bloom, 1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -320,6 +328,15 @@ void tds_render_draw(struct tds_render* ptr, struct tds_world** world_list, int 
 		glDrawArrays(vb_square->render_mode, 0, 6);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
+
+	tds_shader_bind(ptr->shader_passthrough);
+
+	/* flat overlay rendering */
+	tds_shader_set_color(ptr->shader_passthrough, 1.0f, 1.0f, 1.0f, 1.0f);
+	tds_shader_set_transform(ptr->shader_passthrough, (float*) *ident);
+
+	tds_shader_bind_texture(ptr->shader_passthrough, flat_overlay->rt_backbuf->gl_tex);
+	glDrawArrays(vb_square->render_mode, 0, vb_square->vertex_count);
 
 	tds_profile_pop(tds_engine_global->profile_handle);
 

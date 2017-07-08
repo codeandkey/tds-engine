@@ -53,6 +53,7 @@ struct tds_render {
 	struct tds_shader* shader_overlay;
 
 	unsigned int enable_bloom, enable_dynlights;
+	unsigned blur_passes;
 	int enable_wireframe, enable_aabb;
 
 	float ambient_r, ambient_b, ambient_g;
