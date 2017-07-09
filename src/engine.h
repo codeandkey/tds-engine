@@ -120,7 +120,7 @@ struct tds_engine {
 	int run_flag;
 	struct tds_object** object_list;
 
-	int enable_update, enable_draw;
+	int enable_update, enable_draw, enable_fps;
 	char* request_load;
 };
 

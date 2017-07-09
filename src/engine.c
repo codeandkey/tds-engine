@@ -189,6 +189,8 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	output->console_handle = tds_console_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized console.\n");
 
+	output->enable_fps = 0;
+
 	/* Free configs */
 	tds_script_free(engine_conf);
 	tds_logf(TDS_LOG_MESSAGE, "Done initializing everything.\n");
@@ -278,6 +280,10 @@ void tds_engine_run(struct tds_engine* ptr) {
 	unsigned long frame_count = 0;
 	tds_clock_point init_point = tds_clock_get_point();
 
+	const int fps_graph_cnt = 32;
+	float fps_max = 0.0f, fps_min = 1000.0f, fps_graph[fps_graph_cnt];
+	int fps_graph_write = 0;
+
 	while (running && ptr->run_flag) {
 		running &= !tds_display_get_close(ptr->display_handle);
 
@@ -289,6 +295,17 @@ void tds_engine_run(struct tds_engine* ptr) {
 
 		/* We approximate the fps using the delta frame time. */
 		ptr->state.fps = 1000.0f / delta_ms;
+
+		float sum = 0.0f;
+		for (int i = 0; i < fps_graph_cnt; ++i) {
+			sum += fps_graph[i];
+		}
+
+		fps_min = (sum / fps_graph_cnt) - 200.0f;
+		fps_max = (sum / fps_graph_cnt) + 200.0f;
+
+		if (ptr->state.fps > fps_max) fps_max = ptr->state.fps;
+		if (ptr->state.fps < fps_min) fps_min = ptr->state.fps;
 
 		// Useful message for debugging frame delta timings.
 		// tds_logf(TDS_LOG_MESSAGE, "frame : accum = %f ms, delta_ms = %f ms, timestep = %f\n", accumulator, delta_ms, timestep_ms);
@@ -348,6 +365,42 @@ void tds_engine_run(struct tds_engine* ptr) {
 		tds_profile_pop(ptr->profile_handle);
 		tds_module_container_draw(ptr->module_container_handle);
 		tds_console_draw(ptr->console_handle);
+
+		/* if fps enabled, render some performance info */
+		if (ptr->enable_fps) {
+			tds_render_flat_set_mode(ptr->render_flat_overlay_handle, TDS_RENDER_COORD_REL_SCREENSPACE);
+			tds_render_flat_set_color(ptr->render_flat_overlay_handle, 1.0f, 1.0f, 1.0f, 1.0f);
+
+			char fps_buf[12] = {0};
+			snprintf(fps_buf, sizeof fps_buf, "fps %d", (int) ptr->state.fps);
+
+			char accum_buf[24] = {0};
+			snprintf(accum_buf, sizeof accum_buf, "accumulator ms %d", (int) accumulator);
+
+			tds_render_flat_text(ptr->render_flat_overlay_handle, ptr->font_debug, fps_buf, strlen(fps_buf), -1.0f, -0.9f, TDS_RENDER_LALIGN, NULL);
+
+			tds_render_flat_set_color(ptr->render_flat_overlay_handle, 0.0f, 1.0f, 1.0f, 1.0f);
+			tds_render_flat_text(ptr->render_flat_overlay_handle, ptr->font_debug, accum_buf, strlen(accum_buf), -1.0f, -0.95f, TDS_RENDER_LALIGN, NULL);
+
+			/*  render a graph between -0.75 and -0.85 (v) and -1.0 and -0.8 (h) */
+			fps_graph[fps_graph_write] = ptr->state.fps;
+
+			/* first, render everything after the write pos */
+			int wp = 0;
+			for (int i = fps_graph_write + 1; i < fps_graph_cnt - 1; ++i) {
+				tds_render_flat_line(ptr->render_flat_overlay_handle, -1.0f + (wp / (float) fps_graph_cnt) * 0.2f, -0.85 + ((fps_graph[i] - fps_min) / (fps_max - fps_min)) * 0.1f, -1.0f + ((wp + 1) / (float) fps_graph_cnt) * 0.2f, -0.85 + ((fps_graph[i + 1] - fps_min) / (fps_max - fps_min)) * 0.1f);
+
+				wp++;
+			}
+
+			for (int i = 0; i <= fps_graph_write; ++i) {
+				tds_render_flat_line(ptr->render_flat_overlay_handle, -1.0f + (wp / (float) fps_graph_cnt) * 0.2f, -0.85 + ((fps_graph[i] - fps_min) / (fps_max - fps_min)) * 0.1f, -1.0f + ((wp + 1) / (float) fps_graph_cnt) * 0.2f, -0.85 + ((fps_graph[i + 1] - fps_min) / (fps_max - fps_min)) * 0.1f);
+
+				wp++;
+			}
+
+			if (++fps_graph_write >= fps_graph_cnt) fps_graph_write = 0;
+		}
 
 		tds_profile_push(ptr->profile_handle, "Render process");
 		tds_render_draw(ptr->render_handle, ptr->world_buffer, ptr->world_buffer_count, ptr->render_flat_world_handle, ptr->render_flat_overlay_handle);

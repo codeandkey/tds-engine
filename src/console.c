@@ -224,6 +224,12 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "-draw")) {
 		tds_console_print(ptr, "disabling draw\n");
 		tds_engine_global->enable_draw = 0;
+	} else if (!strcmp(cur_cmd, "+fps")) {
+		tds_console_print(ptr, "enabling fps\n");
+		tds_engine_global->enable_fps = 1;
+	} else if (!strcmp(cur_cmd, "-fps")) {
+		tds_console_print(ptr, "disabling fps\n");
+		tds_engine_global->enable_fps = 0;
 	} else if (!strcmp(cur_cmd, "+wire")) {
 		tds_console_print(ptr, "enabling wireframe\n");
 		tds_engine_global->render_handle->enable_wireframe = 1;
