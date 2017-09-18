@@ -109,7 +109,14 @@ void tds_savestate_read(struct tds_savestate* ptr) {
 	FILE* fd = fopen(filename, "r");
 
 	if (!fd) {
-		tds_logf(TDS_LOG_CRITICAL, "Failed to open file [%s] for reading.\n", filename);
+		tds_logf(TDS_LOG_WARNING, "Failed to open file [%s] for reading.\n", filename);
+		tds_logf(TDS_LOG_DEBUG, "Touching savestate file with empty state data.\n");
+		fd = fopen(filename, "w");
+		if (!fd) {
+			tds_logf(TDS_LOG_WARNING, "Couldn't touch savestate file! Will try again on next savestate write.\n");
+			return;
+		}
+		fclose(fd);
 		return;
 	}
 
