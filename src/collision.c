@@ -3,49 +3,20 @@
 
 #include <math.h>
 
-struct _tds_collision_vert {
-	float x, y;
-};
-
-float _tds_collision_crossz(float x1, float y1, float x2, float y2, float x3, float y3);
-int _tds_collision_tri(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
-
 int tds_collision_get_overlap(struct tds_object* first, struct tds_object* second) {
-	if (first->x - first->cbox_width / 2.0f > second->x + second->cbox_width / 2.0f) {
-		return 0;
-	}
-
-	if (first->x + first->cbox_width / 2.0f < second->x - second->cbox_width / 2.0f) {
-		return 0;
-	}
-
-	if (first->y - first->cbox_height / 2.0f > second->y + second->cbox_height / 2.0f) {
-		return 0;
-	}
-
-	if (first->y + first->cbox_height / 2.0f < second->y - second->cbox_height / 2.0f) {
-		return 0;
-	}
+	if (first->pos.x + first->cbox.x < second->pos.x) return 0;
+	if (second->pos.x + second->cbox.x < first->pos.x) return 0;
+	if (first->pos.y + first->cbox.y < second->pos.y) return 0;
+	if (second->pos.y + second->cbox.y < first->pos.y) return 0;
 
 	return 1;
 }
 
-int tds_collision_get_point_overlap(struct tds_object* ptr, float x, float y) {
-	if (x < ptr->x - ptr->cbox_width / 2.0f) {
-		return 0;
-	}
-
-	if (x > ptr->x + ptr->cbox_width / 2.0f) {
-		return 0;
-	}
-
-	if (y < ptr->y - ptr->cbox_height / 2.0f) {
-		return 0;
-	}
-
-	if (y > ptr->y + ptr->cbox_height / 2.0f) {
-		return 0;
-	}
+int tds_collision_get_point_overlap(struct tds_object* ptr, tds_bcp pt) {
+	if (pt.x < ptr->pos.x) return 0;
+	if (pt.x > ptr->pos.x + ptr->cbox.x) return 0; /* consider changing this to GE */
+	if (pt.y < ptr->pos.y) return 0;
+	if (pt.y > ptr->pos.y + ptr->cbox.y) return 0;
 
 	return 1;
 }

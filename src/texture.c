@@ -22,6 +22,9 @@ struct tds_texture* tds_texture_create(const char* filename, int tile_x, int til
 	 * stb_image doesn't seem to be cooperative towards LD when it comes to linking stbi_set_flip_vertically_on_load; we will manually cycle the rows
 	 */
 
+	output->dim.x = w;
+	output->dim.y = h;
+
 	unsigned char* img_data = tds_malloc(sizeof *img_data * w * h * 4);
 	unsigned int img_rw = 4 * w;
 

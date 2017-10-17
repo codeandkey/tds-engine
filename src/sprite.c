@@ -9,27 +9,31 @@
 /* Inefficient as it may seem, we prepare a huge VBO with different texcoords for each texture frame. */
 /* Rendering a gigantic VBO with variable offsets is way faster than switching textures each frame. */
 
-struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, float height, float animation_rate) {
+struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float animation_rate) {
 	struct tds_sprite* output = tds_malloc(sizeof(struct tds_sprite));
 
 	memset(output, 0, sizeof(struct tds_sprite));
 
-	output->width = width;
-	output->height = height;
 	output->texture = texture;
 	output->animation_rate = animation_rate;
-	output->offset_x = output->offset_y = output->offset_angle = 0.0f;
+	output->offset_angle = 0.0f;
+	output->offset = tds_vec2_zero;
 
 	struct tds_vertex* verts = tds_malloc(sizeof(struct tds_vertex) * texture->frame_count * 6);
 
+	float left = (float) -texture->dim.x / 32.0f; /* divide by 16 and 2 to get block halves */
+	float right = (float) texture->dim.x / 32.0f; 
+	float top = (float) texture->dim.y / 32.0f; 
+	float bottom = (float) -texture->dim.y / 32.0f; 
+
 	for (int i = 0; i < texture->frame_count; ++i) {
 		struct tds_vertex tri[6] = {
-			{-width / 2.0f, -height / 2.0f, 0.0f, texture->frame_list[i].left, texture->frame_list[i].bottom},
-			{width / 2.0f, -height / 2.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom},
-			{-width / 2.0f, height / 2.0f, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top},
-			{-width / 2.0f, height / 2.0f, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top},
-			{width / 2.0f, -height / 2.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom},
-			{width / 2.0f, height / 2.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].top}
+			{left, bottom, 0.0f, texture->frame_list[i].left, texture->frame_list[i].bottom},
+			{right, bottom, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom},
+			{left, top, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top},
+			{left, top, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top},
+			{right, bottom, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom},
+			{right, top, 0.0f, texture->frame_list[i].right, texture->frame_list[i].top}
 		};
 
 		memcpy(verts + i * 6, tri, sizeof(struct tds_vertex) * 6);
@@ -57,7 +61,7 @@ vec4* tds_sprite_get_transform(struct tds_sprite* ptr) {
 	mat4x4_identity(ptr->mat_transform);
 	mat4x4_identity(ptr->mat_id);
 
-	mat4x4_translate(pos, ptr->offset_x, ptr->offset_y, 0.0f);
+	mat4x4_translate(pos, ptr->offset.x / 16.0f, ptr->offset.y / 16.0f, 0.0f);
 	mat4x4_rotate_Z(rot, ptr->mat_id, ptr->offset_angle);
 	mat4x4_scale(scale, ptr->mat_id, ptr->offset_scale);
 

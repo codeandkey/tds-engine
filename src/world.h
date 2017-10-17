@@ -5,21 +5,24 @@
 #include "vertex_buffer.h"
 #include "quadtree.h"
 
-#define TDS_WORLD_BLOCK_SIZE 0.5f
+/* each block in the world is strictly 16 units tall, and 16 units wide. */
 
 struct tds_world_hblock {
-	int x, y, w, id;
+	int id;
+	tds_bcp pos, dim;
 	struct tds_world_hblock* next;
 	struct tds_vertex_buffer* vb;
 };
 
 struct tds_world_segment {
-	float x1, y1, x2, y2, nx, ny; /* Segment locations are not in world space, they are in game space. No conversion necessary. */
+	tds_bcp a, b;
+	tds_vec2 n;
 	struct tds_world_segment* next, *prev;
 };
 
+/* it's a huge waste of.. everything to keep complete block data in memory. */
+
 struct tds_world {
-	int** buffer, width, height;
 	struct tds_world_hblock* block_list_head, *block_list_tail;
 	struct tds_world_segment* segment_list;
 	struct tds_vertex_buffer* segment_vb;
@@ -29,7 +32,7 @@ struct tds_world {
 struct tds_world* tds_world_create(void);
 void tds_world_free(struct tds_world* ptr);
 
-void tds_world_init(struct tds_world* ptr, int width, int height); /* This creates a blank slate world; tds_world_load will automatically call this if it hasn't been called yet. */
+void tds_world_init(struct tds_world* ptr); /* This creates a blank slate world; tds_world_load will automatically call this if it hasn't been called yet. */
 void tds_world_load(struct tds_world* ptr, const uint8_t* block_buffer, int width, int height);
 void tds_world_save(struct tds_world* ptr, uint8_t* block_buffer, int width, int height);
 

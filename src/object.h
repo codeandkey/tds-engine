@@ -6,6 +6,7 @@
 #include "clock.h"
 #include "sprite_cache.h"
 #include "sound_source.h"
+#include "coord.h"
 
 struct tds_object_param;
 
@@ -36,8 +37,10 @@ struct tds_object {
 	const char* type_name;
 
 	int visible, layer, save; /* Save : will the object be exported? If not, the editor will not create a selector for it and the engine will ignore it during saving. */
-	float x, y, z, angle, r, g, b, a, xspeed, yspeed;
-	float cbox_width, cbox_height;
+	float angle, r, g, b, a;
+
+	tds_bcp pos, cbox;
+	tds_vec2 speed;
 
 	tds_clock_point anim_lastframe;
 	double anim_speed_offset;
@@ -78,7 +81,7 @@ struct tds_object_type {
 	void (*func_msg)(struct tds_object* ptr, struct tds_object* from, int msg, void* param);
 };
 
-struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_handle_manager* hmgr, struct tds_sprite_cache* smgr, float x, float y, float z, struct tds_object_param* param_list);
+struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_handle_manager* hmgr, struct tds_sprite_cache* smgr, tds_bcp pos, struct tds_object_param* param_list);
 void tds_object_free(struct tds_object* ptr);
 
 void tds_object_set_sprite(struct tds_object* ptr, struct tds_sprite* sprite);

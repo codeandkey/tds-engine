@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_handle_manager* hmgr, struct tds_sprite_cache* smgr, float x, float y, float z, struct tds_object_param* param_list) {
+struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_handle_manager* hmgr, struct tds_sprite_cache* smgr, tds_bcp pos, struct tds_object_param* param_list) {
 	struct tds_object* output = tds_malloc(sizeof(struct tds_object));
 
 	output->type_name = type->type_name;
@@ -18,11 +18,9 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->func_msg = type->func_msg;
 	output->func_destroy = type->func_destroy;
 
-	output->x = x;
-	output->y = y;
-	output->z = z;
+	output->pos = pos;
 	output->save = type->save;
-	output->xspeed = output->yspeed = 0.0;
+	output->speed = tds_vec2_zero;
 	output->snd_volume = 1.0f;
 	output->snd_loop = 0;
 	output->angle = 0.0f;
@@ -48,8 +46,8 @@ struct tds_object* tds_object_create(struct tds_object_type* type, struct tds_ha
 	output->param_list = param_list;
 
 	if (output->sprite_handle) {
-		output->cbox_width = output->sprite_handle->width;
-		output->cbox_height = output->sprite_handle->height;
+		output->cbox.x = output->sprite_handle->texture->dim.x;
+		output->cbox.y = output->sprite_handle->texture->dim.y;
 	}
 
 	tds_logf(TDS_LOG_MESSAGE, "created object with handle %d, sprite %X\n", output->object_handle, (unsigned long) output->sprite_handle);
@@ -105,7 +103,7 @@ vec4* tds_object_get_transform(struct tds_object* ptr) {
 	mat4x4_identity(ptr->transform);
 	mat4x4_identity(id);
 
-	mat4x4_translate(pos, ptr->x, ptr->y, ptr->z);
+	mat4x4_translate(pos, ptr->pos.x, ptr->pos.y, 0.0);
 	mat4x4_rotate_Z(rot, id, ptr->angle);
 
 	mat4x4_mul(ptr->transform, pos, rot);
@@ -175,8 +173,8 @@ void tds_object_update(struct tds_object* ptr) {
 		ptr->func_update(ptr);
 	}
 
-	ptr->x += ptr->xspeed;
-	ptr->y += ptr->yspeed;
+	ptr->pos.x += ptr->speed.x;
+	ptr->pos.y += ptr->speed.y;
 
 	tds_object_update_sndsrc(ptr);
 }
@@ -202,8 +200,8 @@ void tds_object_destroy(struct tds_object* ptr) {
 }
 
 void tds_object_update_sndsrc(struct tds_object* ptr) {
-	tds_sound_source_set_pos(ptr->snd_src, ptr->x, ptr->y);
-	tds_sound_source_set_vel(ptr->snd_src, ptr->xspeed, ptr->yspeed);
+	tds_sound_source_set_pos(ptr->snd_src, ptr->pos.x, ptr->pos.y);
+	tds_sound_source_set_vel(ptr->snd_src, ptr->speed.x, ptr->speed.y);
 	tds_sound_source_set_vol(ptr->snd_src, ptr->snd_volume);
 	tds_sound_source_set_loop(ptr->snd_src, ptr->snd_loop);
 }

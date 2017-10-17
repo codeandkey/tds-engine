@@ -3,6 +3,7 @@
 #include "vertex_buffer.h"
 #include "texture.h"
 #include "linmath.h"
+#include "coord.h"
 
 /* The sprite structure will interpret tilesets and prepare the GL textures.
  *
@@ -15,11 +16,17 @@
  * They are handled by the entity internally.
  */
 
+/*
+ * to help with consistency sprites will be enforced to be exactly their adveritsed size in game units.
+ * so, a 16x16 sprite will take exactly the space of one block in-game.
+ * fortunately, this means sprites no longer need to keep track of their own sizes; they can refer to their source textures.
+ *
+ * vertex buffers will consider 1.0f x 1.0f to be one block in game space and will be scaled appropriately
+ */
+
 struct tds_sprite {
-	float center_x, center_y;
-	float offset_x, offset_y, offset_angle;
-	float offset_scale;
-	float width, height;
+	float offset_angle, offset_scale;
+	tds_vec2 offset;
 	float animation_rate; /* Delay in ms */
 
 	mat4x4 mat_transform, mat_id;
@@ -28,7 +35,7 @@ struct tds_sprite {
 	struct tds_vertex_buffer* vbo_handle;
 };
 
-struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float width, float height, float animation_rate);
+struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float animation_rate);
 void tds_sprite_free(struct tds_sprite* ptr);
 
 /*

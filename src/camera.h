@@ -2,10 +2,18 @@
 
 #include "display.h"
 #include "linmath.h"
+#include "coord.h"
+
+/*
+ * the camera operates within it's own sized space (x, 1.0f) in dim
+ * however we need to be operating with larger coordinates and don't want floating-point
+ * precision to fuck anything up which it will at high coordinates -- so, we maintain the camera position in game space
+ * and then compute relative distances to keep values small.
+ */ 
 
 struct tds_camera {
-	float x, y, z, angle;
-	float width, height;
+	float angle;
+	tds_bcp pos, dim;
 	float hidden_scale; /* Changes the camera size without altering the width and height values. */
 
 	mat4x4 mat_transform;

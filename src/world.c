@@ -6,13 +6,25 @@
 #include <GLXW/glxw.h>
 #include <string.h>
 
+/*
+ * TODO : world data is currently loaded into a huge buffer in engine.c and then later copied through tds_world_load
+ *
+ * this is a colossal waste of heap memory and probably brutal on smaller machines especially those lacking in RAM
+ * also, with the new world representation we cannot have dynamically sized worlds and they will always gigantic
+ * unless we want to develop the engine to only support computers with ~4*(2^28)^2/(1024^3) ~= 262144 terabytes of RAM we'll
+ * need to take a different approach --
+ *
+ * fortunately it's simple; we need to pass the FD from the loader into the world as a part of the segment generation process
+ * and segment generation will be as simple as it was before if not even better. also we won't be using a 
+ * stupid amount of memory anymore. the yxml loader in engine.c however is an incredible hack right now and difficult to read.
+ */
+
 static void _tds_world_generate_hblocks(struct tds_world* ptr);
 static void _tds_world_generate_segments(struct tds_world* ptr);
 
 struct tds_world* tds_world_create(void) {
 	struct tds_world* output = tds_malloc(sizeof *output);
 
-	output->width = output->height = 0;
 	output->block_list_head = output->block_list_tail = 0;
 	output->buffer = 0;
 
@@ -22,14 +34,6 @@ struct tds_world* tds_world_create(void) {
 }
 
 void tds_world_free(struct tds_world* ptr) {
-	if (ptr->buffer) {
-		for (int i = 0; i < ptr->height; ++i) {
-			tds_free(ptr->buffer[i]);
-		}
-
-		tds_free(ptr->buffer);
-	}
-
 	if (ptr->block_list_head) {
 		struct tds_world_hblock* cur = ptr->block_list_head, *tmp = 0;
 
