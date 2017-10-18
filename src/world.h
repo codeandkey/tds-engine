@@ -34,6 +34,7 @@ void tds_world_free(struct tds_world* ptr);
 
 void tds_world_init(struct tds_world* ptr); /* This creates a blank slate world; tds_world_load will automatically call this if it hasn't been called yet. */
 void tds_world_load(struct tds_world* ptr, const uint8_t* block_buffer, int width, int height);
+void tds_world_load_hblocks(struct tds_world* ptr, struct tds_world_hlock* block_list_head); /* the linked list is copied, please free it after passing */
 void tds_world_save(struct tds_world* ptr, uint8_t* block_buffer, int width, int height);
 
 void tds_world_set_block(struct tds_world* ptr, int x, int y, uint8_t block);

@@ -336,6 +336,7 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, fl
 
 void _tds_world_generate_segments(struct tds_world* ptr) {
 	struct tds_world_segment* head = ptr->segment_list, *cur = NULL;
+	struct tds_world_hblock* cur_block = ptr->block_list_head;
 
 	while (head) {
 		cur = head->next;
@@ -352,20 +353,16 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 
 	tds_logf(TDS_LOG_DEBUG, "Starting redundant segment generation phase.\n");
 
-	/* We start by generating a large list of segments without any reduction. */
-	for (int x = 0; x < ptr->width; ++x) {
-		for (int y = 0; y < ptr->height; ++y) {
-			/* For each index, we only consider out-facing edges at the current location. */
-			if (!ptr->buffer[y][x]) {
-				continue;
-			}
+	while (cur_block) {
+		/* we can't add segments solely based on hblocks as they can tend to "overlap" in strange ways which can affect the lighting engine */
+		int flags = tds_block_map_get(tds_engine_global->block_map_handle, cur_block->id).flags;
 
-			int flags = tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y][x]).flags;
+		if (flags & TDS_BLOCK_TYPE_NOLIGHT || !(flags & TDS_BLOCK_TYPE_SOLID)) {
+			cur_block = cur_block->next;
+			continue;
+		}
 
-			if (flags & TDS_BLOCK_TYPE_NOLIGHT || !(flags & TDS_BLOCK_TYPE_SOLID)) {
-				continue;
-			}
-
+		for (int i = 0; i < cur_block->dim.x; ++i) {
 			float block_left = (x  - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 			float block_right = (x + 1.0f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
 			float block_top = (y + 1.0f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
@@ -500,6 +497,8 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				ptr->segment_list = cur;
 			}
 		}
+
+		cur_block = cur_block->next;
 	}
 
 	tds_logf(TDS_LOG_DEBUG, "Starting linear reduction phase.\n");
@@ -526,17 +525,17 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 					continue;
 				}
 
-				if (reduction_cur->nx == 0.0f && reduction_target->nx == 0.0f && reduction_cur->ny == 1.0f && reduction_target->ny == 1.0f) {
+				if (!tds_vec2_cmpi(reduction_cur->n, 0, 1) && !tds_vec2_cmpi(reduction_target, 0, 1)) {
 					/* Both of these lines are horizontal, and each segment's x2 is less than the x1. */
 
-					if (reduction_cur->y1 != reduction_target->y1) {
+					if (reduction_cur->a.y != reduction_target->a.y) {
 						reduction_cur = reduction_cur->next;
 						continue;
 					}
 
-					if (reduction_cur->x2 == reduction_target->x1) {
+					if (reduction_cur->b.x == reduction_target->a.x) {
 						/* reduction_cur is on the right and we can reduce. */
-						reduction_target->x1 = reduction_cur->x1;
+						reduction_target->a.x = reduction_cur->a.x;
 
 						if (reduction_cur->prev) {
 							reduction_cur->prev->next = reduction_cur->next;
@@ -555,9 +554,9 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_target->x2 == reduction_cur->x1) {
+					if (reduction_target->b.x == reduction_cur->a.x) {
 						/* reduction_target is on the right and we can reduce. */
-						reduction_target->x2 = reduction_cur->x2;
+						reduction_target->b.x = reduction_cur->b.x;
 
 						if (reduction_cur->prev) {
 							reduction_cur->prev->next = reduction_cur->next;
@@ -577,17 +576,17 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 					}
 				}
 
-				if (reduction_cur->nx == 0.0f && reduction_target->nx == 0.0f && reduction_cur->ny == -1.0f && reduction_target->ny == -1.0f) {
+				if (!tds_vec2_cmpi(reduction_cur->n, 0, -1) && !tds_vec2_cmpi(reduction_target, 0, -1)) {
 					/* Both of these lines are horizontal, and each segment's x2 is greater than the x1. */
 
-					if (reduction_cur->y1 != reduction_target->y1) {
+					if (reduction_cur->a.y != reduction_target->a.y) {
 						reduction_cur = reduction_cur->next;
 						continue;
 					}
 
-					if (reduction_cur->x1 == reduction_target->x2) {
+					if (reduction_cur->a.x == reduction_target->b.x) {
 						/* reduction_cur is on the right and we can reduce. */
-						reduction_target->x2 = reduction_cur->x2;
+						reduction_target->b.x = reduction_cur->b.x;
 
 						if (reduction_cur->prev) {
 							reduction_cur->prev->next = reduction_cur->next;
@@ -606,9 +605,9 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_target->x1 == reduction_cur->x2) {
+					if (reduction_target->a.x == reduction_cur->b.x) {
 						/* reduction_target is on the right and we can reduce. */
-						reduction_target->x1 = reduction_cur->x1;
+						reduction_target->a.x = reduction_cur->a.x;
 
 						if (reduction_cur->prev) {
 							reduction_cur->prev->next = reduction_cur->next;
@@ -628,17 +627,17 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 					}
 				}
 
-				if (reduction_cur->nx == 1.0f && reduction_target->nx == 1.0f && reduction_cur->ny == 0.0f && reduction_target->ny == 0.0f) {
+				if (!tds_vec2_cmpi(reduction_cur->n, 1, 0) && !tds_vec2_cmpi(reduction_target, 1, 0)) {
 					/* Both of these lines are vertical, and each segment's y2 is greater than the y1. */
 
-					if (reduction_cur->x1 != reduction_target->x1) {
+					if (reduction_cur->a.x != reduction_target->a.x) {
 						reduction_cur = reduction_cur->next;
 						continue;
 					}
 
-					if (reduction_cur->y2 == reduction_target->y1) {
+					if (reduction_cur->b.y == reduction_target->a.y) {
 						/* reduction_cur is on the bottom and we can reduce. */
-						reduction_target->y1 = reduction_cur->y1;
+						reduction_target->a.y = reduction_cur->a.y;
 
 						if (reduction_cur->prev) {
 							reduction_cur->prev->next = reduction_cur->next;
@@ -657,9 +656,9 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_target->y2 == reduction_cur->y1) {
+					if (reduction_target->b.y == reduction_cur->a.y) {
 						/* reduction_target is on the bottom and we can reduce. */
-						reduction_target->y2 = reduction_cur->y2;
+						reduction_target->b.y = reduction_cur->b.y;
 
 						if (reduction_cur->prev) {
 							reduction_cur->prev->next = reduction_cur->next;
@@ -680,17 +679,17 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 					}
 				}
 
-				if (reduction_cur->nx == -1.0f && reduction_target->nx == -1.0f && reduction_cur->ny == 0.0f && reduction_target->ny == 0.0f) {
+				if (!tds_vec2_cmpi(reduction_cur->n, -1, 0) && !tds_vec2_cmpi(reduction_target, -1, 0)) {
 					/* Both of these lines are vertical, and each segment's y2 is less than the y1. */
 
-					if (reduction_cur->x1 != reduction_target->x1) {
+					if (reduction_cur->a.x != reduction_target->a.x) {
 						reduction_cur = reduction_cur->next;
 						continue;
 					}
 
-					if (reduction_cur->y2 == reduction_target->y1) {
+					if (reduction_cur->b.y == reduction_target->a.y) {
 						/* reduction_cur is on the top and we can reduce. */
-						reduction_target->y1 = reduction_cur->y1;
+						reduction_target->a.y = reduction_cur->a.y;
 
 						if (reduction_cur->prev) {
 							reduction_cur->prev->next = reduction_cur->next;
@@ -709,9 +708,9 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_target->y2 == reduction_cur->y1) {
+					if (reduction_target->b.y == reduction_cur->a.y) {
 						/* reduction_target is on the top and we can reduce. */
-						reduction_target->y2 = reduction_cur->y2;
+						reduction_target->b.y = reduction_cur->b.y;
 
 						if (reduction_cur->prev) {
 							reduction_cur->prev->next = reduction_cur->next;
@@ -759,9 +758,12 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 	int i = 0;
 
 	while (cur) {
+		/* the vertex buffer should be appropriately sized by floats, we will deal with translating it later */
+		/* TODO : segment vbos still rely on floating-point niceness, consider moving VBOs to be relative and translating them later in the render process */
+
 		struct tds_vertex verts[] = {
-			{cur->x1, cur->y1, 0.0f, cur->nx, cur->ny}, /* We hide the normal in the texcoords, saving some time. */
-			{cur->x2, cur->y2, 0.0f, cur->nx, cur->ny},
+			{(float) cur->a.x / 16.0f, (float) cur->a.y / 16.0f, 0.0f, cur->n.x, cur->n.y}, /* We hide the normal in the texcoords, saving some time. */
+			{(float) cur->b.x / 16.0f, (float) cur->b.y, 0.0f, cur->n.x, cur->n.y},
 		};
 
 		if (i >= segment_count) {
