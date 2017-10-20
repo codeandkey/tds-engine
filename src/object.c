@@ -103,7 +103,7 @@ vec4* tds_object_get_transform(struct tds_object* ptr) {
 	mat4x4_identity(ptr->transform);
 	mat4x4_identity(id);
 
-	mat4x4_translate(pos, ptr->pos.x, ptr->pos.y, 0.0);
+	mat4x4_translate(pos, (ptr->pos.x + ptr->sprite_handle->texture->dim.x / 2) / 16.0f, (ptr->pos.y + ptr->sprite_handle->texture->dim.y / 2) / 16.0f, 0.0);
 	mat4x4_rotate_Z(rot, id, ptr->angle);
 
 	mat4x4_mul(ptr->transform, pos, rot);

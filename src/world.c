@@ -19,21 +19,19 @@
  * stupid amount of memory anymore. the yxml loader in engine.c however is an incredible hack right now and difficult to read.
  */
 
-static void _tds_world_generate_hblocks(struct tds_world* ptr);
 static void _tds_world_generate_segments(struct tds_world* ptr);
+static void _tds_world_deinit(struct tds_world* ptr);
 
 struct tds_world* tds_world_create(void) {
 	struct tds_world* output = tds_malloc(sizeof *output);
 
 	output->block_list_head = output->block_list_tail = 0;
-	output->buffer = 0;
-
 	output->quadtree = NULL;
 
 	return output;
 }
 
-void tds_world_free(struct tds_world* ptr) {
+void _tds_world_deinit(struct tds_world* ptr) {
 	if (ptr->block_list_head) {
 		struct tds_world_hblock* cur = ptr->block_list_head, *tmp = 0;
 
@@ -60,89 +58,24 @@ void tds_world_free(struct tds_world* ptr) {
 	if (ptr->quadtree) {
 		tds_quadtree_free(ptr->quadtree);
 	}
+}
 
+void tds_world_free(struct tds_world* ptr) {
+	_tds_world_deinit(ptr);
 	tds_free(ptr);
 }
 
-void tds_world_init(struct tds_world* ptr, int width, int height) {
-	if (ptr->buffer) {
-		for (int i = 0; i < height; ++i) {
-			tds_free(ptr->buffer[i]);
-		}
-
-		tds_free(ptr->buffer);
-	}
-
-	ptr->buffer = tds_malloc(sizeof ptr->buffer[0] * height);
-
-	ptr->width = width;
-	ptr->height = height;
-
-	for (int y = 0; y < height; ++y) {
-		ptr->buffer[y] = tds_malloc(sizeof ptr->buffer[0][0] * width);
-
-		for (int x = 0; x < width; ++x) {
-			ptr->buffer[y][x] = 0;
-		}
-	}
-}
-
-void tds_world_load(struct tds_world* ptr, const uint8_t* block_buffer, int width, int height) {
-	tds_logf(TDS_LOG_DEBUG, "Initializing world structure with size %d by %d\n", width, height);
-
-	tds_world_init(ptr, width, height);
-
-	for (int y = 0; y < height; ++y) {
-		for (int x = 0; x < width; ++x) {
-			ptr->buffer[y][x] = block_buffer[y * width + x];
-		}
-	}
-
-	_tds_world_generate_hblocks(ptr);
-	_tds_world_generate_segments(ptr);
-}
-
-void tds_world_save(struct tds_world* ptr, uint8_t* block_buffer, int width, int height) {
-	/* Simply copying the buffer. The buffer will _always_ be up to date. */
-
-	if (width != ptr->width || height != ptr->height) {
-		tds_logf(TDS_LOG_CRITICAL, "World size mismatch.\n");
-		return;
-	}
-
-	for (int y = 0; y < height; ++y) {
-		for (int x = 0; x < width; ++x) {
-			block_buffer[y * width + x] = ptr->buffer[y][x];
-		}
-	}
-}
-
-void tds_world_set_block(struct tds_world* ptr, int x, int y, uint8_t block) {
-	if (x >= ptr->width || x < 0 || y >= ptr->height || y < 0) {
-		tds_logf(TDS_LOG_WARNING, "World index out of bounds.\n");
-		return;
-	}
-
-	if (ptr->buffer[y][x] != block) {
-		ptr->buffer[y][x] = block;
-
-		_tds_world_generate_hblocks(ptr); /* This is not the most efficient way to do this, but it really shouldn't matter with small worlds. */
-		_tds_world_generate_segments(ptr); /* This is the worst. Likely a huge bottleneck. */
-	}
-
-	/* If worlds end up not being small for some reason, we can regenerate only the block which the target resided in along with it's neighbors. */
-	/* This shouldn't be called often anyway, so.. not a big deal. */
-}
-
-uint8_t tds_world_get_block(struct tds_world* ptr, int x, int y) {
-	return ptr->buffer[y][x];
+void tds_world_init(struct tds_world* ptr) {
+	_tds_world_deinit(ptr);
+	memset(ptr, 0, sizeof *ptr);
 }
 
 static void _tds_world_generate_hblocks(struct tds_world* ptr) {
-	/* Perhaps one of the more important functions : regenerate the horizontally reduced blocks */
+	/*
+	 * removing this function as we are migrating hblock generation over to tds_loader to allow streaming as there are no longer stored world layer buffers
+	 * 
 
 	if (ptr->block_list_head) {
-		/* There are already blocks here. Into the trash! */
 		struct tds_world_hblock* cur = ptr->block_list_head, *tmp = 0;
 
 		while (cur) {
@@ -163,7 +96,6 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 		for (int x = 0; x < ptr->width; ++x) {
 			if (ptr->buffer[y][x] != cur_type) {
 				if (block_length > 0 && cur_type) {
-					/* Extract a block. */
 					tmp_block = tds_malloc(sizeof *tmp_block);
 
 					tmp_block->next = 0;
@@ -190,11 +122,9 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 		}
 
 		if (!cur_type) {
-			continue; /* The last block is air, no reason to generate it */
+			continue;
 		}
 
-		/* We also extract a block afterwards, or we'll miss some */
-		/* Extract a block. */
 		tmp_block = tds_malloc(sizeof *tmp_block);
 
 		tmp_block->next = 0;
@@ -212,85 +142,68 @@ static void _tds_world_generate_hblocks(struct tds_world* ptr) {
 		ptr->block_list_tail = tmp_block;
 	}
 
-	/* At this time we will also generate VBOs for each hblock, so that tds_render doesn't have to. (and insert the quadtree) */
-
 	if (ptr->quadtree) {
 		tds_quadtree_free(ptr->quadtree);
 	}
 
-	ptr->quadtree = tds_quadtree_create(-(ptr->width + 1.0f) * TDS_WORLD_BLOCK_SIZE / 2.0f, (ptr->width + 1.0f) * TDS_WORLD_BLOCK_SIZE / 2.0f, (ptr->height + 0.5f) * TDS_WORLD_BLOCK_SIZE / 2.0f, -(ptr->height + 1.0f) * TDS_WORLD_BLOCK_SIZE / 2.0f); 
+	ptr->quadtree = tds_quadtree_create(); 
 
 	struct tds_world_hblock* hb_cur = ptr->block_list_head;
 	while (hb_cur) {
+		float right = hb_cur->dim.x + hb_cur->pos.x;
 		struct tds_vertex vert_list[] = {
-			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, 0.0f, 1.0f },
-			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, hb_cur->w, 0.0f },
-			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, hb_cur->w, 1.0f },
-			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, 0.0f, 1.0f },
-			{ hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, hb_cur->w, 0.0f },
-			{ -hb_cur->w * TDS_WORLD_BLOCK_SIZE / 2.0f, -TDS_WORLD_BLOCK_SIZE / 2.0f, 0.0f, 0.0f, 0.0f },
+			{ 0.0f, 16.0f, 0.0f, 0.0f, 1.0f },
+			{ right, 0.0f, 0.0f, hb_cur->dim.x / 16.0f, 0.0f },
+			{ right, 16.0f, 0.0f, hb_cur->dim.x / 16.0f, 1.0f },
+			{ 0.0f, 16.0f, 0.0f, 0.0f, 1.0f },
+			{ right, 0.0f, 0.0f, hb_cur->dim.x / 16.0f, 0.0f },
+			{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
 		};
 
-		float render_x = TDS_WORLD_BLOCK_SIZE * (hb_cur->x - ptr->width / 2.0f + (hb_cur->w) / 2.0f);
-		float render_y = TDS_WORLD_BLOCK_SIZE * (hb_cur->y - ptr->height / 2.0f + 0.5f);
+		tds_bcp hb_bl = hb_cur->pos, hb_tr = hb_bl;
+		hb_tr.x += hb_cur->dim.x;
+		hb_tr.y += hb_cur->dim.y;
 
-		float block_left = render_x - hb_cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
-		float block_right = render_x + hb_cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
-		float block_top = render_y + TDS_WORLD_BLOCK_SIZE / 2.0f;
-		float block_bottom = render_y - TDS_WORLD_BLOCK_SIZE / 2.0f;
-
-		tds_quadtree_insert(ptr->quadtree, block_left, block_right, block_top, block_bottom, hb_cur);
+		tds_quadtree_insert(ptr->quadtree, hb_bl.x, hb_tr.x, hb_tr.y, hb_bl.y, hb_cur);
 
 		hb_cur->vb = tds_vertex_buffer_create(vert_list, 6, GL_TRIANGLES);
-
 		hb_cur = hb_cur->next;
 	}
+
+	*/
 }
 
-int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, float* x, float* y, float* w, float* h, int flag_req, int flag_or, int flag_not) {
+int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, int flag_req, int flag_or, int flag_not) {
 	/* Another important function. Intersection testing with axis-aligned objects. */
 
-	float obj_left = obj->x - obj->cbox_width / 2.0f;
-	float obj_right = obj->x + obj->cbox_width / 2.0f;
-	float obj_bottom = obj->y - obj->cbox_height / 2.0f;
-	float obj_top = obj->y + obj->cbox_height / 2.0f;
-
-	if (obj->angle) {
-		tds_logf(TDS_LOG_WARNING, "The target object is not axis-aligned. Using a wider bounding box than normal to accommadate.\n");
-
-		float diagonal = sqrtf(pow(obj->cbox_width, 2) + pow(obj->cbox_height, 2)) / 2.0f;
-
-		obj_left = obj->x - diagonal;
-		obj_right = obj->x + diagonal;
-		obj_bottom = obj->y - diagonal;
-		obj_top = obj->y + diagonal;
-	}
+	tds_bcp pos = obj->pos, tr = pos;
+	tr.x += obj->cbox.x;
+	tr.y += obj->cbox.y;
 
 	/* The world block coordinates will be treated as centers. The block at [0, 0] will be centered on the origin. */
 	struct tds_world_hblock* cblock = ptr->block_list_head;
 
 	while (cblock) {
-		float cblock_left = (cblock->x - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-		float cblock_right = (cblock->x + cblock->w - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-		float cblock_top = (cblock->y + 1.0f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-		float cblock_bottom = (cblock->y - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+		tds_bcp c_pos = cblock->pos, c_tr = c_pos;
+		c_tr.x += cblock->dim.x;
+		c_tr.y += cblock->dim.y;
 
-		if (obj_left > cblock_right) {
+		if (pos.x > c_tr.x) {
 			cblock = cblock->next;
 			continue;
 		}
 
-		if (obj_right < cblock_left) {
+		if (tr.x < c_pos.x) {
 			cblock = cblock->next;
 			continue;
 		}
 
-		if (obj_top < cblock_bottom) {
+		if (tr.y < c_pos.y) {
 			cblock = cblock->next;
 			continue;
 		}
 
-		if (obj_bottom > cblock_top) {
+		if (pos.y > c_tr.y) {
 			cblock = cblock->next;
 			continue;
 		}
@@ -310,22 +223,6 @@ int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, fl
 		if (flags & flag_not) {
 			cblock = cblock->next;
 			continue;
-		}
-
-		if (x) {
-			*x = (cblock_left + cblock_right) / 2.0f;
-		}
-
-		if (y) {
-			*y = (cblock_top + cblock_bottom) / 2.0f;
-		}
-
-		if (w) {
-			*w = cblock_right - cblock_left;
-		}
-
-		if (h) {
-			*h = cblock_top - cblock_bottom;
 		}
 
 		return flags;
@@ -362,26 +259,25 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 			continue;
 		}
 
+		/* todo: to accommdate the world no longer having a buffer we can't place segments just on outfacing blocks -- we proceed to place them around every block which should cast a light and match the shape.
+		 * it would certainly be nicer to the lighting engine to restrict segments to actual edges. */
+
 		for (int i = 0; i < cur_block->dim.x; ++i) {
-			float block_left = (x  - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-			float block_right = (x + 1.0f - ptr->width / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-			float block_top = (y + 1.0f - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
-			float block_bottom = (y - ptr->height / 2.0f) * TDS_WORLD_BLOCK_SIZE;
+			tds_bcp block_bl = cur_block->pos;
+			tds_bcp block_tr = cur_block->pos;
 
-			int flags_right = (x < ptr->width - 1) ? tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y][x + 1]).flags : 0;
-			int flags_left = (x > 0) ? tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y][x - 1]).flags : 0;
-			int flags_top = (y < ptr->height - 1) ? tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y + 1][x]).flags : 0;
-			int flags_bottom = (y > 0) ? tds_block_map_get(tds_engine_global->block_map_handle, ptr->buffer[y - 1][x]).flags : 0;
+			block_tr.x += cur_block->dim.x - 1; /* we consider the top-right corner of the block to be on the interior of the block */
+			block_tr.y += cur_block->dim.y - 1;
 
-			if ((flags_right & TDS_BLOCK_TYPE_NOLIGHT || !(flags_right & TDS_BLOCK_TYPE_SOLID)) && !(flags & (TDS_BLOCK_TYPE_RTSLOPE | TDS_BLOCK_TYPE_RBSLOPE))) {
+			if (!(flags & (TDS_BLOCK_TYPE_RTSLOPE | TDS_BLOCK_TYPE_RBSLOPE))) {
 				/* Out-facing right segment. */
 				cur = tds_malloc(sizeof *cur);
-				cur->x1 = block_right;
-				cur->y1 = block_bottom;
-				cur->x2 = block_right;
-				cur->y2 = block_top;
-				cur->nx = 1.0f;
-				cur->ny = 0.0f;
+				cur->a.x = block_tr.x;
+				cur->a.y = block_bl.y;
+				cur->b.x = block_tr.x;
+				cur->b.y = block_tr.y;
+				cur->n.x = 1;
+				cur->n.y = 0;
 				cur->next = ptr->segment_list;
 				if (ptr->segment_list) {
 					ptr->segment_list->prev = cur;
@@ -389,15 +285,15 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				ptr->segment_list = cur;
 			}
 
-			if ((flags_left & TDS_BLOCK_TYPE_NOLIGHT || !(flags_left & TDS_BLOCK_TYPE_SOLID)) && !(flags & (TDS_BLOCK_TYPE_LTSLOPE | TDS_BLOCK_TYPE_LBSLOPE))) {
+			if (!(flags & (TDS_BLOCK_TYPE_LTSLOPE | TDS_BLOCK_TYPE_LBSLOPE))) {
 				/* Out-facing left segment. */
 				cur = tds_malloc(sizeof *cur);
-				cur->x1 = block_left;
-				cur->y1 = block_top;
-				cur->x2 = block_left;
-				cur->y2 = block_bottom;
-				cur->nx = -1.0f;
-				cur->ny = 0.0f;
+				cur->a.x = block_bl.x;
+				cur->a.y = block_tr.y;
+				cur->b.x = block_bl.x;
+				cur->b.y = block_bl.y;
+				cur->n.x = -1;
+				cur->n.y = 0;
 				cur->next = ptr->segment_list;
 				if (ptr->segment_list) {
 					ptr->segment_list->prev = cur;
@@ -405,15 +301,15 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				ptr->segment_list = cur;
 			}
 
-			if (((flags_top & TDS_BLOCK_TYPE_NOLIGHT) || !(flags_top & TDS_BLOCK_TYPE_SOLID)) && !(flags & (TDS_BLOCK_TYPE_LTSLOPE | TDS_BLOCK_TYPE_RTSLOPE))) {
+			if (!(flags & (TDS_BLOCK_TYPE_LTSLOPE | TDS_BLOCK_TYPE_RTSLOPE))) {
 				/* Out-facing up segment. */
 				cur = tds_malloc(sizeof *cur);
-				cur->x1 = block_right;
-				cur->y1 = block_top;
-				cur->x2 = block_left;
-				cur->y2 = block_top;
-				cur->nx = 0.0f;
-				cur->ny = 1.0f;
+				cur->a.x = block_tr.x;
+				cur->a.y = block_tr.y;
+				cur->b.x = block_bl.x;
+				cur->b.y = block_tr.y;
+				cur->n.x = 0;
+				cur->n.y = 1;
 				cur->next = ptr->segment_list;
 				if (ptr->segment_list) {
 					ptr->segment_list->prev = cur;
@@ -421,15 +317,15 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 				ptr->segment_list = cur;
 			}
 
-			if ((flags_bottom & TDS_BLOCK_TYPE_NOLIGHT || !(flags_bottom & TDS_BLOCK_TYPE_SOLID)) && !(flags & (TDS_BLOCK_TYPE_LBSLOPE | TDS_BLOCK_TYPE_RBSLOPE))) {
+			if (!(flags & (TDS_BLOCK_TYPE_LBSLOPE | TDS_BLOCK_TYPE_RBSLOPE))) {
 				/* Out-facing down segment. */
 				cur = tds_malloc(sizeof *cur);
-				cur->x1 = block_left;
-				cur->y1 = block_bottom;
-				cur->x2 = block_right;
-				cur->y2 = block_bottom;
-				cur->nx = 0.0f;
-				cur->ny = -1.0f;
+				cur->a.x = block_bl.x;
+				cur->a.y = block_bl.y;
+				cur->b.x = block_tr.x;
+				cur->b.y = block_bl.y;
+				cur->n.x = 0;
+				cur->n.y = -1;
 				cur->next = ptr->segment_list;
 				if (ptr->segment_list) {
 					ptr->segment_list->prev = cur;
@@ -439,12 +335,12 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 
 			if (flags & TDS_BLOCK_TYPE_LTSLOPE) {
 				cur = tds_malloc(sizeof *cur);
-				cur->x1 = block_left;
-				cur->y1 = block_bottom;
-				cur->x2 = block_right;
-				cur->y2 = block_top;
-				cur->nx = -1.0f;
-				cur->ny = 1.0f;
+				cur->a.x = block_bl.x;
+				cur->a.y = block_bl.y;
+				cur->b.x = block_tr.x;
+				cur->b.y = block_tr.y;
+				cur->n.x = -1;
+				cur->n.y = 1;
 				cur->next = ptr->segment_list;
 				if (ptr->segment_list) {
 					ptr->segment_list->prev = cur;
@@ -454,12 +350,12 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 
 			if (flags & TDS_BLOCK_TYPE_RTSLOPE) {
 				cur = tds_malloc(sizeof *cur);
-				cur->x1 = block_right;
-				cur->y1 = block_bottom;
-				cur->x2 = block_left;
-				cur->y2 = block_top;
-				cur->nx = 1.0f;
-				cur->ny = 1.0f;
+				cur->a.x = block_tr.x;
+				cur->a.y = block_bl.y;
+				cur->b.x = block_bl.x;
+				cur->b.y = block_tr.y;
+				cur->n.x = 1;
+				cur->n.y = 1;
 				cur->next = ptr->segment_list;
 				if (ptr->segment_list) {
 					ptr->segment_list->prev = cur;
@@ -469,12 +365,12 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 
 			if (flags & TDS_BLOCK_TYPE_RBSLOPE) {
 				cur = tds_malloc(sizeof *cur);
-				cur->x1 = block_left;
-				cur->y1 = block_bottom;
-				cur->x2 = block_right;
-				cur->y2 = block_top;
-				cur->nx = 1.0f;
-				cur->ny = -1.0f;
+				cur->a.x = block_bl.x;
+				cur->a.y = block_bl.y;
+				cur->b.x = block_tr.x;
+				cur->b.y = block_tr.y;
+				cur->n.x = 1;
+				cur->n.y = -1;
 				cur->next = ptr->segment_list;
 				if (ptr->segment_list) {
 					ptr->segment_list->prev = cur;
@@ -484,12 +380,12 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 
 			if (flags & TDS_BLOCK_TYPE_LBSLOPE) {
 				cur = tds_malloc(sizeof *cur);
-				cur->x1 = block_left;
-				cur->y1 = block_top;
-				cur->x2 = block_right;
-				cur->y2 = block_bottom;
-				cur->nx = -1.0f;
-				cur->ny = -1.0f;
+				cur->a.x = block_bl.x;
+				cur->a.y = block_tr.y;
+				cur->b.x = block_tr.x;
+				cur->b.y = block_bl.y;
+				cur->n.x = -1;
+				cur->n.y = -1;
 				cur->next = ptr->segment_list;
 				if (ptr->segment_list) {
 					ptr->segment_list->prev = cur;
@@ -525,7 +421,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 					continue;
 				}
 
-				if (!tds_vec2_cmpi(reduction_cur->n, 0, 1) && !tds_vec2_cmpi(reduction_target, 0, 1)) {
+				if (!tds_vec2_cmpi(reduction_cur->n, 0, 1) && !tds_vec2_cmpi(reduction_target->n, 0, 1)) {
 					/* Both of these lines are horizontal, and each segment's x2 is less than the x1. */
 
 					if (reduction_cur->a.y != reduction_target->a.y) {
@@ -533,7 +429,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_cur->b.x == reduction_target->a.x) {
+					if (reduction_cur->b.x == reduction_target->a.x + 1) {
 						/* reduction_cur is on the right and we can reduce. */
 						reduction_target->a.x = reduction_cur->a.x;
 
@@ -554,7 +450,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_target->b.x == reduction_cur->a.x) {
+					if (reduction_target->b.x == reduction_cur->a.x + 1) {
 						/* reduction_target is on the right and we can reduce. */
 						reduction_target->b.x = reduction_cur->b.x;
 
@@ -576,7 +472,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 					}
 				}
 
-				if (!tds_vec2_cmpi(reduction_cur->n, 0, -1) && !tds_vec2_cmpi(reduction_target, 0, -1)) {
+				if (!tds_vec2_cmpi(reduction_cur->n, 0, -1) && !tds_vec2_cmpi(reduction_target->n, 0, -1)) {
 					/* Both of these lines are horizontal, and each segment's x2 is greater than the x1. */
 
 					if (reduction_cur->a.y != reduction_target->a.y) {
@@ -584,7 +480,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_cur->a.x == reduction_target->b.x) {
+					if (reduction_cur->a.x == reduction_target->b.x + 1) {
 						/* reduction_cur is on the right and we can reduce. */
 						reduction_target->b.x = reduction_cur->b.x;
 
@@ -605,7 +501,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_target->a.x == reduction_cur->b.x) {
+					if (reduction_target->a.x == reduction_cur->b.x + 1) {
 						/* reduction_target is on the right and we can reduce. */
 						reduction_target->a.x = reduction_cur->a.x;
 
@@ -627,7 +523,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 					}
 				}
 
-				if (!tds_vec2_cmpi(reduction_cur->n, 1, 0) && !tds_vec2_cmpi(reduction_target, 1, 0)) {
+				if (!tds_vec2_cmpi(reduction_cur->n, 1, 0) && !tds_vec2_cmpi(reduction_target->n, 1, 0)) {
 					/* Both of these lines are vertical, and each segment's y2 is greater than the y1. */
 
 					if (reduction_cur->a.x != reduction_target->a.x) {
@@ -635,7 +531,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_cur->b.y == reduction_target->a.y) {
+					if (reduction_cur->b.y == reduction_target->a.y + 1) {
 						/* reduction_cur is on the bottom and we can reduce. */
 						reduction_target->a.y = reduction_cur->a.y;
 
@@ -656,7 +552,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_target->b.y == reduction_cur->a.y) {
+					if (reduction_target->b.y == reduction_cur->a.y + 1) {
 						/* reduction_target is on the bottom and we can reduce. */
 						reduction_target->b.y = reduction_cur->b.y;
 
@@ -679,7 +575,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 					}
 				}
 
-				if (!tds_vec2_cmpi(reduction_cur->n, -1, 0) && !tds_vec2_cmpi(reduction_target, -1, 0)) {
+				if (!tds_vec2_cmpi(reduction_cur->n, -1, 0) && !tds_vec2_cmpi(reduction_target->n, -1, 0)) {
 					/* Both of these lines are vertical, and each segment's y2 is less than the y1. */
 
 					if (reduction_cur->a.x != reduction_target->a.x) {
@@ -687,7 +583,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_cur->b.y == reduction_target->a.y) {
+					if (reduction_cur->b.y == reduction_target->a.y + 1) {
 						/* reduction_cur is on the top and we can reduce. */
 						reduction_target->a.y = reduction_cur->a.y;
 
@@ -708,7 +604,7 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 						continue;
 					}
 
-					if (reduction_target->b.y == reduction_cur->a.y) {
+					if (reduction_target->b.y == reduction_cur->a.y + 1) {
 						/* reduction_target is on the top and we can reduce. */
 						reduction_target->b.y = reduction_cur->b.y;
 

@@ -27,3 +27,5 @@ extern const tds_vec2 tds_vec2_zero;
 
 tds_bcp tds_bcp_midpoint(tds_bcp a, tds_bcp b);
 double tds_bcp_distance(tds_bcp a, tds_bcp b);
+
+int tds_vec2_cmpi(tds_vec2 v, int x, int y);

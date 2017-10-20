@@ -1,5 +1,7 @@
 #include "coord.h"
 
+#include <math.h>
+
 const tds_bcp tds_bcp_zero = {0};
 const tds_vec2 tds_vec2_zero = {0};
 

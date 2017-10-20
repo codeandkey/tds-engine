@@ -11,7 +11,7 @@ solution "tds"
 		files { "src/**.h", "src/**.c" }
 
 		configuration "linux"
-			includedirs { "/usr/include/freetype2" }
+			includedirs { "/usr/include/freetype2", "/usr/include/libxml2" }
 			links { "m", "GL", "dl", "glfw", "openal", "lua", "freetype" }
 			newaction {
 				trigger = "install",
@@ -23,7 +23,6 @@ solution "tds"
 					os.execute("mkdir -p /usr/include/tds/objects")
 					os.execute("cp src/*.h /usr/include/tds")
 					os.execute("cp src/libs/*.h /usr/include/tds/libs")
-					os.execute("cp src/objects/*.h /usr/include/tds/objects")
 					os.execute("cp *.so /usr/lib")
 				end
 			}

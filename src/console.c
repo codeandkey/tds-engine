@@ -3,7 +3,6 @@
 #include "log.h"
 #include "memory.h"
 #include "input_map.h"
-#include "objects/objects.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -150,14 +149,6 @@ void _tds_console_execute(struct tds_console* ptr) {
 
 	struct tds_object* selected = NULL, *selector = NULL;
 
-	if (editor_cursor) {
-		selector = ((struct obj_editor_cursor_data*) editor_cursor->object_data)->last;
-
-		if (selector) {
-			selected = ((struct obj_editor_selector_data*) selector->object_data)->target;
-		}
-	}
-
 	if (!cur_cmd) {
 		goto EXECUTE_CLEANUP;
 	} else if (!strcmp(cur_cmd, "echo")) {
@@ -167,36 +158,6 @@ void _tds_console_execute(struct tds_console* ptr) {
 		}
 
 		tds_console_print(ptr, "\n");
-	} else if (!strcmp(cur_cmd, "create")) {
-		char* type = strtok(NULL, " "), *x = strtok(NULL, " "), *y = strtok(NULL, " ");
-
-		if (!(type && x && y)) {
-			tds_console_print(ptr, "invalid number of arguments\n");
-			goto EXECUTE_CLEANUP;
-		}
-
-		tds_console_print(ptr, "searching for object type : [");
-		tds_console_print(ptr, type);
-		tds_console_print(ptr, "]\n");
-
-		struct tds_object_type* obj_type = tds_object_type_cache_get(tds_engine_global->otc_handle, type);
-
-		if (!obj_type) {
-			tds_console_print(ptr, "object type lookup failed\n");
-			goto EXECUTE_CLEANUP;
-		}
-
-		tds_console_print(ptr, "located object type : [");
-		tds_console_print(ptr, obj_type->type_name);
-		tds_console_print(ptr, "]\n");
-
-		float x_f = strtof(x, NULL), y_f = strtof(y, NULL);
-		struct tds_object* new_object = tds_object_create(obj_type, tds_engine_global->object_buffer, tds_engine_global->sc_handle, x_f, y_f, 0.0f, NULL);
-		tds_console_print(ptr, "created object\n");
-
-		if (tds_editor_get_mode() == TDS_EDITOR_MODE_OBJECTS) {
-			tds_editor_add_selector(new_object);
-		}
 	} else if (!strcmp(cur_cmd, "exit") || !strcmp(cur_cmd, "quit")) {
 		tds_engine_terminate(tds_engine_global);
 	} else if (!strcmp(cur_cmd, "load")) {
@@ -212,12 +173,6 @@ void _tds_console_execute(struct tds_console* ptr) {
 		tds_console_print(ptr, "..\n");
 
 		tds_engine_load(tds_engine_global, file);
-	} else if (!strcmp(cur_cmd, "+edit")) {
-		tds_console_print(ptr, "creating editor objects\n");
-		tds_create_editor_objects();
-	} else if (!strcmp(cur_cmd, "-edit")) {
-		tds_console_print(ptr, "destroying editor objects\n");
-		tds_destroy_editor_objects();
 	} else if (!strcmp(cur_cmd, "+draw")) {
 		tds_console_print(ptr, "enabling draw\n");
 		tds_engine_global->enable_draw = 1;
@@ -263,7 +218,6 @@ void _tds_console_execute(struct tds_console* ptr) {
 	} else if (!strcmp(cur_cmd, "sethiddenscale")) {
 		tds_engine_global->camera_handle->hidden_scale = strtof(strtok(NULL, " "), 0);
 		/* Reload the camera matrix. */
-		tds_camera_set_raw(tds_engine_global->camera_handle, tds_engine_global->camera_handle->width, tds_engine_global->camera_handle->height, tds_engine_global->camera_handle->x, tds_engine_global->camera_handle->y);
 		tds_console_print(ptr, "set hidden camera scale\n");
 	} else if (!strcmp(cur_cmd, "setblurpasses")) {
 		tds_engine_global->render_handle->blur_passes = strtol(strtok(NULL, " "), NULL, 10);

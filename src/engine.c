@@ -16,8 +16,6 @@
 #include <string.h>
 #include <time.h>
 
-#include "objects/objects.h"
-
 #define TDS_ENGINE_TIMESTEP 120.0f
 
 struct tds_engine* tds_engine_global = NULL;
@@ -95,7 +93,7 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_logf(TDS_LOG_MESSAGE, "Initialized font cache.\n");
 
 	output->camera_handle = tds_camera_create(output->display_handle);
-	tds_camera_set(output->camera_handle, 10.0f, 0.0f, 0.0f);
+	tds_camera_set(output->camera_handle, tds_bcp_zero, 640);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized camera system.\n");
 
 	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
@@ -172,9 +170,6 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	} else {
 		tds_logf(TDS_LOG_WARNING, "No debug font in cache! Some text might be missing.\n");
 	}
-
-	/* Here, we add the editor objects. */
-	tds_load_editor_objects(output->otc_handle);
 
 	if (desc.func_load_object_types) {
 		desc.func_load_object_types(output->otc_handle);
@@ -266,7 +261,7 @@ void tds_engine_run(struct tds_engine* ptr) {
 	int running = ptr->run_flag = 1, accum_frames = 0;
 
 	tds_logf(TDS_LOG_MESSAGE, "Starting engine mainloop.\n");
-	tds_sound_manager_set_pos(ptr->sound_manager_handle, ptr->camera_handle->x, ptr->camera_handle->y);
+	tds_sound_manager_set_pos(ptr->sound_manager_handle, ptr->camera_handle->pos.x, ptr->camera_handle->pos.y);
 
 	/* The game, like 'hunter' will use an accumulator-based approach with a fixed timestep.
 	 * to support higher-refresh rate monitors, the timestep will be set to 144hz. */
@@ -488,6 +483,10 @@ void tds_engine_terminate(struct tds_engine* ptr) {
 }
 
 void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
+	/* deprecated, migrating to tds_loader
+	 *
+	 *
+
 	char* str_filename = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
 
 	memcpy(str_filename, TDS_MAP_PREFIX, strlen(TDS_MAP_PREFIX));
@@ -503,8 +502,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 		tds_free(str_filename);
 		return;
 	}
-
-	/* the map actually exists -- NOW we destroy everything. */
 
 	if (ptr->state.mapname) {
 		tds_free(ptr->state.mapname);
@@ -690,7 +687,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 				}
 
 				if (*(ctx->data) == ',') {
-					/* Push the current readbuf to the id buffer and reset the readbuf. */
 					int tx = world_read_pos % world_width, ty = (world_height - 1) - (world_read_pos / world_width);
 					++world_read_pos;
 
@@ -820,8 +816,6 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 
 				in_layer = 0;
 
-				/* The block IDs are stored now in id_buffer, with the correct winding order. */
-
 				if (ptr->world_buffer_count >= TDS_MAX_WORLD_LAYERS) {
 					tds_logf(TDS_LOG_WARNING, "There were more world layers in the map than allowed (max: %d) -- discarding extra layers\n", TDS_MAX_WORLD_LAYERS);
 					break;
@@ -852,6 +846,8 @@ void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
 	tds_free(ctx);
 	tds_free(str_filename);
 	tds_engine_broadcast(ptr, TDS_MSG_MAP_READY, 0);
+
+	*/
 }
 
 void tds_engine_request_load(struct tds_engine* ptr, const char* request_load) {

@@ -7,10 +7,11 @@
 
 struct tds_camera* tds_camera_create(struct tds_display* disp) {
 	struct tds_camera* output = tds_malloc(sizeof(struct tds_camera));
-	output->x = output->y = output->z = output->angle = 0.0f;
+
+	output->pos = tds_bcp_zero;
 	output->hidden_scale = 1.0f;
 
-	tds_camera_set(output, 10.0f, 0.0f, 0.0f);
+	tds_camera_set(output, tds_bcp_zero, (tds_bc) 10 * 16);
 
 	return output;
 }
@@ -19,35 +20,38 @@ void tds_camera_free(struct tds_camera* ptr) {
 	tds_free(ptr);
 }
 
-void tds_camera_set(struct tds_camera* ptr, float size, float x, float y) {
+void tds_camera_set(struct tds_camera* ptr, tds_bcp center_pos, tds_bc height) {
+	/* to make the game pretty, we try snapping the height so the screen evenly divides into in-game pixels */
+	/*
+	 * if the screen is evenly divided, height | disp->desc.height, so we divide until we get close
+	 */
+
 	struct tds_display* disp = tds_engine_global->display_handle;
 
+	tds_logf(TDS_LOG_DEBUG, "Looking for desirable camera modes..\n");
+
+	unsigned int pixel_height = disp->desc.height / height;
+	height = disp->desc.height / pixel_height; /* round down */
+
+	tds_logf(TDS_LOG_DEBUG, "Selecting mode with camera height @ %d world-pixels, screen:world = %d\n", height, pixel_height);
+
 	float disp_width = disp->desc.width, disp_height = disp->desc.height;
-	float camera_width = 0.0f, camera_height = 0.0f;
 
-	if (disp_width < disp_height) {
-		camera_width = size;
-		camera_height = size * (disp_height / disp_width);
-	} else {
-		camera_height = size;
-		camera_width = size * (disp_width / disp_height);
-	}
+	ptr->dim.y = height;
+	ptr->dim.x = (ptr->dim.y * disp_width) / disp_height;
 
-	tds_camera_set_raw(ptr, camera_width, camera_height, x, y);
+	tds_camera_set_raw(ptr, center_pos, ptr->dim);
 }
 
-void tds_camera_set_raw(struct tds_camera* ptr, float width, float height, float x, float y) {
-	ptr->width = width;
-	ptr->height = height;
-
-	ptr->x = x;
-	ptr->y = y;
+void tds_camera_set_raw(struct tds_camera* ptr, tds_bcp pos, tds_bcp dim) {
+	ptr->pos = pos;
+	ptr->dim = dim;
 
 	mat4x4 translate, ortho;
 
 	mat4x4_identity(ptr->mat_transform);
-	mat4x4_ortho(ortho, -ptr->width * ptr->hidden_scale / 2.0f, ptr->width * ptr->hidden_scale / 2.0f, -ptr->height * ptr->hidden_scale / 2.0f, ptr->height * ptr->hidden_scale / 2.0f, 1.0f, -1.0f);
-	mat4x4_translate(translate, -x, -y, 0.0f);
+	mat4x4_ortho(ortho, -dim.x / 32.0f, dim.x / 32.0f, -ptr->dim.y / 32.0f, ptr->dim.y / 32.0f, 1.0f, -1.0f);
+	mat4x4_translate(translate, -pos.x / 16.0f, -pos.y / 16.0f, 0.0f);
 
 	mat4x4_mul(ptr->mat_transform, ortho, translate);
 }

@@ -363,35 +363,30 @@ void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int laye
 }
 
 void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
-	float camera_left = tds_engine_global->camera_handle->x - tds_engine_global->camera_handle->width / 2.0f;
-	float camera_right = tds_engine_global->camera_handle->x + tds_engine_global->camera_handle->width / 2.0f;
-	float camera_top = tds_engine_global->camera_handle->y + tds_engine_global->camera_handle->height / 2.0f;
-	float camera_bottom = tds_engine_global->camera_handle->y - tds_engine_global->camera_handle->height / 2.0f;
-
-	tds_quadtree_walk(world->quadtree, camera_left, camera_right, camera_top, camera_bottom, world, _tds_render_hblock_callback);
+	tds_quadtree_walk(world->quadtree, tds_engine_global->camera_handle->pos, tds_engine_global->camera_handle->dim, world, _tds_render_hblock_callback);
 }
 
 void _tds_render_hblock_callback(void* usr, void* data) {
 	struct tds_render* ptr = tds_engine_global->render_handle;
-	struct tds_world* world = (struct tds_world*) usr;
 	struct tds_world_hblock* cur = data;
+	struct tds_camera* cam = tds_engine_global->camera_handle;
 
 	/* The translation must take into account that the block size may not be aligned. */
-	float render_x = TDS_WORLD_BLOCK_SIZE * (cur->x - world->width / 2.0f + cur->w / 2.0f);
-	float render_y = TDS_WORLD_BLOCK_SIZE * (cur->y - world->height / 2.0f + 0.5f);
+	float render_x = cur->pos.x / 16.0f;
+	float render_y = cur->pos.y / 16.0f;
 
 	if (ptr->enable_aabb) {
-		float camera_left = tds_engine_global->camera_handle->x - tds_engine_global->camera_handle->width / 2.0f;
-		float camera_right = tds_engine_global->camera_handle->x + tds_engine_global->camera_handle->width / 2.0f;
-		float camera_top = tds_engine_global->camera_handle->y + tds_engine_global->camera_handle->height / 2.0f;
-		float camera_bottom = tds_engine_global->camera_handle->y - tds_engine_global->camera_handle->height / 2.0f;
+		tds_bcp c_bl = cam->pos, c_tr;
+		c_bl.x -= cam->dim.x / 2;
+		c_bl.y -= cam->dim.y / 2;
+		c_tr.y = c_bl.x + cam->dim.x;
+		c_tr.y = c_bl.y + cam->dim.y;
 
-		float block_left = render_x - cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
-		float block_right = render_x + cur->w / 2.0f * TDS_WORLD_BLOCK_SIZE;
-		float block_top = render_y + TDS_WORLD_BLOCK_SIZE / 2.0f;
-		float block_bottom = render_y - TDS_WORLD_BLOCK_SIZE / 2.0f;
+		tds_bcp b_bl = cur->pos, b_tr = b_bl;
+		b_tr.x += cur->dim.x;
+		b_tr.y += cur->dim.y;
 
-		if (block_left > camera_right || block_right < camera_left || block_bottom > camera_top || block_top < camera_bottom) {
+		if (b_tr.x < c_bl.x || b_tr.y < c_bl.y || c_tr.x < b_bl.x || c_tr.y < b_bl.y) {
 			return;
 		}
 	}
@@ -455,25 +450,33 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 	struct tds_render_light* cur = ptr->light_list;
 	struct tds_camera* cam_point = tds_camera_create(tds_engine_global->display_handle), *cam_dir = ptr->camera_handle;
 	struct tds_camera* cam_use = cam_point;
+	tds_bcp c_bl, c_tr, c_size;
 
 	while (cur) {
 		switch(cur->type) {
 		case TDS_RENDER_LIGHT_POINT:
 			tds_shader_bind(ptr->shader_light_point);
 			tds_rt_bind(ptr->point_rt);
-			tds_camera_set_raw(cam_point, cur->dist * 2.0f, cur->dist * 2.0f, cur->x, cur->y);
+			c_size.x = cur->dist / 8.0f;
+			c_size.y = c_size.x;
+			tds_camera_set_raw(cam_point, c_size, cur->pos);
 			cam_use = cam_point;
 			break;
 		case TDS_RENDER_LIGHT_DIRECTIONAL:
 			tds_shader_bind(ptr->shader_light_dir);
-			tds_shader_set_direction(ptr->shader_light_dir, cur->x, cur->y);
+			tds_shader_set_direction(ptr->shader_light_dir, (float) cur->pos.x, (float) cur->pos.y);
 			tds_rt_bind(ptr->dir_rt);
 			cam_use = cam_dir;
 			break;
 		}
 
 		if (cur->type == TDS_RENDER_LIGHT_POINT) {
-			if (cur->x - cur->dist > cam_dir->x + cam_dir->width / 2.0f || cur->x + cur->dist < cam_dir->x - cam_dir->width / 2.0f || cur->y - cur->dist > cam_dir->y + cam_dir->height / 2.0f || cur->y + cur->dist < cam_dir->y - cam_dir->height / 2.0f) {
+			c_bl.x = cam_dir->pos.x - cam_dir->dim.x / 2;
+			c_bl.y = cam_dir->pos.y - cam_dir->dim.y / 2;
+			c_tr.x = c_bl.x + cam_dir->dim.x;
+			c_tr.y = c_bl.y + cam_dir->dim.y;
+
+			if (cur->pos.x + cur->dist < c_bl.x || cur->pos.x - cur->dist > c_tr.y || cur->pos.y + cur->dist < c_bl.y || cur->pos.y - cur->dist > c_tr.y) {
 				cur = cur->next;
 				continue;
 			}
@@ -520,7 +523,7 @@ void _tds_render_lightmap(struct tds_render* ptr, struct tds_world* world) {
 				};
 
 				struct tds_vertex_buffer* vb_point = tds_vertex_buffer_create(verts, sizeof verts / sizeof *verts, GL_TRIANGLES);
-				mat4x4_translate(point_light_transform, cur->x, cur->y, 0.0f);
+				mat4x4_translate(point_light_transform, cur->pos.x / 16.0f, cur->pos.y / 16.0f, 0.0f);
 				mat4x4_mul(pt_final, ptr->camera_handle->mat_transform, point_light_transform);
 				tds_shader_set_transform(ptr->shader_recomb_point, (float*) *pt_final);
 				glBindVertexArray(vb_point->vao);
@@ -558,9 +561,9 @@ void _tds_render_background(struct tds_render* ptr, struct tds_bg* bg) {
 		while (cur) {
 			/* We alter the placement of the background by changing the texcoords of the VBO. */
 
-			float cx = tds_engine_global->camera_handle->x, cy = tds_engine_global->camera_handle->y; /* quick camera vars */
-			float c_left = cx - tds_engine_global->camera_handle->width / 2.0f, c_right = c_left + tds_engine_global->camera_handle->width;
-			float c_bottom = cy - tds_engine_global->camera_handle->height / 2.0f, c_top = c_bottom + tds_engine_global->camera_handle->height;
+			float cx = tds_engine_global->camera_handle->pos.x / 16.0f, cy = tds_engine_global->camera_handle->pos.y / 16.0f; /* quick camera vars */
+			float c_left = cx - tds_engine_global->camera_handle->dim.x / 32.0f, c_right = c_left + tds_engine_global->camera_handle->dim.x / 16.0f;
+			float c_bottom = cy - tds_engine_global->camera_handle->dim.y / 32.0f, c_top = c_bottom + tds_engine_global->camera_handle->dim.y / 16.0f;
 
 			float b_size = c_top - c_bottom; // size background based on camera
 

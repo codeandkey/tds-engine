@@ -259,10 +259,16 @@ void transform_coords(struct tds_render_flat* ptr, float x, float y, float* ox, 
 	struct tds_camera* cam = tds_engine_global->camera_handle;
 	struct tds_display* disp = tds_engine_global->display_handle;
 
+	float cam_width = cam->dim.x / 16.0f;
+	float cam_left = cam->pos.x / 16.0f - cam_width / 2.0f;
+	float cam_height = cam->dim.y / 16.0f;
+	float cam_bottom = cam->pos.y / 16.0f - cam_height / 2.0f;
+
 	switch (ptr->mode) {
 	case TDS_RENDER_COORD_WORLDSPACE:
-		*ox = ((x - (cam->x - cam->width / 2.0f)) / cam->width) * 2.0f - 1.0f;
-		*oy = ((y - (cam->y - cam->height / 2.0f)) / cam->height) * 2.0f - 1.0f;
+		*ox = (x - (cam_left / cam_width)) * 2.0f - 1.0f;
+		*oy = (y - (cam_bottom / cam_height)) * 2.0f - 1.0f;
+
 		break;
 	case TDS_RENDER_COORD_SCREENSPACE:
 		*ox = (x / disp->desc.width) * 2.0f - 1.0f;

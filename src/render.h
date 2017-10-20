@@ -9,6 +9,7 @@
 #include "rt.h"
 #include "shader.h"
 #include "render_flat.h"
+#include "coord.h"
 
 #define TDS_RENDER_SHADER_WORLD_VS "res/shaders/world_vs.glsl"
 #define TDS_RENDER_SHADER_WORLD_FS "res/shaders/world_fs.glsl"
@@ -32,7 +33,8 @@
 
 struct tds_render_light {
 	unsigned int type;
-	float x, y, r, g, b, dist;
+	tds_bcp pos;
+	float r, g, b, dist;
 	struct tds_render_light* next;
 };
 
