@@ -12,7 +12,7 @@ solution "tds"
 
 		configuration "linux"
 			includedirs { "/usr/include/freetype2", "/usr/include/libxml2" }
-			links { "m", "GL", "dl", "glfw", "openal", "lua", "freetype" }
+			links { "m", "GL", "dl", "glfw", "openal", "lua", "freetype", "xml2", "ssl" }
 			newaction {
 				trigger = "install",
 				description = "Install libtds",
@@ -28,7 +28,7 @@ solution "tds"
 			}
 
 		configuration "debug"
-			defines { "TDS_MEMORY_DEBUG", "TDS_PROFILE_ENABLE" }
+			defines { "TDS_MEMORY_DEBUG", "TDS_PROFILE_ENABLE", "TDS_IGNORE_SIGFPE" }
 			links { "m", "GL", "dl", "glfw", "openal", "lua", "freetype" }
 			flags { "Symbols" }
 			targetname "tds_debug"

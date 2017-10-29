@@ -7,18 +7,13 @@
 #include <string.h>
 
 /*
- * TODO : world data is currently loaded into a huge buffer in engine.c and then later copied through tds_world_load
- *
- * this is a colossal waste of heap memory and probably brutal on smaller machines especially those lacking in RAM
- * also, with the new world representation we cannot have dynamically sized worlds and they will always gigantic
- * unless we want to develop the engine to only support computers with ~4*(2^28)^2/(1024^3) ~= 262144 terabytes of RAM we'll
- * need to take a different approach --
- *
- * fortunately it's simple; we need to pass the FD from the loader into the world as a part of the segment generation process
- * and segment generation will be as simple as it was before if not even better. also we won't be using a 
- * stupid amount of memory anymore. the yxml loader in engine.c however is an incredible hack right now and difficult to read.
+ * UPDATE: originally we were going to stream world data into an hblock generator in tds_loader, however..
+ * block data is decoded from base64 all at once anyway -- it's nicer to pass it to tds_world for hblock generation anyway.
+ * RAM isn't a worry as we're not loading a fraction of the entire i32^2 space, as we pass a chunk with dimension and offset.
+ * so, we can still do block generation here and keep everything pretty.
  */
 
+static void _tds_world_generate_quadtree(struct tds_world* ptr);
 static void _tds_world_generate_segments(struct tds_world* ptr);
 static void _tds_world_deinit(struct tds_world* ptr);
 
@@ -63,114 +58,13 @@ void _tds_world_deinit(struct tds_world* ptr) {
 void tds_world_free(struct tds_world* ptr) {
 	_tds_world_deinit(ptr);
 	tds_free(ptr);
+
+	tds_logf(TDS_LOG_DEBUG, "Freed world at %p\n", ptr);
 }
 
 void tds_world_init(struct tds_world* ptr) {
 	_tds_world_deinit(ptr);
 	memset(ptr, 0, sizeof *ptr);
-}
-
-static void _tds_world_generate_hblocks(struct tds_world* ptr) {
-	/*
-	 * removing this function as we are migrating hblock generation over to tds_loader to allow streaming as there are no longer stored world layer buffers
-	 * 
-
-	if (ptr->block_list_head) {
-		struct tds_world_hblock* cur = ptr->block_list_head, *tmp = 0;
-
-		while (cur) {
-			tds_vertex_buffer_free(cur->vb);
-			tmp = cur->next;
-			tds_free(cur);
-			cur = tmp;
-		}
-
-		ptr->block_list_head = ptr->block_list_tail = NULL;
-	}
-
-	for (int y = 0; y < ptr->height; ++y) {
-		uint8_t cur_type = 0;
-		int block_length = 0, block_x = -1;
-		struct tds_world_hblock* tmp_block = NULL;
-
-		for (int x = 0; x < ptr->width; ++x) {
-			if (ptr->buffer[y][x] != cur_type) {
-				if (block_length > 0 && cur_type) {
-					tmp_block = tds_malloc(sizeof *tmp_block);
-
-					tmp_block->next = 0;
-					tmp_block->x = block_x;
-					tmp_block->y = y;
-					tmp_block->w = block_length;
-					tmp_block->id = cur_type;
-
-					if (ptr->block_list_tail) {
-						ptr->block_list_tail->next = tmp_block;
-					} else {
-						ptr->block_list_head = tmp_block;
-					}
-
-					ptr->block_list_tail = tmp_block;
-				}
-
-				cur_type = ptr->buffer[y][x];
-				block_x = x;
-				block_length = 1;
-			} else {
-				block_length++;
-			}
-		}
-
-		if (!cur_type) {
-			continue;
-		}
-
-		tmp_block = tds_malloc(sizeof *tmp_block);
-
-		tmp_block->next = 0;
-		tmp_block->x = block_x;
-		tmp_block->y = y;
-		tmp_block->w = block_length;
-		tmp_block->id = cur_type;
-
-		if (ptr->block_list_tail) {
-			ptr->block_list_tail->next = tmp_block;
-		} else {
-			ptr->block_list_head = tmp_block;
-		}
-
-		ptr->block_list_tail = tmp_block;
-	}
-
-	if (ptr->quadtree) {
-		tds_quadtree_free(ptr->quadtree);
-	}
-
-	ptr->quadtree = tds_quadtree_create(); 
-
-	struct tds_world_hblock* hb_cur = ptr->block_list_head;
-	while (hb_cur) {
-		float right = hb_cur->dim.x + hb_cur->pos.x;
-		struct tds_vertex vert_list[] = {
-			{ 0.0f, 16.0f, 0.0f, 0.0f, 1.0f },
-			{ right, 0.0f, 0.0f, hb_cur->dim.x / 16.0f, 0.0f },
-			{ right, 16.0f, 0.0f, hb_cur->dim.x / 16.0f, 1.0f },
-			{ 0.0f, 16.0f, 0.0f, 0.0f, 1.0f },
-			{ right, 0.0f, 0.0f, hb_cur->dim.x / 16.0f, 0.0f },
-			{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
-		};
-
-		tds_bcp hb_bl = hb_cur->pos, hb_tr = hb_bl;
-		hb_tr.x += hb_cur->dim.x;
-		hb_tr.y += hb_cur->dim.y;
-
-		tds_quadtree_insert(ptr->quadtree, hb_bl.x, hb_tr.x, hb_tr.y, hb_bl.y, hb_cur);
-
-		hb_cur->vb = tds_vertex_buffer_create(vert_list, 6, GL_TRIANGLES);
-		hb_cur = hb_cur->next;
-	}
-
-	*/
 }
 
 int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, int flag_req, int flag_or, int flag_not) {
@@ -676,4 +570,108 @@ void _tds_world_generate_segments(struct tds_world* ptr) {
 
 	ptr->segment_vb = tds_vertex_buffer_create(segment_verts, segment_count * 2, GL_LINES);
 	tds_free(segment_verts);
+}
+
+void _tds_world_generate_quadtree(struct tds_world* ptr) {
+	if (ptr->quadtree) {
+		tds_quadtree_free(ptr->quadtree);
+	}
+
+	ptr->quadtree = tds_quadtree_create(0, 0xFFFFFFFF, 0xFFFFFFFF, 0); /* uses a lot of space, log(n) though so probably no big deal */
+
+	struct tds_world_hblock* cur = ptr->block_list_head;
+
+	while (cur) {
+		tds_quadtree_insert(ptr->quadtree, cur->pos, cur->dim, cur);
+		cur = cur->next;
+	}
+}
+
+void tds_world_load(struct tds_world* ptr, uint8_t* blocks, int w, int h, int x, int y) {
+	/* destroy anything left over -- although there are offsets any previous hblocks in this range could be in danger. */
+	tds_world_init(ptr);
+
+	ptr->block_list_head = NULL;
+	ptr->block_list_tail = NULL;
+
+	struct tds_world_hblock* cur = NULL;
+
+	/* we're not going to hold on to block data or copy it. generate hblocks here and call it good. */
+	for (int cy = y; cy < y + h; ++cy) {
+		int cur_id = -1, cur_blockx = 0;
+
+		for (int cx = x; cx < x + w; ++cx) {
+			if (blocks[cx + cy * w] != cur_id) {
+				if (cur_id > 0) {
+					/* emit block starting at cur_blockx, ending at cx - 1 */
+
+					cur = tds_malloc(sizeof *cur);
+					cur->pos.x = cur_blockx * 16;
+					cur->pos.y = cy * 16;
+					cur->dim.x = (cx - cur_blockx) * 16;
+					cur->dim.y = 16;
+					cur->id = cur_id;
+
+					cur->next = NULL;
+
+					if (ptr->block_list_tail) {
+						ptr->block_list_tail->next = cur;
+						ptr->block_list_tail = cur;
+					} else {
+						ptr->block_list_head = ptr->block_list_tail = cur;
+					}
+				}
+
+				cur_id = blocks[cx + cy * w];
+				cur_blockx = cx;
+			}
+		}
+
+		if (cur_id > 0) {
+			/* emit block starting at cur_blockx, ending at x + w */
+
+			cur = tds_malloc(sizeof *cur);
+			cur->pos.x = cur_blockx * 16;
+			cur->pos.y = cy * 16;
+			cur->dim.x = ((x + w + 1) - cur_blockx) * 16;
+			cur->dim.y = 16;
+			cur->id = cur_id;
+
+			cur->next = NULL;
+
+			if (ptr->block_list_tail) {
+				ptr->block_list_tail->next = cur;
+				ptr->block_list_tail = cur;
+			} else {
+				ptr->block_list_head = ptr->block_list_tail = cur;
+			}
+		}
+	}
+
+	/* insert hblocks into quadtree */
+	_tds_world_generate_quadtree(ptr);
+
+	/* construct segments */
+	_tds_world_generate_segments(ptr);
+
+	/* generate VBOs for active hblocks */
+	cur = ptr->block_list_head;
+
+	while (cur) {
+		tds_logf(TDS_LOG_DEBUG, "Located hblock in world data with pos=%d,%d dim=%d,%d id=%d\n", cur->pos.x, cur->pos.y, cur->dim.x, cur->dim.y, cur->id);
+
+		float right = cur->dim.x;
+
+		struct tds_vertex vert_list[] = { /* need to be translated, VBOs centered on lower-left hblock origin */
+			{ 0.0f, 1.0f, 0.0f, 0.0f, 1.0f },
+			{ right / 16.0f, 0.0f, 0.0f, right / 16.0f, 0.0f },
+			{ right / 16.0f, 1.0f, 0.0f, right / 16.0f, 1.0f },
+			{ 0.0f, 1.0f, 0.0f, 0.0f, 1.0f },
+			{ right / 16.0f, 0.0f, 0.0f, right / 16.0f, 0.0f },
+			{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },
+		};
+
+		cur->vb = tds_vertex_buffer_create(vert_list, 6, GL_TRIANGLES);
+		cur = cur->next;
+	}
 }

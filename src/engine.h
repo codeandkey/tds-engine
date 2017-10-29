@@ -27,6 +27,7 @@
 #include "font_cache.h"
 #include "stringdb.h"
 #include "module.h"
+#include "loader.h"
 
 #define TDS_MAP_PREFIX "res/maps/"
 
@@ -88,6 +89,7 @@ struct tds_engine {
 	struct tds_engine_desc desc;
 	struct tds_engine_state state;
 
+	struct tds_loader* loader_handle;
 	struct tds_display* display_handle;
 	struct tds_render* render_handle;
 	struct tds_render_flat* render_flat_world_handle, *render_flat_overlay_handle;

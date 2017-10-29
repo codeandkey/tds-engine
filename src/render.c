@@ -363,7 +363,8 @@ void _tds_render_object(struct tds_render* ptr, struct tds_object* obj, int laye
 }
 
 void _tds_render_world(struct tds_render* ptr, struct tds_world* world) {
-	tds_quadtree_walk(world->quadtree, tds_engine_global->camera_handle->pos, tds_engine_global->camera_handle->dim, world, _tds_render_hblock_callback);
+	tds_bcp cp = tds_engine_global->camera_handle->pos;
+	tds_quadtree_walk(world->quadtree, cp, tds_engine_global->camera_handle->dim, world, _tds_render_hblock_callback);
 }
 
 void _tds_render_hblock_callback(void* usr, void* data) {
@@ -376,11 +377,9 @@ void _tds_render_hblock_callback(void* usr, void* data) {
 	float render_y = cur->pos.y / 16.0f;
 
 	if (ptr->enable_aabb) {
-		tds_bcp c_bl = cam->pos, c_tr;
-		c_bl.x -= cam->dim.x / 2;
-		c_bl.y -= cam->dim.y / 2;
-		c_tr.y = c_bl.x + cam->dim.x;
-		c_tr.y = c_bl.y + cam->dim.y;
+		tds_bcp c_bl = cam->pos, c_tr = c_bl;
+		c_tr.x += cam->dim.x;
+		c_tr.y += cam->dim.y;
 
 		tds_bcp b_bl = cur->pos, b_tr = b_bl;
 		b_tr.x += cur->dim.x;

@@ -44,6 +44,10 @@ struct tds_display* tds_display_create(struct tds_display_desc desc) {
 
 	glViewport(0, 0, output->desc.width, output->desc.height);
 
+	glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	tds_display_swap(output);
+
 	return output;
 }
 

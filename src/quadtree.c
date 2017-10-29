@@ -1,5 +1,6 @@
 #include "quadtree.h"
 #include "memory.h"
+#include "log.h"
 
 #include <stdlib.h>
 
@@ -96,6 +97,8 @@ int tds_quadtree_insert(struct tds_quadtree* ptr, tds_bcp pos, tds_bcp dim, void
 
 			ptr->lt = ptr->lb = ptr->rt = ptr->rb = NULL;
 		}
+
+		tds_logf(TDS_LOG_DEBUG, "inserted %p (pos %u,%u dim %u,%u) into quadtree leaf %p\n", data, pos.x, pos.y, dim.x, dim.y, ptr);
 
 		return 1;
 	} else {

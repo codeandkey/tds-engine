@@ -34,6 +34,6 @@ struct tds_world* tds_world_create(void);
 void tds_world_free(struct tds_world* ptr);
 
 void tds_world_init(struct tds_world* ptr); /* wipes active data from the world */
-void tds_world_load_hblocks(struct tds_world* ptr, struct tds_world_hblock* block_list_head); /* the linked list is copied, please free it after passing */
+void tds_world_load(struct tds_world* ptr, uint8_t* blocks, int w, int h, int x, int y);
 
 int tds_world_get_overlap_fast(struct tds_world* ptr, struct tds_object* obj, int flag_req, int flag_or, int flag_not);

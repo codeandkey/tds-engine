@@ -51,6 +51,9 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_signal_init();
 	tds_logf(TDS_LOG_MESSAGE, "Registered signal handlers.\n");
 
+	output->loader_handle = tds_loader_create();
+	tds_logf(TDS_LOG_MESSAGE, "Initialized loader structure.\n");
+
 	output->profile_handle = tds_profile_create();
 	tds_logf(TDS_LOG_MESSAGE, "Initialized engine profiler.\n");
 
@@ -93,7 +96,6 @@ struct tds_engine* tds_engine_create(struct tds_engine_desc desc) {
 	tds_logf(TDS_LOG_MESSAGE, "Initialized font cache.\n");
 
 	output->camera_handle = tds_camera_create(output->display_handle);
-	tds_camera_set(output->camera_handle, tds_bcp_zero, 640);
 	tds_logf(TDS_LOG_MESSAGE, "Initialized camera system.\n");
 
 	output->render_handle = tds_render_create(output->camera_handle, output->object_buffer);
@@ -219,7 +221,8 @@ void tds_engine_free(struct tds_engine* ptr) {
 
 	tds_block_map_free(ptr->block_map_handle);
 
-	for (int i = 0; i < TDS_MAX_WORLD_LAYERS; ++i) {
+	tds_logf(TDS_LOG_DEBUG, "Freeing %d worlds in buffer\n", ptr->world_buffer_count);
+	for (int i = 0; i < ptr->world_buffer_count; ++i) {
 		tds_world_free(ptr->world_buffer[i]);
 	}
 
@@ -254,6 +257,7 @@ void tds_engine_free(struct tds_engine* ptr) {
 	tds_module_container_free(ptr->module_container_handle);
 	tds_ft_free(ptr->ft_handle);
 	tds_profile_free(ptr->profile_handle);
+	tds_loader_free(ptr->loader_handle);
 	tds_free(ptr);
 }
 
@@ -483,371 +487,17 @@ void tds_engine_terminate(struct tds_engine* ptr) {
 }
 
 void tds_engine_load(struct tds_engine* ptr, const char* mapname) {
-	/* deprecated, migrating to tds_loader
-	 *
-	 *
+	/* first, convert the mapname and get a prefix in there */
 
-	char* str_filename = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
+	char* map_pfx = tds_malloc(strlen(mapname) + strlen(TDS_MAP_PREFIX) + 1);
+	memcpy(map_pfx, TDS_MAP_PREFIX, strlen(TDS_MAP_PREFIX));
+	memcpy(map_pfx + strlen(TDS_MAP_PREFIX), mapname, strlen(mapname));
+	map_pfx[strlen(TDS_MAP_PREFIX) + strlen(mapname)] = 0;
 
-	memcpy(str_filename, TDS_MAP_PREFIX, strlen(TDS_MAP_PREFIX));
-	memcpy(str_filename + strlen(TDS_MAP_PREFIX), mapname, strlen(mapname));
+	tds_loader_parse(ptr->loader_handle, ptr, map_pfx);
 
-	str_filename[strlen(TDS_MAP_PREFIX) + strlen(mapname)] = 0;
-	tds_logf(TDS_LOG_DEBUG, "Loading map [%s] (%s)\n", str_filename, mapname);
-
-	FILE* fd = fopen(str_filename, "r");
-
-	if (!fd) {
-		tds_logf(TDS_LOG_WARNING, "Failed to load map %s.\n", mapname);
-		tds_free(str_filename);
-		return;
-	}
-
-	if (ptr->state.mapname) {
-		tds_free(ptr->state.mapname);
-		ptr->state.mapname = NULL;
-	}
-
-	ptr->state.mapname = tds_malloc(strlen(mapname) + 1);
-	memcpy(ptr->state.mapname, mapname, strlen(mapname));
-	ptr->state.mapname[strlen(mapname)] = 0;
-
-	tds_engine_flush_objects(ptr);
-	tds_effect_flush(ptr->effect_handle);
-	tds_bg_flush(ptr->bg_handle);
-
-	for (int i = 0; i < TDS_MAX_WORLD_LAYERS; ++i) {
-		tds_world_free(ptr->world_buffer[i]);
-		ptr->world_buffer[i] = tds_world_create();
-		tds_logf(TDS_LOG_MESSAGE, "Initialized world subsystem for layer %d.\n", i);
-	}
-
-	ptr->world_buffer_count = 0;
-
-	yxml_t* ctx = tds_malloc(sizeof(yxml_t) + TDS_LOAD_BUFFER_SIZE); // We hide the buffer with the YXML context
-	yxml_init(ctx, ctx + 1, TDS_LOAD_BUFFER_SIZE);
-
-	int in_layer = 0, in_object = 0, in_parameter = 0, in_data = 0;
-
-	struct tds_object* cur_object = NULL;
-	struct tds_object_param* cur_object_param = NULL;
-
-	char obj_type_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-	char obj_x_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-	char obj_y_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-	char obj_width_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-	char obj_height_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-	char obj_angle_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-	char obj_visible_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-
-	char* target_attr = obj_type_buf;
-
-	char data_encoding_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-
-	char world_width_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-	char world_height_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-
-	int world_width = 1, world_height = 1;
-
-	char world_read_buf[TDS_LOAD_WORLD_SIZE + 1] = {0};
-	int world_read_len = 0;
-	int world_read_pos = 0;
-
-	uint8_t* id_buffer = NULL;
-
-	char prop_name_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-	char prop_val_buf[TDS_LOAD_ATTR_SIZE + 1] = {0};
-
-	int dont_load_world = 0;
-
-	char c_char = 0;
-	while ((c_char = fgetc(fd)) != EOF) {
-
-		if (!c_char) {
-			break;
-		}
-
-		yxml_ret_t r = yxml_parse(ctx, c_char);
-
-		if (r < 0) {
-			tds_logf(TDS_LOG_WARNING, "yxml parsing error while loading %s.\n", str_filename);
-			tds_free(str_filename);
-			tds_free(ctx);
-			return;
-		}
-
-		switch (r) {
-		case YXML_ELEMSTART:
-			if (!strcmp(ctx->elem, "object")) {
-				in_object = 1;
-			}
-			if (!strcmp(ctx->elem, "layer")) {
-				in_layer = 1;
-			}
-			if (!strcmp(ctx->elem, "data")) {
-				in_data = 1;
-			}
-			if (!strcmp(ctx->elem, "property")) {
-				in_parameter = 1;
-			}
-			break;
-		case YXML_ATTRSTART:
-			target_attr = NULL;
-
-			if (in_object) {
-				if (!strcmp(ctx->attr, "type")) {
-					target_attr = obj_type_buf;
-				}
-
-				if (!strcmp(ctx->attr, "x")) {
-					target_attr = obj_x_buf;
-				}
-
-				if (!strcmp(ctx->attr, "y")) {
-					target_attr = obj_y_buf;
-				}
-
-				if (!strcmp(ctx->attr, "width")) {
-					target_attr = obj_width_buf;
-				}
-
-				if (!strcmp(ctx->attr, "height")) {
-					target_attr = obj_height_buf;
-				}
-
-				if (!strcmp(ctx->attr, "visible")) {
-					target_attr = obj_visible_buf;
-				}
-
-				if (!strcmp(ctx->attr, "angle")) {
-					target_attr = obj_angle_buf;
-				}
-			}
-
-			if (in_layer && !in_data) {
-				if (!strcmp(ctx->attr, "width")) {
-					target_attr = world_width_buf;
-				}
-
-				if (!strcmp(ctx->attr, "height")) {
-					target_attr = world_height_buf;
-				}
-			}
-
-			if (in_data) {
-				if (!strcmp(ctx->attr, "encoding")) {
-					target_attr = data_encoding_buf;
-				}
-			}
-
-			if (in_parameter) {
-				if (!strcmp(ctx->attr, "name"))	{
-					target_attr = prop_name_buf;
-				}
-
-				if (!strcmp(ctx->attr, "value")) {
-					target_attr = prop_val_buf;
-				}
-			}
-			break;
-		case YXML_ATTRVAL:
-			if (!target_attr) {
-				break;
-			}
-
-			if (strlen(target_attr) >= TDS_LOAD_ATTR_SIZE) {
-				tds_logf(TDS_LOG_WARNING, "Attribute value too large, truncating! %s=%s..\n", ctx->attr, target_attr);
-				break;
-			}
-
-			target_attr[strlen(target_attr)] = *(ctx->data);
-			break;
-		case YXML_ATTREND:
-			if (in_data) {
-				if (strcmp(data_encoding_buf, "csv")) {
-					tds_logf(TDS_LOG_WARNING, "World data should be encoded as CSV. [%s]\n", data_encoding_buf);
-					dont_load_world = 1;
-				}
-			}
-			break;
-		case YXML_CONTENT:
-			if (in_data) {
-				memset(data_encoding_buf, 0, sizeof data_encoding_buf / sizeof *data_encoding_buf);
-
-				if (!id_buffer) {
-					world_width = strtol(world_width_buf, NULL, 10);
-					world_height = strtol(world_width_buf, NULL, 10);
-
-					id_buffer = tds_malloc(world_width * world_height * sizeof *id_buffer);
-				}
-
-				if (world_read_len >= (sizeof world_read_buf / sizeof *world_read_buf) - 1) {
-					tds_logf(TDS_LOG_WARNING, "World data too large!\n");
-					break;
-				}
-
-				if (*(ctx->data) == ',') {
-					int tx = world_read_pos % world_width, ty = (world_height - 1) - (world_read_pos / world_width);
-					++world_read_pos;
-
-					if (world_read_pos >= world_width * world_height) {
-						tds_logf(TDS_LOG_DEBUG, "World read pos extended past the end of the world.\n");
-						memset(world_read_buf, 0, sizeof world_read_buf / sizeof *world_read_buf);
-						world_read_len = 0;
-						break;
-					}
-
-					id_buffer[ty * world_width + tx] = strtol(world_read_buf, NULL, 10);
-
-					memset(world_read_buf, 0, sizeof world_read_buf / sizeof *world_read_buf);
-					world_read_len = 0;
-				} else {
-					world_read_buf[world_read_len++] = *(ctx->data);
-				}
-			}
-			break;
-		case YXML_ELEMEND:
-			if (in_object && !in_parameter) {
-				in_object = 0;
-
-				struct tds_object_type* type_ptr = tds_object_type_cache_get(ptr->otc_handle, obj_type_buf);
-
-				if (!type_ptr) {
-					tds_logf(TDS_LOG_WARNING, "Unknown typename in map file [%s]!\n", type_ptr);
-
-					memset(obj_type_buf, 0, sizeof obj_type_buf / sizeof *obj_type_buf);
-					memset(obj_visible_buf, 0, sizeof obj_visible_buf / sizeof *obj_visible_buf);
-					memset(obj_angle_buf, 0, sizeof obj_angle_buf / sizeof *obj_angle_buf);
-					memset(obj_x_buf, 0, sizeof obj_x_buf / sizeof *obj_x_buf);
-					memset(obj_y_buf, 0, sizeof obj_y_buf / sizeof *obj_y_buf);
-					memset(obj_width_buf, 0, sizeof obj_width_buf / sizeof *obj_width_buf);
-					memset(obj_height_buf, 0, sizeof obj_height_buf / sizeof *obj_height_buf);
-
-					cur_object_param = NULL;
-					break;
-				}
-
-				float map_x = strtof(obj_x_buf, NULL), map_y = strtof(obj_y_buf, NULL);
-				float map_block_size = TDS_WORLD_BLOCK_SIZE * 32.0f;
-				float map_width = map_block_size * world_width;
-				float map_height = map_block_size * world_height;
-				float game_width = TDS_WORLD_BLOCK_SIZE * world_width;
-				float game_height = TDS_WORLD_BLOCK_SIZE * world_height;
-				float real_width = (strtof(obj_width_buf, NULL) / map_width) * game_width;
-				float real_height = (strtof(obj_height_buf, NULL) / map_height) * game_height;
-				float real_x = -game_width / 2.0f + (game_width * (map_x / map_width)) + (real_width / 2.0f);
-				float real_y = -game_height / 2.0f + (game_height * ((map_height - map_y) / map_height)) - (real_height / 2.0f);
-
-				float ratio_tlx = map_x / map_width;
-				float ratio_tly = map_y / map_height;
-
-				real_x = (-game_width / 2.0f) + ((game_width * ratio_tlx) + (real_width / 2.0f));
-				real_y = (game_height / 2.0f) - ((game_height * ratio_tly) + (real_height / 2.0f));
-
-				tds_logf(TDS_LOG_DEBUG, "Constructing object of type [%s] (map_x %f, map_y %f, map_block_size %f, map_width %f, map_height %f, game_width %f, game_height %f, real_width %f, real_height %f, real_x %f, real_y %f\n", obj_type_buf, map_x, map_y, map_block_size, map_width, map_height, game_width, game_height, real_width, real_height, real_x, real_y);
-
-				cur_object = tds_object_create(type_ptr, ptr->object_buffer, ptr->sc_handle, real_x, real_y, 0.0f, cur_object_param);
-
-				cur_object->cbox_width = real_width;
-				cur_object->cbox_height = real_height;
-
-				cur_object->visible = strcmp(obj_visible_buf, "0") ? 1 : 0;
-				cur_object->angle = strtof(obj_angle_buf, NULL) * 3.141f / 180.0f;
-
-				memset(obj_type_buf, 0, sizeof obj_type_buf / sizeof *obj_type_buf);
-				memset(obj_visible_buf, 0, sizeof obj_visible_buf / sizeof *obj_visible_buf);
-				memset(obj_angle_buf, 0, sizeof obj_angle_buf / sizeof *obj_angle_buf);
-				memset(obj_x_buf, 0, sizeof obj_x_buf / sizeof *obj_x_buf);
-				memset(obj_y_buf, 0, sizeof obj_y_buf / sizeof *obj_y_buf);
-				memset(obj_width_buf, 0, sizeof obj_width_buf / sizeof *obj_width_buf);
-				memset(obj_height_buf, 0, sizeof obj_height_buf / sizeof *obj_height_buf);
-
-				cur_object_param = NULL;
-			} else if (in_parameter) {
-				in_parameter = 0;
-
-				struct tds_object_param* next_param = tds_malloc(sizeof *next_param);
-
-				next_param->next = cur_object_param;
-				cur_object_param = next_param;
-
-				switch (prop_name_buf[0]) {
-				default:
-					tds_logf(TDS_LOG_WARNING, "Invalid type prefix [%c] in object parameter; default to int\n", prop_name_buf[0]);
-				case 'i':
-					next_param->type = TDS_PARAM_INT;
-					next_param->ipart = strtol(prop_val_buf, NULL, 10);
-					break;
-				case 'u':
-					next_param->type = TDS_PARAM_UINT;
-					next_param->upart = strtol(prop_val_buf, NULL, 10);
-					break;
-				case 'f':
-					next_param->type = TDS_PARAM_FLOAT;
-					next_param->fpart = strtof(prop_val_buf, NULL);
-					break;
-				case 's':
-					{
-						next_param->type = TDS_PARAM_STRING;
-						int srclen = strlen(prop_val_buf), writelen = srclen;
-						if (srclen > TDS_PARAM_VALSIZE) {
-							tds_logf(TDS_LOG_WARNING, "Parameter string longer than %d. Truncating..\n", TDS_PARAM_VALSIZE);
-							writelen = TDS_PARAM_VALSIZE;
-						}
-						memcpy(next_param->spart, prop_val_buf, writelen);
-					}
-					break;
-				}
-
-				next_param->key = strtol(prop_name_buf + 1, NULL, 10);
-				tds_logf(TDS_LOG_DEBUG, "Created object parameter with type %c, key %d, valbuf [%s], namebuf [%s]\n", prop_name_buf[0], next_param->key, prop_val_buf, prop_name_buf);
-
-				memset(prop_name_buf, 0, sizeof prop_name_buf / sizeof *prop_name_buf);
-				memset(prop_val_buf, 0, sizeof prop_val_buf / sizeof *prop_val_buf);
-			} else if (in_layer && in_data) {
-				in_data = 0;
-			} else if (in_layer && !in_data) {
-				memset(world_read_buf, 0, sizeof world_read_buf / sizeof *world_read_buf);
-				world_read_len = world_read_pos = 0;
-
-				if (dont_load_world) {
-					break;
-				}
-
-				in_layer = 0;
-
-				if (ptr->world_buffer_count >= TDS_MAX_WORLD_LAYERS) {
-					tds_logf(TDS_LOG_WARNING, "There were more world layers in the map than allowed (max: %d) -- discarding extra layers\n", TDS_MAX_WORLD_LAYERS);
-					break;
-				}
-
-				tds_world_init(ptr->world_buffer[ptr->world_buffer_count], world_width, world_height);
-				tds_world_load(ptr->world_buffer[ptr->world_buffer_count++], id_buffer, world_width, world_height);
-
-				memset(id_buffer, 0, sizeof(id_buffer[0]) * world_width * world_height);
-				memset(data_encoding_buf, 0, sizeof data_encoding_buf / sizeof *data_encoding_buf);
-			}
-			break;
-		default:
-			break;
-		}
-	}
-
-	if (id_buffer) {
-		tds_free(id_buffer);
-	}
-
-	yxml_ret_t ret = yxml_eof(ctx);
-
-	if (ret < 0) {
-		tds_logf(TDS_LOG_WARNING, "yxml reported incorrectly formatted map file at EOF!\n");
-	}
-
-	tds_free(ctx);
-	tds_free(str_filename);
 	tds_engine_broadcast(ptr, TDS_MSG_MAP_READY, 0);
-
-	*/
+	tds_free(map_pfx);
 }
 
 void tds_engine_request_load(struct tds_engine* ptr, const char* request_load) {
