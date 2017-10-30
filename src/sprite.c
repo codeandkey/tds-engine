@@ -21,18 +21,16 @@ struct tds_sprite* tds_sprite_create(struct tds_texture* texture, float animatio
 
 	struct tds_vertex* verts = tds_malloc(sizeof(struct tds_vertex) * texture->frame_count * 6);
 
-	float left = (float) -texture->dim.x / 32.0f; /* divide by 16 and 2 to get block halves */
-	float right = (float) texture->dim.x / 32.0f; 
-	float top = (float) texture->dim.y / 32.0f; 
-	float bottom = (float) -texture->dim.y / 32.0f; 
+	float right = (float) texture->dim.x / 16.0f; 
+	float top = (float) texture->dim.y / 16.0f; 
 
 	for (int i = 0; i < texture->frame_count; ++i) {
 		struct tds_vertex tri[6] = {
-			{left, bottom, 0.0f, texture->frame_list[i].left, texture->frame_list[i].bottom},
-			{right, bottom, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom},
-			{left, top, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top},
-			{left, top, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top},
-			{right, bottom, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom},
+			{0.0f, 0.0f, 0.0f, texture->frame_list[i].left, texture->frame_list[i].bottom},
+			{right, 0.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom},
+			{0.0f, top, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top},
+			{0.0f, top, 0.0f, texture->frame_list[i].left, texture->frame_list[i].top},
+			{right, 0.0f, 0.0f, texture->frame_list[i].right, texture->frame_list[i].bottom},
 			{right, top, 0.0f, texture->frame_list[i].right, texture->frame_list[i].top}
 		};
 

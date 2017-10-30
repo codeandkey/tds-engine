@@ -26,8 +26,10 @@ void tds_loader_free(struct tds_loader* ptr) {
 
 int tds_loader_parse(struct tds_loader* state, struct tds_engine* eng, const char* filename) {
 	xmlDoc* d;
-	xmlNode* root, *cur_tld, *inner;
+	xmlNode* root, *cur_tld, *inner, *prop;
 	FILE* fd;
+
+	int w_w = 0, w_h = 0; /* world width, height */
 
 	if (!filename || !strlen(filename)) return 0;
 	if (!(fd = fopen(filename, "r"))) return 0;
@@ -42,6 +44,114 @@ int tds_loader_parse(struct tds_loader* state, struct tds_engine* eng, const cha
 	}
 
 	for (cur_tld = root->children; cur_tld; cur_tld = cur_tld->next) {
+		if (!strcmp(cur_tld->name, "objectgroup")) {
+			/* constructing some objects.. walk through children */
+
+			for (inner = cur_tld->children; inner; inner = inner->next) {
+				struct tds_object* new_object;
+				struct tds_object_type* new_object_type;
+
+				if (strcmp(inner->name, "object")) {
+					continue;
+				}
+
+				/* first, get the typename, position, and cbox sizes */
+
+				xmlChar* o_typename = xmlGetProp(inner, "type");
+				xmlChar* o_pos_x = xmlGetProp(inner, "x");
+				xmlChar* o_pos_y = xmlGetProp(inner, "y");
+				xmlChar* o_pos_w = xmlGetProp(inner, "width");
+				xmlChar* o_pos_h = xmlGetProp(inner, "height");
+
+				struct tds_object_param* o_params = NULL;
+				tds_bcp o_pos, o_cbox;
+
+				o_pos.x = strtol(o_pos_x, NULL, 10);
+				o_pos.y = strtol(o_pos_y, NULL, 10);
+
+				o_cbox.x = strtol(o_pos_w, NULL, 10);
+				o_cbox.y = strtol(o_pos_h, NULL, 10);
+
+				/* the map position is the upper-left origin of the object, also treated with a RH origin */
+				if (w_h) {
+					o_pos.y = w_h * 16 - (o_pos.y + o_cbox.y);
+				} else {
+					tds_logf(TDS_LOG_WARNING, "No active current world size! I don't know where to place objects.\n");
+				}
+
+				new_object_type = tds_object_type_cache_get(eng->otc_handle, o_typename);
+
+				if (!new_object_type) {
+					tds_logf(TDS_LOG_WARNING, "Bad typename [%s], aborting\n", o_typename);
+					continue;
+				}
+
+				/* now, we walk through inner properties and construct some params */
+				prop = inner->children;
+
+				while (prop && strcmp(prop->name, "properties")) {
+					prop = prop->next;
+				}
+
+				/* confusing line, reuses prop only if the object has properties */
+				for (prop = prop ? prop->children : NULL; prop; prop = prop->next) {
+					/* iterate through property tags */
+					if (strcmp(prop->name, "property")) {
+						continue;
+					}
+
+					struct tds_object_param* p_next = tds_malloc(sizeof *p_next);
+
+					p_next->next = o_params; /* extend linked list */
+					o_params = p_next;
+
+					xmlChar* p_name = xmlGetProp(prop, "name"), *p_index = p_name + 1;
+					xmlChar* p_value = xmlGetProp(prop, "value");
+
+					p_next->key = strtoul(p_index, NULL, 10); /* we just kinda hope the input makes sense */
+
+					switch ((char) *p_name) {
+					case 'f':
+						p_next->type = TDS_PARAM_FLOAT;
+						p_next->fpart = strtof(p_value, NULL);
+						break;
+					case 'i':
+						p_next->type = TDS_PARAM_INT;
+						p_next->ipart = strtol(p_value, NULL, 10);
+						break;
+					case 'u':
+						p_next->type = TDS_PARAM_UINT;
+						p_next->upart = strtoul(p_value, NULL, 10);
+						break;
+					case 's':
+						memset(p_next->spart, 0, TDS_PARAM_VALSIZE); /* zero off */
+						strncpy(p_next->spart, TDS_PARAM_VALSIZE, p_value);
+						p_next->type = TDS_PARAM_STRING;
+						break;
+					}
+
+					xmlFree(p_name);
+					xmlFree(p_value);
+				}
+
+				/* everything's ready for the object */
+				new_object = tds_object_create(new_object_type, eng->object_buffer, eng->sc_handle, o_pos, o_params);
+
+				/* should be good, we set the cbox as well. */
+				new_object->cbox = o_cbox;
+
+				/* the object throws itself into the hmgr, we don't need to do anything more */
+				/* perform xml cleanup */
+
+				xmlFree(o_typename);
+				xmlFree(o_pos_x);
+				xmlFree(o_pos_y);
+				xmlFree(o_pos_w);
+				xmlFree(o_pos_h);
+			}
+
+		}
+
 		if (!strcmp(cur_tld->name, "layer")) {
 			inner = cur_tld->children;
 
@@ -68,6 +178,15 @@ int tds_loader_parse(struct tds_loader* state, struct tds_engine* eng, const cha
 			}
 
 			uint32_t w = strtol(width, NULL, 10), h = strtol(height, NULL, 10);
+
+			if (w != w_w || h != w_h) {
+				if (w_w || w_h) {
+					tds_logf(TDS_LOG_WARNING, "World layer size mismatch! Objects might be out of place. Read size (%d,%d) while previously read size was (%d,%d)\n", w, h, w_w, w_h);
+				} else {
+					w_w = w;
+					w_h = h;
+				}
+			}
 
 			xmlFree(width);
 			xmlFree(height);
@@ -109,7 +228,6 @@ int tds_loader_parse(struct tds_loader* state, struct tds_engine* eng, const cha
 			tds_logf(TDS_LOG_DEBUG, "estimated decode length: %d bytes\n", world_dec_len);
 
 			uint32_t* world_dec = tds_malloc(world_dec_len + 1);
-			//world_dec[world_dec_len] = 0;
 
 			bio = BIO_new_mem_buf(data, -1);
 			b64 = BIO_new(BIO_f_base64());
